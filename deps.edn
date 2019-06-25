@@ -1,2 +1,2 @@
-{:deps {org.openjdk.jol/jol-core {:mvn/version "0.9"}
+{:deps {org.openjdk.jol/jol-core {:mvn/version "0.3.2"}
         rhizome {:mvn/version "0.2.5"}}}
