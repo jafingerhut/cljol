@@ -4,8 +4,10 @@
                                  GraphLayout))
   (:import (org.openjdk.jol.util VMSupport))
   (:require [clojure.set :as set]
+            [clojure.java.io :as io]
             [clojure.pprint :as pp]
-            [rhizome.viz :as viz]))
+            [rhizome.viz :as viz]
+            [rhizome.dot :as dot]))
 
 
 (set! *warn-on-reflection* true)
@@ -467,7 +469,7 @@ thread."
             :both-size both-size}))))))
 
 
-(defn view-object-graph [g]
+(defn view-object-graph [view-or-dot-str-kw g]
   (let [
         addr->obj (into {}
                         (for [obj g]
@@ -503,9 +505,22 @@ thread."
 ;;    (doseq [addr (keys graph)]
 ;;      (println (desc addr)))
 ;;    graph
-    (viz/view-graph (keys graph) graph
-                    :node->descriptor desc)
+    (apply (case view-or-dot-str-kw
+             :view viz/view-graph
+             :dot-str dot/graph->dot)
+           [(keys graph) graph
+            :node->descriptor desc])
     ))
+
+
+(defn view [obj]
+  (view-object-graph :view (myexternals obj)))
+
+
+(defn write-dot-file [obj fname]
+  (with-open [wrtr (io/writer fname)]
+    (let [s (view-object-graph :dot-str (myexternals obj))]
+      (spit wrtr s))))
 
 
 ;; Function internals as adapted from the following source code:
@@ -570,5 +585,22 @@ thread."
 (def phms-sizes (map-indexed (fn [i [a b]] (assoc (sizes a b) :idx i))
                              (partition 2 1 phms)))
 (->> phms-sizes (filter :err) (map #(select-keys % [:idx :err :err-data])))
+
+
+(use 'clojure.pprint)
+(use 'cljol.dig)
+(require '[clojure.java.io :as io])
+
+(defn int-map [n]
+  (into {} (map (fn [i] [(* 2 i) (inc (* 2 i))])
+                (range n))))
+
+(def m5 (int-map 5))
+(def m50 (int-map 50))
+(System/gc)
+(view m5)
+(view m50)
+(write-dot-file m5 "m5.dot")
+(write-dot-file m50 "m50.dot")
 
 )

@@ -6,13 +6,15 @@
   :dependencies [
                  ;;[org.clojure/clojure "1.6.0"]
                  [org.clojure/clojure "1.10.1"]
-                 ;;[org.openjdk.jol/jol-core "0.3.2"]
-                 [org.openjdk.jol/jol-core "0.9"]
+                 [org.openjdk.jol/jol-core "0.3.2"]
+                 ;;[org.openjdk.jol/jol-core "0.9"]
+                 ;;[org.openjdk.jol/jol-core "0.10-SNAPSHOT"]
                  ;;[org.openjdk.jol/jol-core "0.4-SNAPSHOT"]
                  [rhizome "0.2.5"]
                  ]
   :jvm-opts ^:replace [
                        ;;"-XX:+PrintGC"
                        "-XX:+PrintGCDetails"
+                       "-Djol.tryWithSudo=true"
                        ]
   )
