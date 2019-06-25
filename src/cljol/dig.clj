@@ -611,7 +611,6 @@ thread."
 
 (use 'clojure.pprint)
 (use 'cljol.dig)
-(require '[clojure.java.io :as io])
 
 (defn int-map [n]
   (into {} (map (fn [i] [(* 2 i) (inc (* 2 i))])
@@ -620,9 +619,10 @@ thread."
 (def m5 (int-map 5))
 (def m50 (int-map 50))
 (System/gc)
-(view m5)
-(view m50)
-(write-dot-file m5 "m5.dot")
-(write-dot-file m50 "m50.dot")
+(def opts {:label-fn #(str-with-limit % 50)})
+(view m5 opts)
+(view m50 opts)
+(write-dot-file m5 "m5.dot" opts)
+(write-dot-file m50 "m50.dot" opts)
 
 )
