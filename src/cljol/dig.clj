@@ -469,13 +469,14 @@ thread."
             :both-size both-size}))))))
 
 
-(defn view-object-graph [view-or-dot-str-kw g]
+(defn render-object-graph [g opts]
   (let [
+        obj->label-str (get opts :label-fn str)
         addr->obj (into {}
                         (for [obj g]
                           [(:address obj)
-                           (assoc obj ;:obj nil
-                                  :str (str (:obj obj))
+                           (assoc obj
+                                  :label (obj->label-str (:obj obj))
                                   :class (class (:obj obj)))]))
         graph (into {}
                     (for [[addr obj] addr->obj]
@@ -499,28 +500,49 @@ thread."
                                                (count obj)
                                                (pr-str
                                                 (array-element-type obj)))
-                                       :else (:str obj-info)))
+                                       :else (:label obj-info)))
                   }))
         ]
 ;;    (doseq [addr (keys graph)]
 ;;      (println (desc addr)))
 ;;    graph
-    (apply (case view-or-dot-str-kw
+
+    ;; TBD: I do not know how to achieve it, but it would be nice if
+    ;; array elements were at least usually rendered in order of
+    ;; index.  I suspect that putting them in that order into the
+    ;; GraphViz .dot file would achieve that in many cases, if not
+    ;; all, but not sure how to call and/or modify view-graph and
+    ;; graph->dot functions to achieve that.
+    (apply (case (get opts :render-method :view)
              :view viz/view-graph
              :dot-str dot/graph->dot)
-           [(keys graph) graph
-            :node->descriptor desc])
-    ))
+           [(keys graph) graph :node->descriptor desc :vertical? false])))
 
 
-(defn view [obj]
-  (view-object-graph :view (myexternals obj)))
+(defn truncate-long-str [s n]
+  (if (> (count s) n)
+    (str (subs s 0 n) " ...")
+    s))
+
+(defn str-with-limit [obj n]
+  (truncate-long-str (str obj) n))
 
 
-(defn write-dot-file [obj fname]
-  (with-open [wrtr (io/writer fname)]
-    (let [s (view-object-graph :dot-str (myexternals obj))]
-      (spit wrtr s))))
+(defn view
+  ([obj]
+   (view obj {}))
+  ([obj opts]
+   (render-object-graph (myexternals obj) (merge opts {:render-method :view}))))
+
+
+(defn write-dot-file
+  ([obj fname]
+   (write-dot-file obj fname {}))
+  ([obj fname opts]
+   (with-open [wrtr (io/writer fname)]
+     (let [s (render-object-graph (myexternals obj)
+                                  (merge opts {:render-method :dot-str}))]
+       (spit wrtr s)))))
 
 
 ;; Function internals as adapted from the following source code:
