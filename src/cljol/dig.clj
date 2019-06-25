@@ -625,4 +625,11 @@ thread."
 (write-dot-file m5 "m5.dot" opts)
 (write-dot-file m50 "m50.dot" opts)
 
+;; The graph created with this data shows that when the same object is
+;; referenced from multiple places in an array (:b in this case, which
+;; is both element 2 and 5 of a PersistentArrayMap), the graph is
+;; confusing.  Not sure of the best way to improve on that right now,
+;; but wanted to record a small example that demonstrates the issue.
+(write-dot-file {:a 1 :b 2 :c :b} "test.dot")
+
 )
