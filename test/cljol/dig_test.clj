@@ -1,6 +1,6 @@
 (ns cljol.dig-test
   (:require [clojure.test :refer :all]
-            [cljol.dig :refer :all]))
+            [cljol.dig9 :refer :all]))
 
 (def ref-array (object-array 5))
 (def prim-array (int-array 4 [2 4 6 8]))
