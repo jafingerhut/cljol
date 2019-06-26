@@ -466,21 +466,66 @@ thread."
 ;; {:num-edges 2
 ;;  :edges [{:field-name-str "x"} {:field-name-str "y"}]}
 
-(defn make-edge-map1 [addr->objmap]
-  (into {}
-        (for [[from-addr from-obj-map] addr->objmap
-              [from-obj-field-name-str to-addr] (:fields from-obj-map)
-              :when (not (nil? to-addr))]
-          [[from-addr to-addr] {:field-name-str from-obj-field-name-str}])))
+(defn make-addr->objmap [g javaobj->label-str]
+  (->> (group-by :address g)
+       (map-vals first-if-exactly-one)
+       (map-vals (fn [objmap]
+                   (assoc objmap
+                          :label (javaobj->label-str (:obj objmap))
+                          :class (class (:obj objmap)))))))
+
+(defn make-edge-map [addr->objmap]
+  (->> (for [[from-addr from-obj-map] addr->objmap
+             [from-obj-field-name-str to-addr] (:fields from-obj-map)
+             :when (not (nil? to-addr))]
+         {:node-pair [from-addr to-addr]
+          :edge-properties {:field-name-str from-obj-field-name-str}})
+       (group-by :node-pair)
+       (map-vals #(mapv :edge-properties %))))
+
+
+(defn new-edge-call-count [m node-pair]
+  (assoc m node-pair (inc (get m node-pair 0))))
+
+(defn update-edge-call-count [edge-call-count-atom node1 node2]
+  (let [node-pair [node1 node2]
+        new-count-map (swap! edge-call-count-atom new-edge-call-count node-pair)]
+    (get new-count-map node-pair)))
+
+
+(defn node-label [objmap opts]
+  (let [obj (:obj objmap)
+        address-str (if (:label-with-address? opts)
+                      (format "@%08x\n" (:address objmap))
+                      "")
+        path-str (if (:label-with-path? opts)
+                   (str "path=" (:path objmap) "\n")
+                   "")]
+    (format "%s%d bytes\n%s%s"
+            address-str
+            (:size objmap)
+            path-str
+            (if (array? obj)
+              (format "array of %d %s" (count obj)
+                      (pr-str (array-element-type obj)))
+              (:label objmap)))))
+
+
+(defn throw-edge-cb-exception [addr1 addr2 edge-map edge-call-count]
+  (throw (ex-info
+          (format (str "rhizome called :edge->descriptor fn"
+                       " with args %s %s, but no such edge was specified")
+                  addr1 addr2)
+          {:edge-map edge-map
+           :addr1 addr1
+           :addr2 addr2
+           :edge-call-count edge-call-count})))
+
 
 (defn render-object-graph [g opts]
   (let [javaobj->label-str (get opts :label-fn str)
-        addr->objmap (->> (group-by :address g)
-                          (map-vals first-if-exactly-one)
-                          (map-vals (fn [objmap]
-                                      (assoc objmap
-                                             :label (javaobj->label-str (:obj objmap))
-                                             :class (class (:obj objmap))))))
+        addr->objmap (make-addr->objmap g javaobj->label-str)
+        edge-map (make-edge-map addr->objmap)
         graph (into {}
                     (for [[addr objmap] addr->objmap]
                       [addr
@@ -488,24 +533,21 @@ thread."
                             (remove nil?)
                             vec)]))
         node-desc (fn [addr]
-                    (let [objmap (addr->objmap addr)
-                          obj (:obj objmap)]
-                      {:shape "box"
-                       :label (format "@%08x\n%d bytes\npath=%s\n%s"
-                               (:address objmap)
-                               ;;format "%d bytes\npath=%s\n%s"
-                               (:size objmap)
-                               (:path objmap)
-                               (if (array? obj)
-                                 (format "array of %d %s" (count obj)
-                                         (pr-str (array-element-type obj)))
-                                 (:label objmap)))}))
-        edge-map (make-edge-map1 addr->objmap)
+                    {:shape "box"
+                     :label (node-label (addr->objmap addr) opts)})
+        edge-call-count (atom {})
         edge-desc (fn edge-description [addr1 addr2]
-                    (let [edge-info (get edge-map [addr1 addr2] "unknown_edge")]
-                      ;;(println (format "dbg: addr1=%d addr2=%d edge-info=%s" addr1 addr2 edge-info))
-                      {:label (:field-name-str edge-info)}))
-        ]
+                    (let [num-calls (update-edge-call-count edge-call-count
+                                                            addr1 addr2)
+                          node-pair [addr1 addr2]
+                          _ (if-not (contains? edge-map node-pair)
+                              (throw-edge-cb-exception addr1 addr2 edge-map
+                                                       @edge-call-count))
+                          edges-info (edge-map node-pair)
+                          edge-info (edges-info (dec num-calls))]
+;;                      (println (format "dbg: addr1=%d addr2=%d num-calls=%d edge-info=%s"
+;;                                       addr1 addr2 num-calls edge-info))
+                      {:label (:field-name-str edge-info)}))]
     ;; TBD: I do not know how to achieve it, but it would be nice if
     ;; array elements were at least usually rendered in order of
     ;; index.  I suspect that putting them in that order into the
@@ -600,6 +642,13 @@ thread."
 (d/view m1)
 (d/write-dot-file m1 "m1.dot")
 
+(def m1b (let [x "a" y "b"] {x y y x :c x}))
+(d/view m1b)
+(def m1c {"abc" "def" (str "de" "f") (str "a" "bc") :c "abc"})
+(d/view m1c)
+(def m1d {"abc" "d\u1234f" (str "d\u1234" "f") (str "a" "bc") :c "abc"})
+(d/view m1d)
+
 (def m2 (vec (range 70)))
 (def m2 (vec (range 1000)))
 (def e2 (d/gen-valid-obj-graph m2))
@@ -608,6 +657,20 @@ thread."
 
 (def m2 (vec (range 35)))
 (d/write-dot-file m2 "m2.dot")
+
+(defn int-map [n]
+  (into {} (map (fn [i] [(* 2 i) (inc (* 2 i))])
+                (range n))))
+(def m5 (int-map 5))
+(def m50 (int-map 50))
+(def opts {:label-fn #(d/str-with-limit % 50)})
+(d/view m5 opts)
+(d/view m50 opts)
+(d/write-dot-file m5 "m5.dot" opts)
+(d/write-dot-file m50 "m50.dot" opts)
+
+(def m5 (int-map 5))
+(def m50 (int-map 50))
 
 (defn externals [x]
   (let [parsed-inst (GraphLayout/parseInstance x)]
@@ -623,6 +686,25 @@ thread."
 (def i1 (iterator-seq (.iterator a1)))
 i1
 (print (.toPrintable p1))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(def m1 (let [x :a y :b] {x y y x}))
+(def e1 (d/myexternals m1))
+(pprint e1)
+
+(def a2o (d/make-addr->objmap e1 str))
+(pprint a2o)
+
+(def em (d/make-edge-map a2o))
+(pprint em)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(def a (atom {}))
+(d/update-edge-call-count a 1 2)
+(d/update-edge-call-count a 2 2)
+@a
 
 ;; The images produced by GraphLayout/toImage method seem fairly
 ;; useless to me, from these two examples.
