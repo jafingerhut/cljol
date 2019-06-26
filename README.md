@@ -31,7 +31,7 @@ can clone the repository yourself and create a JAR if you like, or use
 the `clj` / `clojure` commands provided by the Clojure installer.
 
 ```bash
-$ clj -Sdeps '{:deps {cljol {:git/url "https://github.com/jafingerhut/cljol" :sha "f681a78cde715d66baf21402d89e40d2b91f9cc1"}}}'
+$ clj -Sdeps '{:deps {cljol {:git/url "https://github.com/jafingerhut/cljol" :sha "dfd6ad92214424cfab936c26ee4b5a3b8c6f65bf"}}}'
 ```
 
 In the REPL:
@@ -57,16 +57,22 @@ $ dot -Tpng my-map.dot -o my-map.png
 Below is the figure in the file `my-map.png` I get from the last
 command above.
 
-Each rectangle is a Java object.  The object's string representation,
-as returned by Clojure's `str` function, is in the bottom part of each
-node label, except for Java arrays.  By default, Java arrays are
-labeled "array of N `class-name`".
+Each rectangle is a Java object.  By default each shows:
+
+* the object's size
+* its type, usually a class name, with common prefixes like
+  "clojure.lang." replaced with "c.l." and "java.lang." replaced with
+  "j.l.".  Java arrays are shown as "array of N `class-name`".
+* a string representation of the object's value
+
+The string representation is by default limited to 50 characters, with
+" ..." appearing at the end if it was truncated.
 
 The arrows out of an array object are labeled with "[i]", where "i" is
 a number that is the array index.  Other labels on edges are the name
 of the field in the Java object that the edge comes from.
 
-![my-map.png](doc/my-map.png)
+![my-map.png](doc/my-map-macos-10.13.6-oraclejdk-1.8.0_192-clj-1.10.1.png)
 
 
 # Warning messages
