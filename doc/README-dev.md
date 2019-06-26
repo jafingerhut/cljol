@@ -1,3 +1,24 @@
+# Compressed strings in Java 9 and later
+
+In Java 8 and earlier, the default was for strings to be represented
+in memory as arrays of Java `char`, which are 2 bytes each.  If most
+of the strings you represent are within the ASCII subset, then this is
+twice as much memory as they need, but it enables strings to be
+handled consistently throughout the Java library whether they use a
+larger subset of the full Unicode character set, or not.
+
+Java 9 introduced [Compressed
+strings](https://www.codenuclear.com/compact-strings-java-9), where if
+a string contains only characters whose code points fit within a
+single 8-bit byte, then it is stored in memory using only 1 byte per
+character.
+
+`cljol` can make this easy to see, by using it to analyze a string
+like `"food"` containing only characters within the ASCII subset, and
+a very similar string like `"fo\u1234d"` that contains a character
+that requires more than 8 bits to represent.
+
+
 # Pretty printing of large values
 
 I have tried several Clojure pretty-printing libraries, including

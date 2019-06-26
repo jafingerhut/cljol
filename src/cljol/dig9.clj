@@ -785,6 +785,10 @@ i1
 (keys (:errors ed1))
 (:err (:errors ed1))
 
+(def o2 (atom [1 2]))
+(d/view o2)
+(d/write-dot-file o2 "atom.dot")
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (def m1 (let [x :a y :b] {x y y x}))
