@@ -55,7 +55,16 @@ $ dot -Tpng my-map.dot -o my-map.png
 ```
 
 Below is the figure in the file `my-map.png` I get from the last
-command above:
+command above.
+
+Each rectangle is a Java object.  The object's string representation,
+as returned by Clojure's `str` function, is in the bottom part of each
+node label, except for Java arrays.  By default, Java arrays are
+labeled "array of N <type>".
+
+The arrows out of an array object are labeled with "[i]", where "i" is
+a number that is the array index.  Other labels on edges are the name
+of the field in the Java object that the edge comes from.
 
 ![my-map.png](doc/my-map.png)
 
