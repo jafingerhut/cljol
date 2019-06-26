@@ -60,7 +60,7 @@ command above.
 Each rectangle is a Java object.  The object's string representation,
 as returned by Clojure's `str` function, is in the bottom part of each
 node label, except for Java arrays.  By default, Java arrays are
-labeled "array of N <type>".
+labeled "array of N `class-name`".
 
 The arrows out of an array object are labeled with "[i]", where "i" is
 a number that is the array index.  Other labels on edges are the name
