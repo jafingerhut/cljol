@@ -237,17 +237,24 @@
   (or (some validate-one-obj g)
       (let [obj-addresses (object-addresses g)
             fld-addresses (field-addresses g)
-            root-objs (root-objects g)
+            ;;root-objs (root-objects g)
             refs-outside-objs (set/difference fld-addresses obj-addresses)]
         (cond (not (empty? refs-outside-objs))
               {:err :some-refs-outside-object-set
                :err-data refs-outside-objs
                :data g}
 
-              (not= 1 (count root-objs))
-              {:err :not-1-root-object
-               :err-data root-objs
-               :data g}
+              ;; This check fails for sets of objects with cycles in
+              ;; the references between them.  That does not typically
+              ;; happen with Clojure data structures, which are most
+              ;; often acyclic, but does happen reasonably often with
+              ;; mutable Java data structures.  Removing the check
+              ;; below makes cljol more useful for analyzing their
+              ;; structure, too.
+;;              (not= 1 (count root-objs))
+;;              {:err :not-1-root-object
+;;               :err-data root-objs
+;;               :data g}
 
               :else
               nil))))
@@ -351,26 +358,6 @@ thread."
   (let [by-addr (sort-by :address g)]
     (some (fn [[a b]] (two-objects-overlap? a b))
           (partition 2 1 by-addr))))
-
-
-(defn validate-obj-graph [g]
-  (or (some validate-one-obj g)
-      (let [obj-addresses (object-addresses g)
-            fld-addresses (field-addresses g)
-            root-objs (root-objects g)
-            refs-outside-objs (set/difference fld-addresses obj-addresses)]
-        (cond (not (empty? refs-outside-objs))
-              {:err :some-refs-outside-object-set
-               :err-data refs-outside-objs
-               :data g}
-
-              (not= 1 (count root-objs))
-              {:err :not-1-root-object
-               :err-data root-objs
-               :data g}
-
-              :else
-              nil))))
 
 
 (defn object-graph-errors [g]
@@ -506,6 +493,7 @@ thread."
 (def class-name-prefix-abbreviations
   [
    {:prefix "java.lang." :abbreviation "j.l."}
+   {:prefix "java.util." :abbreviation "j.u."}
    {:prefix "clojure.lang." :abbreviation "c.l."}
    ])
 
@@ -699,6 +687,34 @@ thread."
 (d/view my-map3)
 (d/write-dot-file my-map3 "my-map3.dot")
 
+(defn node-label-no-str-calls [javaobj]
+  "")
+(def opts-no-label {:node-label-fn node-label-no-str-calls})
+
+(def lazy-seq1 (map inc (range 20)))
+;; I do not know if there is a straightforward way to look at
+;; lazy-seq1's object graph without realizing it, at least not with
+;; the default options for cljol.  I am pretty sure that calling `str`
+;; to generate a string representation of a value forces the lazy
+;; sequence to be realized.
+;;(d/write-dot-file lazy-seq1 "lazy-seq1-unrealized.dot")
+(d/write-dot-file lazy-seq1 "lazy-seq1-unrealized.dot" opts-no-label)
+(d/write-dot-file (doall lazy-seq1) "lazy-seq1-realized.dot")
+(d/write-dot-file (doall (map inc (range 100))) "lazy-seq2-realized.dot")
+
+;; TBD: Find examples that show difference between chunked and
+;; unchunked sequences.
+
+;; These functions have optimizations that handle chunked sequences
+;; given to them specially, and preserve the chunked-ness in their
+;; results.
+;; map, filter, remove, keep
+
+(d/write-dot-file (doall (filter even? (range 100))) "lazy-seq3-realized.dot")
+
+;; This gives an unchunked lazy sequence:
+(d/write-dot-file (doall (distinct (range 30))) "lazy-seq4-realized.dot")
+
 (def arr1 (int-array (range 50)))
 (d/view arr1)
 (def arr2 (int-array (range 500)))
@@ -758,6 +774,16 @@ thread."
 (def i1 (iterator-seq (.iterator a1)))
 i1
 (print (.toPrintable p1))
+
+(def o1 (System/getProperties))
+(d/view o1)
+(d/write-dot-file o1 "getproperties.dot")
+(def e1 *e)
+(def ed1 (ex-data e1))
+(keys ed1)
+(type (:errors ed1))
+(keys (:errors ed1))
+(:err (:errors ed1))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
