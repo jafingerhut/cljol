@@ -17,23 +17,42 @@ the `view` function, or writing to a GraphViz dot file using the
 
 # Quick example
 
-You must install GraphViz in order for the generation of figures to
-work.
+You must install [GraphViz](http://www.graphviz.org) in order for the
+generation of figures to work -- see its home page for downloads and
+installation instructions if the following do not work:
+
+* Ubuntu Linux - `sudo apt-get install graphviz`
+* Mac OS X
+  * If you use Homebrew: `brew install graphviz`
+  * If you use MacPorts: `sudo port install graphviz`
+
+`write-dot-file` will work without GraphViz installed, but it only
+writes a text file in a format expected as input by the GraphViz `dot`
+command.
 
 ```bash
 $ clj -Sdeps "{:deps {cljol {:git/url \"https://github.com/jafingerhut/cljol\" :sha \"f681a78cde715d66baf21402d89e40d2b91f9cc1\"}}}"
 ```
 
+There are not yet any packaged releases of `cljol` on Clojars.
+
 ```
 (require '[cljol.dig9 :as d])
 (def my-map {:a 1 :b 2 :c 3})
 (d/view my-map)
+(d/write-dot-file my-map "my-map.dot")
 ```
 
 See the "Warning messages" section for warning messages that you are
 likely to see when using this code.
 
+To convert a GraphViz dot file into one of many different graphic
+image formats:
 
+```bash
+$ dot -Tpdf my-map.dot -o my-map.pdf
+$ dot -Tpng my-map.dot -o my-map.png
+```
 
 # Warning messages
 
