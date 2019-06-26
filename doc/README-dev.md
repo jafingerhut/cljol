@@ -62,3 +62,20 @@ Other people who have written about using jol-core in various ways:
 
 http://igstan.ro/posts/2014-09-23-calculating-an-object-graphs-size-on-the-jvm.html
 http://www.mastertheboss.com/jboss-server/jboss-monitoring/monitoring-the-size-of-your-java-objects-with-java-object-layout
+
+
+# Other possible tools for examining Java objects in a running JVM
+
+Code for determining the size of an object in a JVM, including all
+other objects it references, recursively.
+
+Many useful answers found on this StackOverflow question:
+
+http://stackoverflow.com/questions/52353/in-java-what-is-the-best-way-to-determine-the-size-of-an-object
+
+There is a link to a Memory Measurer tool that used to be on Google
+code, but as of Aug 2015 I could only find it here on Github:
+
+    https://github.com/msteindorfer/memory-measurer
+
+Another project: http://sourceforge.net/projects/sizeof/

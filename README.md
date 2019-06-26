@@ -26,15 +26,15 @@ installation instructions if the following do not work:
   * If you use Homebrew: `brew install graphviz`
   * If you use MacPorts: `sudo port install graphviz`
 
-The function `write-dot-file` will work without GraphViz installed,
-but it only writes a text file in a format expected as input by the
-GraphViz `dot` command.
+There are not yet any packaged releases of `cljol` on Clojars.  You
+can clone the repository yourself and create a JAR if you like, or use
+the `clj` / `clojure` commands provided by the Clojure installer.
 
 ```bash
 $ clj -Sdeps '{:deps {cljol {:git/url "https://github.com/jafingerhut/cljol" :sha "f681a78cde715d66baf21402d89e40d2b91f9cc1"}}}'
 ```
 
-There are not yet any packaged releases of `cljol` on Clojars.
+In the REPL:
 
 ```
 (require '[cljol.dig9 :as d])
@@ -43,11 +43,11 @@ There are not yet any packaged releases of `cljol` on Clojars.
 (d/write-dot-file my-map "my-map.dot")
 ```
 
-See the "Warning messages" section for warning messages that you are
+See the "Warning messages" section below for messages that you are
 likely to see when using this code.
 
-To convert a GraphViz dot file into one of many different graphic
-image formats:
+To convert a GraphViz dot file into one of many different image
+formats:
 
 ```bash
 $ dot -Tpdf my-map.dot -o my-map.pdf
@@ -89,13 +89,20 @@ $ clj -J-Djdk.attach.allowAttachSelf -J-Djol.tryWithSudo=true
 ```
 
 The lines starting with "WARNING: An illegal reflective access
-operation has occurred" are due to using a JDK version 9 or later.
-See [here](https://clojure.org/guides/faq#illegal_access) for more
+operation has occurred" happen when using the JOL library with JDK
+version 9 or later.  See
+[here](https://clojure.org/guides/faq#illegal_access) for more
 details.
 
 Tested with:
 
-Ubuntu 18.04.2, OpenJDK 11, Clojure 1.10.1
+* Ubuntu 18.04.2, OpenJDK 11, Clojure 1.10.1
+* Ubuntu 18.04.2, Oracle JDK 8, Clojure 1.10.1
+* Mac OS X 10.13 High Sierra, Oracle JDK 8, Clojure 1.10.1
+
+It should work with older versions of Clojure, too, but I do not know
+how far back it can go.  Probably as far back as Clojure 1.6, in which
+this code was originally developed.
 
 
 # Possible future work
@@ -107,19 +114,6 @@ between two Clojure collections.  There is some code in the
 well tested and thus probably contains many errors, if it even runs at
 all.
 
-
-# Other possible tools
-
-Code for determining the size of an object in a JVM, including all
-other objects it references, recursively.
-
-Many useful answers found on this StackOverflow question:
-
-http://stackoverflow.com/questions/52353/in-java-what-is-the-best-way-to-determine-the-size-of-an-object
-
-There is a link to a Memory Measurer tool that used to be on Google
-code, but as of Aug 2015 I could only find it here on Github:
-
-    https://github.com/msteindorfer/memory-measurer
-
-Another project: http://sourceforge.net/projects/sizeof/
+It would be nice if there was a way to cause the edges out of Java
+array objects to at least usually be in increasing order of array
+index.  Right now they are fairly arbitrary.
