@@ -85,14 +85,17 @@
 
 (def empty-obj-array (object-array []))
 
+(defn gpr->java-obj [gpr]
+  (.invoke gpr-obj-method gpr empty-obj-array))
+
+
 
 (defn myexternals [x]
   (let [parsed-inst (GraphLayout/parseInstance (object-array [x]))
         addresses (.addresses parsed-inst)]
     (map (fn [addr]
            (let [gpr (. parsed-inst record addr)
-                 ;;_ (def gpr1 gpr)
-                 obj (.invoke gpr-obj-method gpr empty-obj-array)
+                 obj (gpr->java-obj gpr)
                  arr? (array? obj)
                  ref-arr? (and arr?
                                (not (. (array-element-type obj)
@@ -107,6 +110,87 @@
                                       (range (count obj))))
                         (into {} (map #(field-name-and-address % obj) flds)))}))
          addresses)))
+
+
+;; When I use externals on many data structures, I see objects
+;; mentioned with a very large value in SIZE column, and (something
+;; else) in TYPE and VALUE columns, (somewhere else) in PATH column.
+;; See example below for value #{5 7}.  However, when I use footprint
+;; function to see a summary, those lines do not show up in the
+;; result.
+
+;; It turns out that those lines appear because between the Java
+;; objects in the heap that are shown in a single call to externals,
+;; there is memory space between them that is not in one of the
+;; objects being shown.  These 'gaps' may include other allocated Java
+;; objects not shown, or that space may never have contained a Java
+;; object, or perhaps it once did, but has since been deallocated
+;; during garbage collection.  This can be annoying if you don't want
+;; to see these gaps between the objects shown, only the objects
+;; themselves.
+
+;; I also found an answer here:
+
+;; https://stackoverflow.com/questions/30021092/what-is-something-else-in-jol-graphlayout-output
+
+
+;; Things to check in 'myexternals' return value before processing
+;; further, as sanity check, and documentation of the data structure:
+
+;; Sequence of maps, each containing keys:
+
+;;   :address - value satisfies integer? and >= 0
+;;   :obj - no check on value
+;;   :size - value satisfies integer? and > 0
+;;   :path - value is string
+;;   :fields - value is map, where keys are strings, and values are same
+;;     as :address, or nil.
+
+(defn validate-one-obj [m]
+  (cond (not (map? m))
+        {:err :non-map
+         :data m}
+
+        (not (every? #(contains? m %) [:address :obj :size :path :fields]))
+        {:err :obj-map-missing-required-key
+         :data m}
+        
+        (not (integer? (:address m)))
+        {:err :address-not-natural-integer
+         :data m}
+
+        (not (>= (:address m) 0))
+        {:err :address-not-natural-integer
+         :data m}
+        
+        (not (integer? (:size m)))
+        {:err :size-not-positive-integer
+         :data m}
+        
+        (not (> (:size m) 0))
+        {:err :size-not-positive-integer
+         :data m}
+        
+        (not (string? (:path m)))
+        {:err :path-not-string
+         :data m}
+        
+        (not (map? (:fields m)))
+        {:err :fields-not-map
+         :data m}
+        
+        (not (every? #(string? %) (keys (:fields m))))
+        {:err :fields-has-non-string-key
+         :data m}
+        
+        (not (every? #(or (nil? %)
+                          (and (integer? %) (>= % 0)))
+                     (vals (:fields m))))
+        {:err :fields-has-val-neither-nil-nor-natural-integer
+         :data m}
+        
+        :else  ;; no problems found
+        nil))
 
 
 ;; Additional checks:
@@ -203,12 +287,12 @@
 ;; something will have moved.
 
 
-(defn object-moved? [obj-info]
-  (let [obj (:obj obj-info)
-        addr (:address obj-info)
+(defn object-moved? [objmap]
+  (let [obj (:obj objmap)
+        addr (:address objmap)
         cur-addr (address-of obj)]
     (if (not= addr cur-addr)
-      (assoc obj-info :cur-address cur-addr))))
+      (assoc objmap :cur-address cur-addr))))
 
 
 (defn any-object-moved?
@@ -259,87 +343,6 @@ thread."
           (partition 2 1 by-addr))))
 
 
-;; When I use externals on many data structures, I see objects
-;; mentioned with a very large value in SIZE column, and (something
-;; else) in TYPE and VALUE columns, (somewhere else) in PATH column.
-;; See example below for value #{5 7}.  However, when I use footprint
-;; function to see a summary, those lines do not show up in the
-;; result.
-
-;; It turns out that those lines appear because between the Java
-;; objects in the heap that are shown in a single call to externals,
-;; there is memory space between them that is not in one of the
-;; objects being shown.  These 'gaps' may include other allocated Java
-;; objects not shown, or that space may never have contained a Java
-;; object, or perhaps it once did, but has since been deallocated
-;; during garbage collection.  This can be annoying if you don't want
-;; to see these gaps between the objects shown, only the objects
-;; themselves.
-
-;; I also found an answer here:
-
-;; https://stackoverflow.com/questions/30021092/what-is-something-else-in-jol-graphlayout-output
-
-
-;; Things to check in 'myexternals' return value before processing
-;; further, as sanity check, and documentation of the data structure:
-
-;; Sequence of maps, each containing keys:
-
-;;   :address - value satisfies integer? and >= 0
-;;   :obj - no check on value
-;;   :size - value satisfies integer? and > 0
-;;   :path - value is string
-;;   :fields - value is map, where keys are strings, and values are same
-;;     as :address, or nil.
-
-(defn validate-one-obj [m]
-  (cond (not (map? m))
-        {:err :non-map
-         :data m}
-
-        (not (every? #(contains? m %) [:address :obj :size :path :fields]))
-        {:err :obj-map-missing-required-key
-         :data m}
-        
-        (not (integer? (:address m)))
-        {:err :address-not-natural-integer
-         :data m}
-
-        (not (>= (:address m) 0))
-        {:err :address-not-natural-integer
-         :data m}
-        
-        (not (integer? (:size m)))
-        {:err :size-not-positive-integer
-         :data m}
-        
-        (not (> (:size m) 0))
-        {:err :size-not-positive-integer
-         :data m}
-        
-        (not (string? (:path m)))
-        {:err :path-not-string
-         :data m}
-        
-        (not (map? (:fields m)))
-        {:err :fields-not-map
-         :data m}
-        
-        (not (every? #(string? %) (keys (:fields m))))
-        {:err :fields-has-non-string-key
-         :data m}
-        
-        (not (every? #(or (nil? %)
-                          (and (integer? %) (>= % 0)))
-                     (vals (:fields m))))
-        {:err :fields-has-val-neither-nil-nor-natural-integer
-         :data m}
-        
-        :else  ;; no problems found
-        nil))
-
-
 (defn validate-obj-graph [g]
   (or (some validate-one-obj g)
       (let [obj-addresses (object-addresses g)
@@ -377,52 +380,130 @@ thread."
                     {:bad-sequence v}))))
 
 
+;; Terminology:
+
+;; A 'javaobj' is one of the Java objects found while calling
+;; myexternals on the object given to myexternals as a parameter.
+
+;; An 'objmap' is a Clojure map describing exactly one of those
+;; javaobjs.  An objmap contains at lesat the keys returned by
+;; myexternals, but perhaps also more.
+
+;; The value returned by myexternals is a sequence of objmaps.
+
+;; render-object-graph creates data structures and functions needed in
+;; order to call the rhizome library, using it to draw a figure of the
+;; graph where each node represents a javaobj, and there is an edge
+;; from node A to B if javaobj A has a reference to javaobj B.
+
+;; In this graph, I want each javaobj in memory to represented by
+;; exactly one node.  If a javaobj X is referenced from multiple other
+;; javaobjs, and they are in the graph, too, then there should be
+;; multiple edges into the node for X.
+
+;; Also, in Clojure two values can be equal according to
+;; clojure.core/=, but they might be the identical javaobj, or they
+;; might be different javaobjs in memory.  The graph drawn here should
+;; show separate nodes if they are separate javaobjs in memory.
+
+;; rhizome lets the caller pick the values used to represent nodes.
+;; Because I want different javaobjs in memory to be different nodes
+;; in the graph, one way to do that is to use the numeric address of
+;; the object in memory to represent a graph node for rhizome.  If we
+;; tried using the javaobj itself to represent a node to rhizome, I
+;; suspect that it would treat any two of them that were
+;; clojure.core/= to each other as the same node, even if they were
+;; different javaobjs in memory.
+
+;; TBD: Right now any null references stored in one javaobj will not
+;; be represented in the graph created.  It might be nice some time to
+;; have an option for that.  In that case, it would probably make the
+;; graph easier to read if each nil/null reference had its own
+;; separate arrow to its own separate node for each such null
+;; reference, otherwise there could be many of them throughout the
+;; graph all pointing to a common null node.
+
+;; TBD: It seems that rhizome will let you send it a graph where there
+;; are multiple edges from a node A to another node B, and it can draw
+;; them separately, but if you want separate drawing properties for
+;; each edge independently, when rhizome calls the function provided
+;; to it as the value of the key :edge->descriptor, each such function
+;; call will have the same arguments A B as the call for all edges
+;; from A to B.  There is nothing that rhizome uses to distinguish one
+;; such call from another.
+
+;; I am considering implementing what I would call a somewhat hackish
+;; approach to work around this property of rhizome, which is to
+;; maintain state and count the number of times that :edge->descriptor
+;; is called for each pair of nodes [A B], and use that count to
+;; return different values for each such A-to-B edge.  That only works
+;; if rhizome calls that function exactly once for each edge in the
+;; graph, but I think that might be what it does.
+
+;; A cleaner way would be if rhizome's representation of a graph used
+;; explicit values to represent each edge, and included that value in
+;; its calls to the :edge->descriptor function.  That would be a
+;; noticeable change to the rhizome API that would break other
+;; people's use of it, if it were made in a future version of rhizome,
+;; unless it were somehow an option.
+
+
+;; Create a map where the keys are ordered pairs of graph nodes [A B].
+;; The values are maps representing information about all of the edges
+;; from node A to B.
+
+;; In those maps, the value assoc'd with key :num-edges is the number
+;; of such parallel edges.
+
+;; The value assoc'd with key :edges is a vector of one map per edge,
+;; where the map contains properties descrbing that edge.
+
+;; Examples: If there is only one, that map will look like:
+;; {:num-edges 1
+;;  :edges [{:field-name-str "x"}]}
+
+;; If there are two such parallel edges, that map will look like:
+;; {:num-edges 2
+;;  :edges [{:field-name-str "x"} {:field-name-str "y"}]}
+
+(defn make-edge-map1 [addr->objmap]
+  (into {}
+        (for [[from-addr from-obj-map] addr->objmap
+              [from-obj-field-name-str to-addr] (:fields from-obj-map)
+              :when (not (nil? to-addr))]
+          [[from-addr to-addr] {:field-name-str from-obj-field-name-str}])))
+
 (defn render-object-graph [g opts]
-  (let [obj->label-str (get opts :label-fn str)
-        addr->obj-old (into {}
-                            (for [obj g]
-                              [(:address obj)
-                               (assoc obj
-                                      :label (obj->label-str (:obj obj))
-                                      :class (class (:obj obj)))]))
-        addr->obj (->> (group-by :address g)
-                       (map-vals first-if-exactly-one)
-                       (map-vals (fn [obj-map]
-                                   (assoc obj-map
-                                          :label (obj->label-str (:obj obj-map))
-                                          :class (class (:obj obj-map))))))
-        _ (assert (= addr->obj-old addr->obj))
+  (let [javaobj->label-str (get opts :label-fn str)
+        addr->objmap (->> (group-by :address g)
+                          (map-vals first-if-exactly-one)
+                          (map-vals (fn [objmap]
+                                      (assoc objmap
+                                             :label (javaobj->label-str (:obj objmap))
+                                             :class (class (:obj objmap))))))
         graph (into {}
-                    (for [[addr obj] addr->obj]
+                    (for [[addr objmap] addr->objmap]
                       [addr
-                       (->> (vals (:fields obj))
-;;                            (map #(if (integer? %)
-;;                                    (get addr->obj %)))
+                       (->> (vals (:fields objmap))
                             (remove nil?)
                             vec)]))
         node-desc (fn [addr]
-                    (let [obj-info (addr->obj addr)
-                          obj (:obj obj-info)]
+                    (let [objmap (addr->objmap addr)
+                          obj (:obj objmap)]
                       {:shape "box"
                        :label (format "@%08x\n%d bytes\npath=%s\n%s"
-                               (:address obj-info)
+                               (:address objmap)
                                ;;format "%d bytes\npath=%s\n%s"
-                               (:size obj-info)
-                               (:path obj-info)
-                               (cond (array? obj)
-                                     (format "array of %d %s"
-                                             (count obj)
-                                             (pr-str
-                                              (array-element-type obj)))
-                                     :else (:label obj-info)))}))
-        edge-map (into {}
-                       (for [[from-addr from-obj-map] addr->obj
-                             [from-obj-field-name-str to-addr] (:fields from-obj-map)
-                             :when (not (nil? to-addr))]
-                         [[from-addr to-addr] {:field-name-str from-obj-field-name-str}]))
+                               (:size objmap)
+                               (:path objmap)
+                               (if (array? obj)
+                                 (format "array of %d %s" (count obj)
+                                         (pr-str (array-element-type obj)))
+                                 (:label objmap)))}))
+        edge-map (make-edge-map1 addr->objmap)
         edge-desc (fn edge-description [addr1 addr2]
-                    (let [edge-info (get edge-map [addr1 addr2])]
-                      (println (format "dbg: addr1=%d addr2=%d edge-info=%s" addr1 addr2 edge-info))
+                    (let [edge-info (get edge-map [addr1 addr2] "unknown_edge")]
+                      ;;(println (format "dbg: addr1=%d addr2=%d edge-info=%s" addr1 addr2 edge-info))
                       {:label (:field-name-str edge-info)}))
         ]
     ;; TBD: I do not know how to achieve it, but it would be nice if
