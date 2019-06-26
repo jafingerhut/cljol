@@ -5,6 +5,7 @@
   (:import (org.openjdk.jol.vm VM))
   (:import (java.lang.reflect Method))
   (:require [clojure.set :as set]
+            [clojure.string :as str]
             [clojure.java.io :as io]
             [clojure.pprint :as pp]
             [rhizome.viz :as viz]
@@ -502,17 +503,41 @@ thread."
     (get new-count-map node-pair)))
 
 
+(def class-name-prefix-abbreviations
+  [
+   {:prefix "java.lang." :abbreviation "j.l."}
+   {:prefix "clojure.lang." :abbreviation "c.l."}
+   ])
+
+
+(defn abbreviated-class-name-str [s]
+  (if-let [x (some (fn [x] (if (str/starts-with? s (:prefix x)) x))
+                   class-name-prefix-abbreviations)]
+    (str (:abbreviation x)
+         (subs s (count (:prefix x))))
+    s))
+
+
 (defn node-label [objmap opts]
   (let [obj (:obj objmap)
         address-str (if (:label-node-with-address? opts)
                       (format "@%08x\n" (:address objmap))
                       "")
+        class-name-str (if (:label-node-with-class? opts)
+                         (if (array? obj)
+                           (format "array of %d %s\n" (count obj)
+                                   (abbreviated-class-name-str
+                                    (pr-str (array-element-type obj))))
+                           (str (abbreviated-class-name-str (pr-str (class obj)))
+                              "\n"))
+                         "")
         path-str (if (:label-node-with-path? opts)
                    (str "path=" (:path objmap) "\n")
                    "")]
-    (format "%s%d bytes\n%s%s"
+    (format "%s%d bytes\n%s%s%s"
             address-str
             (:size objmap)
+            class-name-str
             path-str
             (:label objmap))))
 
@@ -538,8 +563,7 @@ thread."
 
 
 (defn default-array-label [array]
-  (format "array of %d %s" (count array)
-          (pr-str (array-element-type array))))
+  (str-with-limit (vec array) 50))
 
 (defn default-javaobj->str [javaobj]
   (if (array? javaobj)
@@ -551,6 +575,7 @@ thread."
   (let [opts (merge {:render-method :view
                      :node-label-fn default-javaobj->str
                      :label-node-with-address? false
+                     :label-node-with-class? true
                      :label-node-with-path? false}
                     opts)
         javaobj->label-str (:node-label-fn opts)
@@ -662,6 +687,17 @@ thread."
 
 (d/view m1)
 (d/write-dot-file m1 "m1.dot")
+
+(def my-map {:a 1 :b 2 :c 3})
+(d/view my-map)
+
+(def my-map2 {:a 1 :b 2 :c 3 :d 4 :e 5 :f 6 :g 8})
+(d/view my-map2)
+(d/write-dot-file my-map2 "my-map2.dot")
+
+(def my-map3 {:a [1 2] :b "d\u1234of" :c #{:a :b} :d {:e 10 :f 11}})
+(d/view my-map3)
+(d/write-dot-file my-map3 "my-map3.dot")
 
 (def m1b (let [x "a" y "b"] {x y y x :c x}))
 (d/view m1b)
