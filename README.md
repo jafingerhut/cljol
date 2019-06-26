@@ -117,3 +117,12 @@ all.
 It would be nice if there was a way to cause the edges out of Java
 array objects to at least usually be in increasing order of array
 index.  Right now they are fairly arbitrary.
+
+
+## License
+
+Copyright © 2016-2019 Andy Fingerhut
+
+This program and the accompanying materials are made available under the
+terms of the Eclipse Public License 2.0 which is available at
+http://www.eclipse.org/legal/epl-2.0.
