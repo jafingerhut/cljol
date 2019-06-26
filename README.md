@@ -26,12 +26,12 @@ installation instructions if the following do not work:
   * If you use Homebrew: `brew install graphviz`
   * If you use MacPorts: `sudo port install graphviz`
 
-`write-dot-file` will work without GraphViz installed, but it only
-writes a text file in a format expected as input by the GraphViz `dot`
-command.
+The function `write-dot-file` will work without GraphViz installed,
+but it only writes a text file in a format expected as input by the
+GraphViz `dot` command.
 
 ```bash
-$ clj -Sdeps "{:deps {cljol {:git/url \"https://github.com/jafingerhut/cljol\" :sha \"f681a78cde715d66baf21402d89e40d2b91f9cc1\"}}}"
+$ clj -Sdeps '{:deps {cljol {:git/url "https://github.com/jafingerhut/cljol" :sha "f681a78cde715d66baf21402d89e40d2b91f9cc1"}}}'
 ```
 
 There are not yet any packaged releases of `cljol` on Clojars.
