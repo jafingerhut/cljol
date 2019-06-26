@@ -54,6 +54,12 @@ $ dot -Tpdf my-map.dot -o my-map.pdf
 $ dot -Tpng my-map.dot -o my-map.png
 ```
 
+Below is the figure in the file `my-map.png` I get from the last
+command above:
+
+![my-map.png](doc/my-map.png)
+
+
 # Warning messages
 
 Note: I see output like that shown below in my REPL, the first time I
