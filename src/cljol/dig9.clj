@@ -67,6 +67,13 @@
        (address-of fld-val))]))
 
 
+;; Several Java interop calls in the next few lines of code cause
+;; reflection warnings that are not easily eliminated via type hints,
+;; at least not in any way that I know of.  Disable reflection
+;; warnings for this short section of code.
+
+(set! *warn-on-reflection* false)
+
 (defn array-elem-name-and-address [idx array-obj]
   (let [array-idx-val (aget array-obj idx)]
     [(str "[" idx "]")
@@ -87,6 +94,8 @@
 
 (defn gpr->java-obj [gpr]
   (.invoke gpr-obj-method gpr empty-obj-array))
+
+(set! *warn-on-reflection* true)
 
 
 
@@ -471,7 +480,7 @@ thread."
        (map-vals first-if-exactly-one)
        (map-vals (fn [objmap]
                    (assoc objmap
-                          :label (javaobj->label-str (:obj objmap))
+                          :label (str (javaobj->label-str (:obj objmap)))
                           :class (class (:obj objmap)))))))
 
 (defn make-edge-map [addr->objmap]
@@ -495,20 +504,17 @@ thread."
 
 (defn node-label [objmap opts]
   (let [obj (:obj objmap)
-        address-str (if (:label-with-address? opts)
+        address-str (if (:label-node-with-address? opts)
                       (format "@%08x\n" (:address objmap))
                       "")
-        path-str (if (:label-with-path? opts)
+        path-str (if (:label-node-with-path? opts)
                    (str "path=" (:path objmap) "\n")
                    "")]
     (format "%s%d bytes\n%s%s"
             address-str
             (:size objmap)
             path-str
-            (if (array? obj)
-              (format "array of %d %s" (count obj)
-                      (pr-str (array-element-type obj)))
-              (:label objmap)))))
+            (:label objmap))))
 
 
 (defn throw-edge-cb-exception [addr1 addr2 edge-map edge-call-count]
@@ -522,8 +528,32 @@ thread."
            :edge-call-count edge-call-count})))
 
 
+(defn truncate-long-str [s n]
+  (if (> (count s) n)
+    (str (subs s 0 n) " ...")
+    s))
+
+(defn str-with-limit [obj n]
+  (truncate-long-str (str obj) n))
+
+
+(defn default-array-label [array]
+  (format "array of %d %s" (count array)
+          (pr-str (array-element-type array))))
+
+(defn default-javaobj->str [javaobj]
+  (if (array? javaobj)
+    (default-array-label javaobj)
+    (str-with-limit javaobj 50)))
+
+
 (defn render-object-graph [g opts]
-  (let [javaobj->label-str (get opts :label-fn str)
+  (let [opts (merge {:render-method :view
+                     :node-label-fn default-javaobj->str
+                     :label-node-with-address? false
+                     :label-node-with-path? false}
+                    opts)
+        javaobj->label-str (:node-label-fn opts)
         addr->objmap (make-addr->objmap g javaobj->label-str)
         edge-map (make-edge-map addr->objmap)
         graph (into {}
@@ -554,21 +584,12 @@ thread."
     ;; GraphViz .dot file would achieve that in many cases, if not
     ;; all, but not sure how to call and/or modify view-graph and
     ;; graph->dot functions to achieve that.
-    (apply (case (get opts :render-method :view)
+    (apply (case (get opts :render-method)
              :view viz/view-graph
              :dot-str dot/graph->dot)
            [(keys graph) graph :node->descriptor node-desc
             :edge->descriptor edge-desc
             :vertical? false])))
-
-
-(defn truncate-long-str [s n]
-  (if (> (count s) n)
-    (str (subs s 0 n) " ...")
-    s))
-
-(defn str-with-limit [obj n]
-  (truncate-long-str (str obj) n))
 
 
 (defn gen-valid-obj-graph
@@ -663,7 +684,7 @@ thread."
                 (range n))))
 (def m5 (int-map 5))
 (def m50 (int-map 50))
-(def opts {:label-fn #(d/str-with-limit % 50)})
+(def opts {:node-label-fn #(d/str-with-limit % 50)})
 (d/view m5 opts)
 (d/view m50 opts)
 (d/write-dot-file m5 "m5.dot" opts)
