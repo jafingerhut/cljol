@@ -470,8 +470,7 @@ thread."
 
 
 (defn render-object-graph [g opts]
-  (let [
-        obj->label-str (get opts :label-fn str)
+  (let [obj->label-str (get opts :label-fn str)
         addr->obj (into {}
                         (for [obj g]
                           [(:address obj)
