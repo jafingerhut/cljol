@@ -100,8 +100,8 @@
 
 
 
-(defn myexternals [x]
-  (let [parsed-inst (GraphLayout/parseInstance (object-array [x]))
+(defn reachable-objmaps [obj-coll]
+  (let [parsed-inst (GraphLayout/parseInstance (object-array obj-coll))
         addresses (.addresses parsed-inst)]
     (map (fn [addr]
            (let [gpr (. parsed-inst record addr)
@@ -144,7 +144,7 @@
 ;; https://stackoverflow.com/questions/30021092/what-is-something-else-in-jol-graphlayout-output
 
 
-;; Things to check in 'myexternals' return value before processing
+;; Things to check in 'reachable-objmaps' return value before processing
 ;; further, as sanity check, and documentation of the data structure:
 
 ;; Sequence of maps, each containing keys:
@@ -299,7 +299,7 @@
 ;; I have unit-tested any-object-moved? with some simple objects
 ;; like (def pv1 [1 2 3 4 5]) and (def pv2 (conj pv1 6)), and seen
 ;; that most often if I do that followed
-;; by (any-object-moved? (myexternals pv1)) or on pv2, nothing has
+;; by (any-object-moved? (reachable-objmaps pv1)) or on pv2, nothing has
 ;; moved.  If I do (System/gc) and then repeat those calls, typically
 ;; something will have moved.
 
@@ -380,13 +380,14 @@ thread."
 ;; Terminology:
 
 ;; A 'javaobj' is one of the Java objects found while calling
-;; myexternals on the object given to myexternals as a parameter.
+;; reachable-objmaps on the object given to reachable-objmaps as a
+;; parameter.
 
 ;; An 'objmap' is a Clojure map describing exactly one of those
 ;; javaobjs.  An objmap contains at lesat the keys returned by
-;; myexternals, but perhaps also more.
+;; reachable-objmaps, but perhaps also more.
 
-;; The value returned by myexternals is a sequence of objmaps.
+;; The value returned by reachable-objmaps is a sequence of objmaps.
 
 ;; render-object-graph creates data structures and functions needed in
 ;; order to call the rhizome library, using it to draw a figure of the
@@ -605,37 +606,37 @@ thread."
             :vertical? false])))
 
 
-(defn gen-valid-obj-graph
-  "Using myexternals to generate an object graph for a large data
-  structure can result in an invalid obj-graph data structure.  For
-  example, if a GC occurs during the execution of myexternals, or any
-  object is moved in memory for any reason while myexternals is
-  executing, the resulting obj-graph data is significantly less
-  useful.
+(defn consistent-reachable-objmaps
+  "Using reachable-objmaps to find all reachable objects of a large
+  data structure can result in a set of objmaps with inconsistent
+  memory addresses.  For example, if a GC occurs during the execution
+  of reachable-objmaps, or any object is moved in memory for any
+  reason while reachable-objmaps is executing, the resulting
+  collection of objmaps is significantly less useful.
  
-  This function calls myexternals, checks whether the result has no
-  errors according to object-graph-errors, and returns the valid
+  This function calls reachable-objmaps, checks whether the result has
+  no errors according to object-graph-errors, and returns the valid
   obj-graph if there are no errors.
 
   If there were errors, it retries a few times, calling (System/gc)
-  before each further call to myexternals, in hopes that this will
-  make it less likely that objects will move during the execution of
-  myexternals."
-  [obj]
+  before each further call to reachable-objmaps, in hopes that this
+  will make it less likely that objects will move during the execution
+  of reachable-objmaps."
+  [obj-coll]
   (let [max-tries 4]
-    (loop [obj-graph (myexternals obj)
+    (loop [obj-graph (reachable-objmaps obj-coll)
            num-tries 1]
       (let [errs (object-graph-errors obj-graph)]
         (if errs
           (if (< num-tries max-tries)
             (do
               (System/gc)
-              (recur (myexternals obj) (inc num-tries)))
+              (recur (reachable-objmaps obj-coll) (inc num-tries)))
             (throw
              (ex-info
-              (format "myexternals returned erroneous obj-graphs on all of %d tries"
+              (format "reachable-objmaps returned erroneous obj-graphs on all of %d tries"
                       max-tries)
-              {:obj obj :errors errs})))
+              {:obj-coll obj-coll :errors errs})))
           ;; else
           obj-graph)))))
 
@@ -644,7 +645,7 @@ thread."
   ([obj]
    (view obj {}))
   ([obj opts]
-   (render-object-graph (gen-valid-obj-graph obj)
+   (render-object-graph (consistent-reachable-objmaps [obj])
                         (merge opts {:render-method :view}))))
 
 
@@ -653,7 +654,7 @@ thread."
    (write-dot-file obj fname {}))
   ([obj fname opts]
    (with-open [wrtr (io/writer fname)]
-     (let [s (render-object-graph (gen-valid-obj-graph obj)
+     (let [s (render-object-graph (consistent-reachable-objmaps [obj])
                                   (merge opts {:render-method :dot-str}))]
        (spit wrtr s)))))
 
@@ -668,7 +669,7 @@ thread."
 
 (def m1 (let [x :a y :b] {x y y x}))
 (def p1 (GraphLayout/parseInstance (object-array [m1])))
-(def e1 (d/gen-valid-obj-graph m1))
+(def e1 (d/consistent-reachable-objmaps [m1]))
 (d/object-graph-errors e1)
 (count e1)
 (pprint e1)
@@ -739,7 +740,7 @@ thread."
 
 (def m2 (vec (range 70)))
 (def m2 (vec (range 1000)))
-(def e2 (d/gen-valid-obj-graph m2))
+(def e2 (d/consistent-reachable-objmaps [m2]))
 (def err2 (d/object-graph-errors e2))
 (d/write-dot-file m2 "m2.dot")
 
@@ -792,7 +793,7 @@ i1
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (def m1 (let [x :a y :b] {x y y x}))
-(def e1 (d/myexternals m1))
+(def e1 (d/reachable-objmaps [m1]))
 (pprint e1)
 
 (def a2o (d/make-addr->objmap e1 str))

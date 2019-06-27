@@ -7,7 +7,7 @@
 (def two-dee-array (to-array-2d [[1 2 3] [4 5 6] [7 8 9]]))
 
 (deftest a-test
-  (are [x] (let [ex (myexternals x)]
+  (are [x] (let [ex (reachable-objmaps [x])]
              (and (nil? (validate-obj-graph ex))
                   (not (any-objects-overlap? ex))
                   (not (any-object-moved? ex))))
