@@ -699,6 +699,7 @@ thread."
 ;; to generate a string representation of a value forces the lazy
 ;; sequence to be realized.
 ;;(d/write-dot-file lazy-seq1 "lazy-seq1-unrealized.dot")
+(d/view lazy-seq1 opts-no-label)
 (d/write-dot-file lazy-seq1 "lazy-seq1-unrealized.dot" opts-no-label)
 (d/write-dot-file (doall lazy-seq1) "lazy-seq1-realized.dot")
 (d/write-dot-file (doall (map inc (range 100))) "lazy-seq2-realized.dot")
@@ -714,7 +715,8 @@ thread."
 (d/write-dot-file (doall (filter even? (range 100))) "lazy-seq3-realized.dot")
 
 ;; This gives an unchunked lazy sequence:
-(d/write-dot-file (doall (distinct (range 30))) "lazy-seq4-realized.dot")
+(d/view (doall (distinct (range 10))))
+(d/write-dot-file (doall (distinct (range 10))) "lazy-seq4-realized.dot")
 
 (def arr1 (int-array (range 50)))
 (d/view arr1)
