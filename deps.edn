@@ -10,7 +10,16 @@
   :1.10 {:override-deps {org.clojure/clojure {:mvn/version "1.10.0"}}}
   :1.10.1 {:override-deps {org.clojure/clojure {:mvn/version "1.10.1"}}}
   :master {:override-deps {org.clojure/clojure {:mvn/version "1.11.0-master-SNAPSHOT"}}}
+
+  ;; Extra dependency I found useful for getting a list of all classes
+  ;; defined in a running JVM.  I used that to have lots of test cases
+  ;; to compare the results of lists of object fields returned via
+  ;; clojure.reflect/type-reflect vs. JOL's ClassData.  Except for a
+  ;; few minor differences in class names, e.g. "$" characters instead
+  ;; of ".", and "<>" instead of "[]" in array type names, they were
+  ;; identical.
+  :classgraph {:extra-deps {io.github.classgraph/classgraph
+                            {:mvn/version "4.8.42"}}}
   }
  :deps {org.openjdk.jol/jol-core {:mvn/version "0.9"}
-        rhizome {:mvn/version "0.2.5"}
-        io.github.classgraph/classgraph {:mvn/version "4.8.42"}}}
+        rhizome {:mvn/version "0.2.5"}}}

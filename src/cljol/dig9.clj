@@ -1132,20 +1132,45 @@ f1
       d)))
 )
 
+(do
+
 (import '(io.github.classgraph ClassGraph ClassInfo))
-(def scan-result (.. (ClassGraph.) verbose enableAllInfo scan))
+;;(def scan-result (.. (ClassGraph.) verbose enableAllInfo scan))
 (def scan-result (.. (ClassGraph.) enableAllInfo scan))
 (type scan-result)
 (def allkls (into {} (.getAllClassesAsMap scan-result)))
 (type allkls)
 (count allkls)
-(type (first allkls))
-(first allkls)
-(Class/forName "clojure.core$when_first")
-(def kls1 (. (val (first allkls)) loadClass))
-(class kls1)
 
-(pprint (compare-fields-jra-vs-jol kls1))
+(def diffs0
+  (->> allkls
+       (mapv (fn [[class-name-str class-info]]
+               (let [kls (. class-info loadClass)]
+                 {:class-name-str class-name-str
+                  :kls kls
+                  :diffs (compare-fields-jra-vs-jol kls)})))))
+
+(def diffs1
+  (->> diffs0
+       (remove #(= :same (:diffs %)))))
+
+)
+
+(count allkls)
+(count diffs0)
+(count diffs1)
+
+
+;; Separate out differences that are only because JOL
+;; found "__methodImplCache" and java reflection API did not.  Note:
+;; Later I found out that the reason for those differences was that
+;; JOL returned all per-instance fields of a class, whereas
+;; clojure.reflect/type-reflect was only returning the fields declared
+;; directly in that class, ignoring any fields defined in
+;; superclasses.  When I added the `:ancestors true` options to the
+;; clojure.reflect/type-reflect call, they returned the same lists of
+;; per-instance fields (probably for all fields, but I only did
+;; careful checking on the per-instance fields).
 
 (defn only-diff-is-method-impl-cache? [diff]
   (and (vector? diff)
@@ -1158,19 +1183,6 @@ f1
               (map? (first x))
               (= "__methodImplCache" (:field-name (first x)))))))
 
-(def diffs1
-  (->> allkls
-       (map (fn [[class-name-str class-info]]
-              (let [kls (. class-info loadClass)]
-                {:class-name-str class-name-str
-                 :kls kls
-                 :diffs (compare-fields-jra-vs-jol kls)})))
-       (remove #(= :same (:diffs %)))))
-
-;; Separate out differences that are only because JOL
-;; found "__methodImplCache" and java reflection API did not.
-
-(count diffs1)
 (pprint diffs1)
 (def d (nth diffs1 1))
 (pprint (:diffs d))
@@ -1234,7 +1246,5 @@ f1
 (def per-instance-flds (remove #(contains? (:flags %) :static) maybe-flds))
 (count per-instance-flds)
 (pprint per-instance-flds)
-
-(load-file "src/cljol/dig9.clj")
 
   )
