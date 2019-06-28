@@ -2,7 +2,7 @@
   (:gen-class)
   (:import (java.io File))
   (:require [cljol.dig9 :as d]
-            [clojure.string :as str])) 
+            [clojure.string :as str]))
 
 
 (def props (into (sorted-map) (System/getProperties)))
@@ -24,6 +24,21 @@
 (defn fname [s opts]
   (str (:output-dir opts) File/separator
        s "-" stack-desc ".dot"))
+
+
+;; Copied from clojure.math.combinatorics namespace
+
+(defn unchunk
+  "Given a sequence that may have chunks, return a sequence that is 1-at-a-time
+lazy with no chunks. Chunks are good for efficiency when the data items are
+small, but when being processed via map, for example, a reference is kept to
+every function result in the chunk until the entire chunk has been processed,
+which increases the amount of memory in use that cannot be garbage
+collected."
+  [s]
+  (lazy-seq
+   (when (seq s)
+     (cons (first s) (unchunk (rest s))))))
 
 
 (defn gen [obj name opts]
@@ -54,23 +69,71 @@
     (let [map1 (let [x :a y :b] {x y y x})]
       (gen map1 "map1" opts))
 
+;; Interesting!  Self-loop for optimal memory efficiency!
+    (let [opts opts-dont-realize-values
+          repeat-42 (repeat 42)
+          repeat-10-a (repeat 10 "a")]
+      (gen repeat-42 "unlimited-repeat-unrealized" opts)
+      (println "(take 1 repeat-42)" (take 1 repeat-42))
+      (gen repeat-42 "unlimited-repeat-realized1" opts)
+      (println "(take 50 repeat-42)" (take 50 repeat-42))
+      (gen repeat-42 "unlimited-repeat-realized50" opts)
+
+      (gen repeat-10-a "repeat-10-unrealized" opts)
+      (println "(take 1 repeat-10-a)" (take 1 repeat-10-a))
+      (gen repeat-10-a "repeat-10-realized1" opts)
+      (println "(take 4 repeat-10-a)" (take 4 repeat-10-a))
+      (gen repeat-10-a "repeat-10-realized4" opts))
+
+    (let [opts opts-dont-realize-values
+          unchunked-range (unchunk (range 50))]
+
+      (gen unchunked-range "unchunked-range-unrealized" opts)
+      (println "(take 1 unchunked-range)" (take 1 unchunked-range))
+      (gen unchunked-range "unchunked-range-realized1" opts)
+      (println "(take 5 unchunked-range)" (take 5 unchunked-range))
+      (gen unchunked-range "unchunked-range-realized5" opts))
+
+    (let [opts opts-dont-realize-values
+          fib-fn (fn fib-fn [a b]
+                   (lazy-seq (cons a (fib-fn b (+ a b)))))
+          fib-seq (fib-fn 0 1)]
+      (gen fib-seq "lazy-fibonacci-unrealized" opts)
+      (println "(take 1 fib-seq)" (take 1 fib-seq))
+      (gen fib-seq "lazy-fibonacci-realized1" opts)
+      (println "(take 2 fib-seq)" (take 2 fib-seq))
+      (gen fib-seq "lazy-fibonacci-realized2" opts)
+      (println "(take 3 fib-seq)" (take 3 fib-seq))
+      (gen fib-seq "lazy-fibonacci-realized3" opts)
+      
+      (gen [fib-seq (nthrest fib-seq 1) (nthrest fib-seq 2)
+            (nthrest fib-seq 3) (nthrest fib-seq 4)]
+           "lazy-fibonacci-vector-of-nthrest" opts))
+
+    (let [opts opts-with-field-values
+          string-8-bit-char "food"
+          string-non-8-bit-char "f\u1234od"]
+      (gen ["food has only 8-bit characters"
+            "f\u1234od has non-8-bit characters!"]
+           "strings-8-bit-and-not" opts))
+
     ;; Show effects of a lazy sequence being generated on demand,
     ;; without chunking.
-    
+
     ;; Creators of sequences: repeat, range
-    
+
     ;; Functions in core.clj that have special code to handle chunked
     ;; sequences in:
     ;; reduce1
     ;; reverse - from reduce1
     ;; A _lot_ of functions in core use reduce1
-  
+
     ;; sequence
     ;; map map-indexed filter remove (inherited from filter) keep keep-indexed
     ;; random-sample - from filter
     ;; doseq
     ;; iterator-seq
-  
+
     ))
 
 
@@ -79,24 +142,55 @@
 (do
 (use 'cljol.generate)
 (require '[cljol.dig9 :as d])
+
+(def opts-with-field-values {:label-node-with-field-values? true})
+(def opts-dont-realize-values (merge opts-with-field-values
+                                     {:node-label-fn (constantly "")}))
 )
 
-;; Interesting!  Self-loop for optimal memory efficiency!
-(def lazy2 (repeat 42))
-(d/view lazy2 opts-dont-realize-values)
-(take 1 lazy2)
-(take 10 lazy2)
+(defn lazy-fib-sequence* [a b]
+  (lazy-seq (let [sum (+ a b)]
+              (cons sum (lazy-fib-sequence* b sum)))))
 
-;; Generates a linked list of a Repeat object, each with a count 1
-;; less than the one before.
-(def lazy3 (repeat 10 "a"))
-(d/view lazy3 opts-dont-realize-values)
-(take 1 lazy3)
-(take 4 lazy3)
+(defn lazy-fib-sequence [a b]
+  (cons a (cons b (lazy-seq (lazy-fib-sequence* a b)))))
+
+(def fib-seq (lazy-fib-sequence 1 1))
+
+
+(defn fib-fn [a b]
+  (lazy-seq (cons a (fib-fn b (+ a b)))))
+
+(def fib-seq (fib-fn 0 1))
+
+(def opts opts-dont-realize-values)
+(d/view fib-seq opts)
+(println (take 2 fib-seq))
+(println (take 3 fib-seq))
+(println (take 4 fib-seq))
+(println (take 7 fib-seq))
+
+(d/view [fib-seq (nthrest fib-seq 1) (nthrest fib-seq 2)
+         (nthrest fib-seq 3) (nthrest fib-seq 4)] opts)
 
 (def lazy4 (seq (vec (range 100))))
 (d/view lazy4 opts-dont-realize-values)
 (take 1 lazy4)
 (take 4 lazy4)
+
+
+;; It might be nice to figure out how seq on a map is implemented some
+;; day.  Not extremely obvious to me yet from the figures here, but
+;; not surprising as I have never looked at the implementation.
+
+    (let [opts opts-dont-realize-values
+          m {1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20}
+          s (seq m)]
+      (gen s "seq-on-map1-unrealized" opts)
+      (doall (take 1 s))
+      (gen s "seq-on-map1-realized1" opts)
+      (doall (take 3 s))
+      (gen s "seq-on-map1-realized3" opts)
+      (println "(vec s)" (vec s)))
 
 )

@@ -13,7 +13,7 @@ SCRIPTPATH="$( cd "$(dirname "$0")" ; pwd -P )"
 #echo ":${SCRIPTPATH}:"
 #exit 0
 
-OUTPUT_DIR="${SCRIPTPATH}/images"
+OUTPUT_DIR="${SCRIPTPATH}/tryout-images"
 mkdir -p "${OUTPUT_DIR}"
 
 clojure -m cljol.generate "${OUTPUT_DIR}"
