@@ -1,0 +1,55 @@
+digraph {
+graph[dpi=100, rankdir=LR]
+node[fontname="Monospace"]
+edge[fontname="Monospace"]
+
+node686[shape="box", label="80 bytes
+array of 30 char
+[\\f \\ሴ \\o \\d \\space \\h \\a \\s \\space \\n \\o \\n \\- \\8 ..."]
+node687[shape="box", label="24 bytes
+j.l.String
+12: value (ref) ->
+16: hash (int) 511352126
+food has only 8-bit characters"]
+node688[shape="box", label="40 bytes
+c.l.PersistentVector
+12: _hash (int) 0
+16: _hasheq (int) 0
+20: cnt (int) 2
+24: shift (int) 5
+28: root (ref) ->
+32: tail (ref) ->
+36: _meta (ref) nil
+[\"food has only 8-bit characters\" \"fሴod has non-8- ..."]
+node689[shape="box", label="24 bytes
+array of 2 j.l.Object
+[\"food has only 8-bit characters\" \"fሴod has non-8- ..."]
+node690[shape="box", label="80 bytes
+array of 30 char
+[\\f \\o \\o \\d \\space \\h \\a \\s \\space \\o \\n \\l \\y \\s ..."]
+node691[shape="box", label="24 bytes
+c.l.PersistentVector$Node
+12: edit (ref) ->
+16: array (ref) ->
+clojure.lang.PersistentVector$Node@61e3a1fd"]
+node692[shape="box", label="24 bytes
+j.l.String
+12: value (ref) ->
+16: hash (int) -938149940
+fሴod has non-8-bit characters!"]
+node693[shape="box", label="144 bytes
+array of 32 j.l.Object
+[nil nil nil nil nil nil nil nil nil nil nil nil n ..."]
+node694[shape="box", label="16 bytes
+j.u.concurrent.atomic.AtomicReference
+12: value (ref) nil
+null"]
+node687 -> node690[label="value"]
+node688 -> node691[label="root"]
+node688 -> node689[label="tail"]
+node689 -> node687[label="[0]"]
+node689 -> node692[label="[1]"]
+node691 -> node694[label="edit"]
+node691 -> node693[label="array"]
+node692 -> node686[label="value"]
+}
