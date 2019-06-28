@@ -15,6 +15,10 @@ It can create images of these graphs, either popping up a window using
 the `view` function, or writing to a GraphViz dot file using the
 `write-dot-file` function.
 
+`cljol` has been tested most with Clojure 1.10.1 so far, but as far as
+I know should work fine with Clojure 1.5.1 or later.
+
+
 # Quick example
 
 You must install [GraphViz](http://www.graphviz.org) in order for the
