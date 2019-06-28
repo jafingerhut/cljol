@@ -862,6 +862,30 @@ thread."
   "")
 (def opts-no-label (merge opts {:node-label-fn node-label-no-str-calls}))
 
+(def lazy-seq1 (map (fn [x] (println "generating elem for x=" x) (inc x))
+                    (range 100)))
+(nth lazy-seq1 0)
+(nth lazy-seq1 5)
+(nth lazy-seq1 30)
+
+;; Interesting!  Self-loop for optimal memory efficiency!
+(def lazy2 (repeat 42))
+(d/view lazy2 opts-no-label)
+(take 1 lazy2)
+(take 10 lazy2)
+
+;; Generates a linked list of a Repeat object, each with a count 1
+;; less than the one before.
+(def lazy3 (repeat 10 "a"))
+(d/view lazy3 opts-no-label)
+(take 1 lazy3)
+(take 4 lazy3)
+
+(def lazy4 (seq (vec (range 100))))
+(d/view lazy4 opts-no-label)
+(take 1 lazy4)
+(take 4 lazy4)
+
 (def lazy-seq1 (map inc (range 8)))
 ;; I do not know if there is a straightforward way to look at
 ;; lazy-seq1's object graph without realizing it, at least not with
@@ -869,8 +893,10 @@ thread."
 ;; to generate a string representation of a value forces the lazy
 ;; sequence to be realized.
 ;;(d/write-dot-file lazy-seq1 "lazy-seq1-unrealized.dot" opts)
-(d/view lazy-seq1 opts-no-label opts)
+(d/view lazy-seq1 opts-no-label)
 (d/write-dot-file lazy-seq1 "lazy-seq1-unrealized.dot" opts-no-label)
+(println (first lazy-seq1))
+(d/view lazy-seq1 opts-no-label)
 (d/view (doall lazy-seq1) opts)
 (d/write-dot-file (doall lazy-seq1) "lazy-seq1-realized.dot" opts)
 (d/write-dot-file (doall (map inc (range 100))) "lazy-seq2-realized.dot" opts)
