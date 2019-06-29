@@ -180,7 +180,30 @@
 
 
 
-(defn reachable-objmaps [obj-coll]
+(defn reachable-objmaps
+  "Starting from the given collection of objects, follow the
+  references in those objects, and in the objects they reach,
+  etc. recursively, until all such reachable objects have been found.
+  No locking or synchronization of any kind is done, so the results
+  may not be a consistent snapshot of any one point in time.
+
+  Even if all of the objects are immutable, as most Clojure data
+  structures are, or no changes are being made to mutable objects
+  while this function is executing, it is still possible that Java's
+  garbage collector might move objects around in memory while this
+  walk is performed.  In this case the addresses of objects returned
+  will be correct for that object at the time the object's address was
+  determined, but references to that object from other objects may
+  have different addresses.
+
+  Calling (System/gc) before calling this function should make a
+  garbage collection run less likely to occur while this function
+  runs.
+
+  See also consistent-reachable-objmaps, which you may prefer to use
+  over this one for the assistance it provides in trying to return a
+  consistent set of addresses across all objects."
+  [obj-coll]
   (let [parsed-inst (GraphLayout/parseInstance (object-array obj-coll))
         addresses (.addresses parsed-inst)]
     (map (fn [addr]
@@ -440,7 +463,23 @@ thread."
           (partition 2 1 by-addr))))
 
 
-(defn object-graph-errors [g]
+(defn object-graph-errors
+  "Examine a collection of objmaps, as returned by reachable-objmaps,
+  to see if any errors or inconsistencies can be found among them.
+
+  I would expect that the vast majority of time that this function
+  returns no errors, the data is consistent with each other.
+
+  However, in the spirit of openness, I would like to mention that
+  this function deals with objects and their addresses in memory at
+  the time they were 'visited' by the function reachable-objmaps.  If
+  a garbage collection were done during the execution of
+  reachable-objmaps, and not just any garbage collection, but one
+  where two objects with the same class swapped addresses with each
+  other, or in general some set of objects all did some permutation of
+  exchanging addresses with each other, it seems possible that
+  object-graph-errors would not be able to detect that."
+  [g]
   (or 
    (if-let [x (any-object-moved? g)]
      {:err :object-moved :err-data x :data g})
@@ -717,21 +756,21 @@ thread."
 
 
 (defn consistent-reachable-objmaps
-  "Using reachable-objmaps to find all reachable objects of a large
-  data structure can result in a set of objmaps with inconsistent
-  memory addresses.  For example, if a GC occurs during the execution
-  of reachable-objmaps, or any object is moved in memory for any
-  reason while reachable-objmaps is executing, the resulting
-  collection of objmaps is significantly less useful.
+  "As described in the documentation for reachable-objmaps, it can
+  return inconsistent results for the addresses of different objects.
  
-  This function calls reachable-objmaps, checks whether the result has
-  any errors according to object-graph-errors, and returns the valid
-  obj-graph if there are no errors.
+  This function calls reachable-objmaps, then checks whether the
+  result has any errors according to object-graph-errors, returning
+  the consistent obj-graph if no errors were found.
 
-  If there were errors, it retries a few times, calling (System/gc)
-  before each further call to reachable-objmaps, in hopes that this
-  will make it less likely that objects will move during the execution
-  of reachable-objmaps."
+  If errors were found, this function retries a few times,
+  calling (System/gc) before each further call to reachable-objmaps,
+  in hopes that this will make it less likely that objects will move
+  during the execution of reachable-objmaps.
+
+  Note: See object-graph-errors documentation for some notes about a
+  possible way that it might not detect any errors, even though the
+  set of object data is not actually all consistent with each other."
   [obj-coll]
   (let [max-tries 4]
     (loop [obj-graph (reachable-objmaps obj-coll)
