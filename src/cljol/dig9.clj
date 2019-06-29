@@ -725,7 +725,7 @@ thread."
   collection of objmaps is significantly less useful.
  
   This function calls reachable-objmaps, checks whether the result has
-  no errors according to object-graph-errors, and returns the valid
+  any errors according to object-graph-errors, and returns the valid
   obj-graph if there are no errors.
 
   If there were errors, it retries a few times, calling (System/gc)
