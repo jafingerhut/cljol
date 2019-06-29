@@ -20,9 +20,10 @@
   ;; identical.
   :classgraph {:extra-deps {io.github.classgraph/classgraph
                             {:mvn/version "4.8.42"}}}
+  ;; Make this an option for now.  May become required dep later
+  :uber {:extra-deps {ubergraph {:mvn/version "0.5.3"}}}
   ;; - start a Socket REPL on port 50505:
   :socket {:jvm-opts ["-Dclojure.server.repl={:port,50505,:accept,clojure.core.server/repl}"]}
   }
  :deps {org.openjdk.jol/jol-core {:mvn/version "0.9"}
-        ubergraph {:mvn/version "0.5.3"}
         rhizome {:mvn/version "0.2.5"}}}

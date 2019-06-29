@@ -5,6 +5,7 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.10.1"]
                  [org.openjdk.jol/jol-core "0.9"]
+                 [ubergraph "0.5.3"]
                  [rhizome "0.2.5"]]
   :jvm-opts ^:replace [
                        ;;"-XX:+PrintGC"
