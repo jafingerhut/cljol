@@ -8,6 +8,7 @@
             [clojure.string :as str]
             [clojure.java.io :as io]
             [clojure.pprint :as pp]
+            [ubergraph.core :as uber]
             [rhizome.viz :as viz]
             [rhizome.dot :as dot]))
 
@@ -577,26 +578,23 @@ thread."
 
 ;; Examples: If there is only one, that map will look like:
 ;; {:num-edges 1
-;;  :edges [{:field-name-str "x"}]}
+;;  :edges [{:field-name "x"}]}
 
 ;; If there are two such parallel edges, that map will look like:
 ;; {:num-edges 2
-;;  :edges [{:field-name-str "x"} {:field-name-str "y"}]}
+;;  :edges [{:field-name "x"} {:field-name "y"}]}
 
-(defn make-addr->objmap [g javaobj->label-str]
+(defn make-addr->objmap [g]
   (->> (group-by :address g)
-       (map-vals first-if-exactly-one)
-       (map-vals (fn [objmap]
-                   (assoc objmap
-                          :label (str (javaobj->label-str (:obj objmap)))
-                          :class (class (:obj objmap)))))))
+       (map-vals first-if-exactly-one)))
+
 
 (defn make-edge-map [addr->objmap]
   (->> (for [[from-addr from-obj-map] addr->objmap
              [from-obj-field-name-str to-addr] (:fields from-obj-map)
              :when (not (nil? to-addr))]
          {:node-pair [from-addr to-addr]
-          :edge-properties {:field-name-str from-obj-field-name-str}})
+          :edge-properties {:field-name from-obj-field-name-str}})
        (group-by :node-pair)
        (map-vals #(mapv :edge-properties %))))
 
@@ -613,6 +611,7 @@ thread."
 (def class-name-prefix-abbreviations
   [
    {:prefix "java.lang." :abbreviation "j.l."}
+   {:prefix "java.util.concurrent." :abbreviation "j.u.c."}
    {:prefix "java.util." :abbreviation "j.u."}
    {:prefix "clojure.lang." :abbreviation "c.l."}
    ])
@@ -631,52 +630,50 @@ thread."
   (.get fld obj))
 
 
+(defn primitive-class-name? [name-str]
+  (contains? #{"boolean" "byte" "short" "char" "int" "float" "long" "double"}
+             name-str))
+
+
 (defn field-values->str [objmap opts]
   (let [obj (:obj objmap)
         cd (ClassData->map (ClassData/parseClass (class obj)))
         flds (sort-by :vm-offset (:fields cd))]
-   (apply str
-          (map (fn [fld-info]
-                 (let [primitive? (contains? #{"boolean" "byte" "short" "char"
-                                               "int" "float" "long" "double"}
-                                             (:type-class fld-info))
-                       val (obj-field-value obj (:ref-field fld-info))]
-                   (format "%d: %s (%s) %s\n"
-                           (:vm-offset fld-info)
-                           (:field-name fld-info)
-                           (if primitive? (:type-class fld-info) "ref")
-                           (if primitive?
-                             val
-                             (if (nil? val) "nil" "->")))))
-               flds))))
+    (if (seq flds)
+      (str/join "\n"
+                (for [fld-info flds]
+                  (let [primitive? (primitive-class-name? (:type-class fld-info))
+                        val (obj-field-value obj (:ref-field fld-info))]
+                    (format "%d: %s (%s) %s"
+                            (:vm-offset fld-info)
+                            (:field-name fld-info)
+                            (if primitive? (:type-class fld-info) "ref")
+                            (if primitive?
+                              val
+                              (if (nil? val) "nil" "->")))))))))
+
+
+(defn class-description [obj]
+  (if (array? obj)
+    (format "array of %d %s" (count obj) (abbreviated-class-name-str
+                                          (pr-str (array-element-type obj))))
+    (abbreviated-class-name-str (pr-str (class obj)))))
 
 
 (defn node-label [objmap opts]
-  (let [obj (:obj objmap)
-        address-str (if (:label-node-with-address? opts)
-                      (format "@%08x\n" (:address objmap))
-                      "")
-        class-name-str (if (:label-node-with-class? opts)
-                         (if (array? obj)
-                           (format "array of %d %s\n" (count obj)
-                                   (abbreviated-class-name-str
-                                    (pr-str (array-element-type obj))))
-                           (str (abbreviated-class-name-str (pr-str (class obj)))
-                              "\n"))
-                         "")
-        field-vals-str (if (:label-node-with-field-values? opts)
-                         (field-values->str objmap opts)
-                         "")
-        path-str (if (:label-node-with-path? opts)
-                   (str "path=" (:path objmap) "\n")
-                   "")]
-    (format "%s%d bytes\n%s%s%s%s"
-            address-str
-            (:size objmap)
-            class-name-str
-            field-vals-str
-            path-str
-            (:label objmap))))
+  (str/join "\n"
+            (remove nil? [(if (:label-node-with-address? opts)
+                            (format "@%08x" (:address objmap)))
+                          (format "%d bytes" (:size objmap))
+                          (if (:label-node-with-class? opts)
+                            (class-description (:obj objmap)))
+                          (if (:label-node-with-field-values? opts)
+                            (field-values->str objmap opts))
+                          (if (:label-node-with-path? opts)
+                            (str "path=" (:path objmap)))
+                          (:value-str objmap)
+                          (if (:node-label-fn opts)
+                            ((:node-label-fn opts) (:obj objmap)))])))
 
 
 (defn throw-edge-cb-exception [addr1 addr2 edge-map edge-call-count]
@@ -708,16 +705,18 @@ thread."
     (str-with-limit javaobj 50)))
 
 
+(def default-render-opts
+  {:render-method :view
+   :node-label-fn default-javaobj->str
+   :label-node-with-address? false
+   :label-node-with-class? true
+   :label-node-with-field-values? false
+   :label-node-with-path? false})
+
+
 (defn render-object-graph [g opts]
-  (let [opts (merge {:render-method :view
-                     :node-label-fn default-javaobj->str
-                     :label-node-with-address? false
-                     :label-node-with-class? true
-                     :label-node-with-field-values? false
-                     :label-node-with-path? false}
-                    opts)
-        javaobj->label-str (:node-label-fn opts)
-        addr->objmap (make-addr->objmap g javaobj->label-str)
+  (let [opts (merge {:render-method :view} default-render-opts opts)
+        addr->objmap (make-addr->objmap g)
         edge-map (make-edge-map addr->objmap)
         graph (into {}
                     (for [[addr objmap] addr->objmap]
@@ -740,7 +739,7 @@ thread."
                           edge-info (edges-info (dec num-calls))]
 ;;                      (println (format "dbg: addr1=%d addr2=%d num-calls=%d edge-info=%s"
 ;;                                       addr1 addr2 num-calls edge-info))
-                      {:label (:field-name-str edge-info)}))]
+                      {:label (:field-name edge-info)}))]
     ;; TBD: I do not know how to achieve it, but it would be nice if
     ;; array elements were at least usually rendered in order of
     ;; index.  I suspect that putting them in that order into the
@@ -753,6 +752,52 @@ thread."
            [(keys graph) graph :node->descriptor node-desc
             :edge->descriptor edge-desc
             :vertical? false])))
+
+
+(defn add-viz-attributes
+  "Return an augmented version of the graph `graph` with GraphViz
+  attributes to nodes and edges, such as for nodes:
+
+  :shape :label
+
+  and for edges: :label"
+  [graph opts]
+  (let [opts (merge default-render-opts opts)]
+    (as-> graph gr
+      (reduce (fn add-node-attrs [g node]
+                (uber/add-attrs
+                 g node
+                 {:shape "box"
+                  :label (node-label (:objmap (uber/attrs g node)) opts)}))
+              gr (uber/nodes gr))
+      (reduce (fn add-edge-attrs [g edge]
+                (uber/add-attrs
+                 g edge
+                 {:label (:field-name (uber/attrs g edge))}))
+              gr (uber/edges gr)))))
+
+
+(defn object-graph->ubergraph
+  "Create and return an ubergraph graph data structure from the given
+  collection of objmaps.  The return value is a 'multidigraph', 'di'
+  for directed because edges represent references from object A to
+  object B, stored inside of A.  'multi' because from one object A to
+  another object B, there may be multiple references, and we want
+  these to be explicitly represented in the result.
+
+  TBD: Document the attributes present on the nodes and edges in the
+  graph created."
+  [g opts]
+  (-> (uber/multidigraph)
+      (uber/add-nodes-with-attrs* (for [objmap g]
+                                    [(:address objmap) {:objmap objmap}]))
+      (uber/add-edges*
+       (for [from-objmap g
+             [from-obj-field-name-str to-addr] (:fields from-objmap)
+             ;; Do not create edges for null references
+             :when (not (nil? to-addr))]
+         [(:address from-objmap) to-addr
+          {:field-name from-obj-field-name-str}]))))
 
 
 (defn consistent-reachable-objmaps
@@ -814,7 +859,8 @@ thread."
 (import '(java.lang.reflect Method))
 (import '(org.openjdk.jol.info ClassLayout GraphLayout))
 (import '(org.openjdk.jol.vm VM))
-(require '[cljol.dig9 :as d])
+(require '[cljol.dig9 :as d]
+         '[ubergraph.core :as uber])
 
 (load-file "src/cljol/dig9.clj")
 
@@ -827,6 +873,16 @@ thread."
 (d/object-graph-errors e1)
 (count e1)
 (pprint e1)
+
+(def g1 (d/object-graph->ubergraph (d/consistent-reachable-objmaps [m1]) opts))
+(uber/pprint g1)
+(def g1 (d/add-viz-attributes g1 opts))
+
+(def g1 (-> (d/consistent-reachable-objmaps [m1])
+            (d/object-graph->ubergraph opts)
+            (d/add-viz-attributes opts)))
+(uber/viz-graph g1 {:rankdir :LR})
+
 
 (d/view m1 opts)
 (d/write-dot-file m1 "m1.dot" opts)
@@ -1039,7 +1095,7 @@ i1
 (def e1 (d/reachable-objmaps [m1]))
 (pprint e1)
 
-(def a2o (d/make-addr->objmap e1 str))
+(def a2o (d/make-addr->objmap e1))
 (pprint a2o)
 
 (def em (d/make-edge-map a2o))
@@ -1311,5 +1367,7 @@ f1
 (def per-instance-flds (remove #(contains? (:flags %) :static) maybe-flds))
 (count per-instance-flds)
 (pprint per-instance-flds)
+
+(load-file "src/cljol/dig9.clj")
 
   )
