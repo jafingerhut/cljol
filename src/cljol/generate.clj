@@ -54,17 +54,33 @@ collected."
   {:output-dir (nth args 0)})
 
 
+(def opts-show-field-values
+  {:node-label-functions
+   [d/address-hex
+    d/size-bytes
+    d/class-description
+    d/field-values
+    ;;d/path-to-object
+    d/javaobj->str]})
+
+;; Avoid calling clojure.core/str or any similar function on a lazy
+;; sequence if you do not want it to be realized.
+(def opts-dont-realize-values
+  {:node-label-functions
+   [d/address-hex
+    d/size-bytes
+    d/class-description
+    d/field-values
+    ;;d/path-to-object
+    ;;d/javaobj->str
+    ]})
+
 (defn -main [& args]
   (let [cmdline-opts (parse-args args)
         opts-default cmdline-opts
-        opts-with-field-values (merge cmdline-opts
-                                      {:label-node-with-field-values? true})
-
-        ;; Avoid calling clojure.core/str or any similar function on a
-        ;; lazy sequence if you do not want it to be realized.
-        opts-dont-realize-values (merge opts-with-field-values
-                                        {:node-label-fn (constantly "")})
-        opts opts-with-field-values]
+        opts-show-field-values (merge cmdline-opts opts-show-field-values)
+        opts-dont-realize-values (merge cmdline-opts opts-dont-realize-values)
+        opts opts-show-field-values]
 
     (let [map1 (let [x :a y :b] {x y y x})]
       (gen map1 "map1" opts))
@@ -110,9 +126,7 @@ collected."
             (nthrest fib-seq 3) (nthrest fib-seq 4)]
            "lazy-fibonacci-vector-of-nthrest" opts))
 
-    (let [opts opts-with-field-values
-          string-8-bit-char "food"
-          string-non-8-bit-char "f\u1234od"]
+    (let [opts opts-show-field-values]
       (gen ["food has only 8-bit characters"
             "f\u1234od has non-8-bit characters!"]
            "strings-8-bit-and-not" opts))
@@ -140,13 +154,21 @@ collected."
 (comment
 
 (do
-(use 'cljol.generate)
-(require '[cljol.dig9 :as d])
 
-(def opts-with-field-values {:label-node-with-field-values? true})
-(def opts-dont-realize-values (merge opts-with-field-values
-                                     {:node-label-fn (constantly "")}))
+(require 'cljol.generate)
+(require '[cljol.dig9 :as d])
+(in-ns 'cljol.generate)
+
 )
+
+(def opts opts-dont-realize-values)
+(def repeat-42 (repeat 42))
+(def o1 (d/consistent-reachable-objmaps [repeat-42]))
+(def u1 (d/object-graph->ubergraph o1 opts))
+(def g1 (d/add-viz-attributes u1 opts))
+(def r1 (d/graph-of-reachable-objects [repeat-42] opts))
+(d/view repeat-42 opts)
+(println (take 10 repeat-42))
 
 (defn lazy-fib-sequence* [a b]
   (lazy-seq (let [sum (+ a b)]

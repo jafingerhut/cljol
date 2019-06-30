@@ -6,11 +6,7 @@
   (:import (java.lang.reflect Method))
   (:require [clojure.set :as set]
             [clojure.string :as str]
-            [clojure.java.io :as io]
-            [clojure.pprint :as pp]
-            [ubergraph.core :as uber]
-            [rhizome.viz :as viz]
-            [rhizome.dot :as dot]))
+            [ubergraph.core :as uber]))
 
 
 (set! *warn-on-reflection* true)
@@ -504,17 +500,18 @@ thread."
 ;; parameter.
 
 ;; An 'objmap' is a Clojure map describing exactly one of those
-;; javaobjs.  An objmap contains at lesat the keys returned by
+;; javaobjs.  An objmap contains at least the keys returned by
 ;; reachable-objmaps, but perhaps also more.
 
 ;; The value returned by reachable-objmaps is a sequence of objmaps.
 
-;; render-object-graph creates data structures and functions needed in
-;; order to call the rhizome library, using it to draw a figure of the
-;; graph where each node represents a javaobj, and there is an edge
-;; from node A to B if javaobj A has a reference to javaobj B.
+;; The function object-graph->ubergraph creates a graph, as
+;; implemented by the ubergraph library, and that can be used to draw
+;; a figure of the graph using Graphviz, where each node represents a
+;; javaobj, and there is an edge from node A to B if javaobj A has a
+;; reference to javaobj B.
 
-;; In this graph, I want each javaobj in memory to represented by
+;; In this graph, I want each javaobj in memory to be represented by
 ;; exactly one node.  If a javaobj X is referenced from multiple other
 ;; javaobjs, and they are in the graph, too, then there should be
 ;; multiple edges into the node for X.
@@ -524,12 +521,12 @@ thread."
 ;; might be different javaobjs in memory.  The graph drawn here should
 ;; show separate nodes if they are separate javaobjs in memory.
 
-;; rhizome lets the caller pick the values used to represent nodes.
+;; ubergraph lets the caller pick the values used to represent nodes.
 ;; Because I want different javaobjs in memory to be different nodes
 ;; in the graph, one way to do that is to use the numeric address of
-;; the object in memory to represent a graph node for rhizome.  If we
-;; tried using the javaobj itself to represent a node to rhizome, I
-;; suspect that it would treat any two of them that were
+;; the object in memory to represent a graph node for ubergraph.  If
+;; we tried using the javaobj itself to represent a node to ubergraph,
+;; I suspect that it would treat any two of them that were
 ;; clojure.core/= to each other as the same node, even if they were
 ;; different javaobjs in memory.
 
@@ -541,71 +538,13 @@ thread."
 ;; reference, otherwise there could be many of them throughout the
 ;; graph all pointing to a common null node.
 
-;; TBD: It seems that rhizome will let you send it a graph where there
-;; are multiple edges from a node A to another node B, and it can draw
-;; them separately, but if you want separate drawing properties for
-;; each edge independently, when rhizome calls the function provided
-;; to it as the value of the key :edge->descriptor, each such function
-;; call will have the same arguments A B as the call for all edges
-;; from A to B.  There is nothing that rhizome uses to distinguish one
-;; such call from another.
-
-;; I am considering implementing what I would call a somewhat hackish
-;; approach to work around this property of rhizome, which is to
-;; maintain state and count the number of times that :edge->descriptor
-;; is called for each pair of nodes [A B], and use that count to
-;; return different values for each such A-to-B edge.  That only works
-;; if rhizome calls that function exactly once for each edge in the
-;; graph, but I think that might be what it does.
-
-;; A cleaner way would be if rhizome's representation of a graph used
-;; explicit values to represent each edge, and included that value in
-;; its calls to the :edge->descriptor function.  That would be a
-;; noticeable change to the rhizome API that would break other
-;; people's use of it, if it were made in a future version of rhizome,
-;; unless it were somehow an option.
-
-
-;; Create a map where the keys are ordered pairs of graph nodes [A B].
-;; The values are maps representing information about all of the edges
-;; from node A to B.
-
-;; In those maps, the value assoc'd with key :num-edges is the number
-;; of such parallel edges.
-
-;; The value assoc'd with key :edges is a vector of one map per edge,
-;; where the map contains properties descrbing that edge.
-
-;; Examples: If there is only one, that map will look like:
-;; {:num-edges 1
-;;  :edges [{:field-name "x"}]}
-
-;; If there are two such parallel edges, that map will look like:
-;; {:num-edges 2
-;;  :edges [{:field-name "x"} {:field-name "y"}]}
-
-(defn make-addr->objmap [g]
-  (->> (group-by :address g)
-       (map-vals first-if-exactly-one)))
-
-
-(defn make-edge-map [addr->objmap]
-  (->> (for [[from-addr from-obj-map] addr->objmap
-             [from-obj-field-name-str to-addr] (:fields from-obj-map)
-             :when (not (nil? to-addr))]
-         {:node-pair [from-addr to-addr]
-          :edge-properties {:field-name from-obj-field-name-str}})
-       (group-by :node-pair)
-       (map-vals #(mapv :edge-properties %))))
-
-
-(defn new-edge-call-count [m node-pair]
-  (assoc m node-pair (inc (get m node-pair 0))))
-
-(defn update-edge-call-count [edge-call-count-atom node1 node2]
-  (let [node-pair [node1 node2]
-        new-count-map (swap! edge-call-count-atom new-edge-call-count node-pair)]
-    (get new-count-map node-pair)))
+;; One reason I chose ubergraph over the rhizome library is that
+;; ubergraph supports multiple parallel directed edges from a node A
+;; to another node B in the graph at the same time, where each edge
+;; has different attributes, and different labels when drawn using
+;; Graphviz.  This is important for representing a javaobj A with
+;; multiple references to the same javaobj B, but in different fields
+;; of A.
 
 
 (defn address-hex [objmap opts]
@@ -679,19 +618,9 @@ thread."
               (f objmap opts))))
 
 
-(defn throw-edge-cb-exception [addr1 addr2 edge-map edge-call-count]
-  (throw (ex-info
-          (format (str "rhizome called :edge->descriptor fn"
-                       " with args %s %s, but no such edge was specified")
-                  addr1 addr2)
-          {:edge-map edge-map
-           :addr1 addr1
-           :addr2 addr2
-           :edge-call-count edge-call-count})))
-
-
-;; ubergraph 0.5.3 already prepends double quote characters with
-;; backslash, so we should not do so here.
+;; ubergraph 0.5.3 already replaces double quote characters with
+;; backslash (or actually dorothy 0.0.6 does, but ubergraph 0.5.3 uses
+;; that), so we should not do so here.
 (def escapable-characters-not-handled-by-ubergraph-0-5-3 "\\|{}")
 
 (def graphviz-dot-escape-char-map
@@ -728,19 +657,16 @@ thread."
   (str-with-limit (vec array) (get opts :max-value-len 50)))
 
 
-(defn javaobj->str [objmap opts]
+(defn javaobj->str-no-escaping [objmap opts]
   (let [obj (:obj objmap)]
     (if (array? obj)
       (array-label obj opts)
       (str-with-limit obj (get opts :max-value-len 50)))))
 
 
-(defn ubergraph-0-5-3-javaobj->str [objmap opts]
-  (let [s1 (javaobj->str objmap opts)
+(defn javaobj->str [objmap opts]
+  (let [s1 (javaobj->str-no-escaping objmap opts)
         s2 (graphviz-dot-escape-label-string s1)]
-    (println)
-    (println "s1=" s1)
-    (println "s2=" s2)
     s2))
 
 
@@ -772,46 +698,6 @@ thread."
 
 (def default-render-opts {:node-label-functions default-node-labels
                           :max-value-len 50})
-
-
-(defn render-object-graph [g opts]
-  (let [opts (merge {:render-method :view} default-render-opts opts)
-        addr->objmap (make-addr->objmap g)
-        edge-map (make-edge-map addr->objmap)
-        graph (into {}
-                    (for [[addr objmap] addr->objmap]
-                      [addr
-                       (->> (vals (:fields objmap))
-                            (remove nil?)
-                            vec)]))
-        node-desc (fn [addr]
-                    {:shape "box"
-                     :label (node-label (addr->objmap addr) opts)})
-        edge-call-count (atom {})
-        edge-desc (fn edge-description [addr1 addr2]
-                    (let [num-calls (update-edge-call-count edge-call-count
-                                                            addr1 addr2)
-                          node-pair [addr1 addr2]
-                          _ (if-not (contains? edge-map node-pair)
-                              (throw-edge-cb-exception addr1 addr2 edge-map
-                                                       @edge-call-count))
-                          edges-info (edge-map node-pair)
-                          edge-info (edges-info (dec num-calls))]
-;;                      (println (format "dbg: addr1=%d addr2=%d num-calls=%d edge-info=%s"
-;;                                       addr1 addr2 num-calls edge-info))
-                      {:label (:field-name edge-info)}))]
-    ;; TBD: I do not know how to achieve it, but it would be nice if
-    ;; array elements were at least usually rendered in order of
-    ;; index.  I suspect that putting them in that order into the
-    ;; GraphViz .dot file would achieve that in many cases, if not
-    ;; all, but not sure how to call and/or modify view-graph and
-    ;; graph->dot functions to achieve that.
-    (apply (case (get opts :render-method)
-             :view viz/view-graph
-             :dot-str dot/graph->dot)
-           [(keys graph) graph :node->descriptor node-desc
-            :edge->descriptor edge-desc
-            :vertical? false])))
 
 
 (defn add-viz-attributes
@@ -895,23 +781,35 @@ thread."
           obj-graph)))))
 
 
+(defn graph-of-reachable-objects [obj-coll opts]
+  (-> (consistent-reachable-objmaps obj-coll)
+      (object-graph->ubergraph opts)
+      (add-viz-attributes opts)))
+
+
 (defn view
   ([obj]
    (view obj {}))
   ([obj opts]
-   (render-object-graph (consistent-reachable-objmaps [obj])
-                        (merge opts {:render-method :view}))))
+   (let [g (graph-of-reachable-objects [obj] opts)]
+     ;; I have found that I get an error from the dorothy library if I
+     ;; pass all of opts to uber/viz-graph.  I am not sure what can be
+     ;; passed and what not, but it does appear that
+     ;; the :node-label-functions key and value are mentioned in the
+     ;; exception.
+     (uber/viz-graph g
+                     ;;(merge {:rankdir :LR} opts)
+                     {:rankdir :LR}
+                     ))))
 
 
 (defn write-dot-file
   ([obj fname]
    (write-dot-file obj fname {}))
   ([obj fname opts]
-   (with-open [wrtr (io/writer fname)]
-     (let [s (render-object-graph (consistent-reachable-objmaps [obj])
-                                  (merge opts {:render-method :dot-str}))]
-       (spit wrtr s)))))
-
+   (let [g (graph-of-reachable-objects [obj] opts)]
+     (uber/viz-graph g {:rankdir :LR
+                        :save {:filename fname :format :dot}}))))
 
 
 (comment
@@ -924,44 +822,44 @@ thread."
 
 (do
 
+(in-ns 'user)
+
 (require '[cljol.dig9 :as d]
          '[clojure.string :as str]
          '[ubergraph.core :as uber])
+(use 'clojure.pprint)
+
+(in-ns 'cljol.dig9)
 
 (def opts {})
 (def opts
-  (merge d/default-render-opts
-         {:node-label-functions [d/address-hex
-                                 d/size-bytes
-                                 d/class-description
-                                 ;;d/field-values
-                                 ;;d/path-to-object
-                                 d/javaobj->str
+  (merge default-render-opts
+         {:node-label-functions [address-hex
+                                 size-bytes
+                                 class-description
+                                 ;;field-values
+                                 ;;path-to-object
+                                 javaobj->str
                                  ]}))
 
-;;(require '[rhizome.dot :as dot])
-
 (def opts-for-ubergraph
-  (merge d/default-render-opts
-         {:node-label-functions [d/address-hex
-                                 d/size-bytes
-                                 d/class-description
-                                 ;;d/field-values
-                                 ;;d/path-to-object
-                                 d/ubergraph-0-5-3-javaobj->str
+  (merge default-render-opts
+         {:node-label-functions [address-hex
+                                 size-bytes
+                                 class-description
+                                 ;;field-values
+                                 ;;path-to-object
+                                 javaobj->str
                                  ]}))
 
 (def m1 (mapv char "a\"b"))
-(def g1 (-> (d/consistent-reachable-objmaps [m1])
-            (d/object-graph->ubergraph opts-for-ubergraph)
-            (d/add-viz-attributes opts-for-ubergraph)))
-(defn write-dot-file [g fname opts-for-ubergraph]
-  (uber/viz-graph g (merge opts-for-ubergraph
-                           {:save {:filename fname :format :dot}})))
-(write-dot-file g1 "m1-uber.dot" {:rankdir :LR})
-(d/write-dot-file m1 "m1-rhi.dot" opts)
+(def g1 (graph-of-reachable-objects [m1] opts-for-ubergraph))
+(uber/pprint g1)
+(view m1 opts-for-ubergraph)
+(write-dot-file m1 "m1.dot" opts-for-ubergraph)
 
 
+(do
 (def s1 (apply str (map char (range   0  32))))
 (def s2 (apply str (map char (range  32  64))))
 (def s3 (apply str (map char (range  64  96))))
@@ -971,6 +869,7 @@ thread."
 (def s7 (apply str (map char (range 192 224))))
 (def s8 (apply str (map char (range 224 256))))
 (def s9 (apply str (map char (range 256 271))))
+)
 
 (let [extra-opts {:max-value-len 1024}
       opts-for-ubergraph (merge opts-for-ubergraph extra-opts)]
@@ -978,44 +877,36 @@ thread."
           [
            [s1 "s1"]
            [s2 "s2"]
-           [s3 "s3"]
+           ;;[s3 "s3"]
            [s4 "s4"]
-           [s5 "s5"]
-           [s6 "s6"]
-           [s7 "s7"]
-           [s8 "s8"]
-           [s9 "s9"]
+           ;;[s5 "s5"]
+           ;;[s6 "s6"]
+           ;;[s7 "s7"]
+           ;;[s8 "s8"]
+           ;;[s9 "s9"]
            ]]
-    (def g2 (-> (d/consistent-reachable-objmaps [s])
-                (d/object-graph->ubergraph opts-for-ubergraph)
-                (d/add-viz-attributes opts-for-ubergraph)))
-    (write-dot-file g2 (str name-prefix "-uber.dot") {:rankdir :LR})
-    (d/write-dot-file s (str name-prefix "-rhi.dot") (merge opts extra-opts))
+    ;;(def g2 (graph-of-reachable-objects [s] opts-for-ubergraph))
+    (write-dot-file s (str name-prefix ".dot") opts-for-ubergraph)
     ))
 
 )
 
-(pprint (into (sorted-map) d/graphviz-dot-escape-char-map))
+(pprint (into (sorted-map) graphviz-dot-escape-char-map))
 
 
 (def m1 (let [x :a y :b] {x y y x}))
 (def m1 (mapv char "a\"b\\c|d{e}f"))
 (def m1 (mapv char "a\"b"))
 (def p1 (GraphLayout/parseInstance (object-array [m1])))
-(def e1 (d/consistent-reachable-objmaps [m1]))
-(d/object-graph-errors e1)
+(def e1 (consistent-reachable-objmaps [m1]))
+(object-graph-errors e1)
 (count e1)
 (pprint e1)
 
-(def g1 (-> (d/consistent-reachable-objmaps [m1])
-            (d/object-graph->ubergraph opts-for-ubergraph)
-            (d/add-viz-attributes opts-for-ubergraph)))
+(def g1 (graph-of-reachable-objects [m1] opts-for-ubergraph))
 (uber/pprint g1)
 (uber/viz-graph g1 {:rankdir :LR})
-(defn write-dot-file [g fname opts-for-ubergraph]
-  (uber/viz-graph g (merge opts-for-ubergraph
-                           {:save {:filename fname :format :dot}})))
-(write-dot-file g1 "m1-uber.dot" {:rankdir :LR})
+(write-dot-file m1 "m1.dot" opts-for-ubergraph)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1030,7 +921,10 @@ thread."
 
 ;; That version of ubergraph, before passing label strings to dorothy,
 ;; will do these replacements in function
-;; ubergraph.core/escape-backslashes
+;; ubergraph.core/escape-backslashes, but only if you request that it
+;; create node and edge labels for you with the :auto-label true
+;; option.  Without that option, this replacement is not performed on
+;; labels you provide to ubergraph.
 
 ;;   \  replaced with   \\
 
@@ -1049,8 +943,8 @@ thread."
 ;; One way to use ubergraph 0.5.3 and dorothy 0.0.6 without changing
 ;; them, and get the rhizome set of characters escaped exactly once
 ;; each, is, before calling ubergraph to add the labels, to replace
-;; the strings that rhizome does, _except for_ " and \.  Then let
-;; ubergraph replace the \, and let dorothy replace the ".
+;; the strings that rhizome does, _except for_ ".  Then let dorothy
+;; replace the ".
 
 ;; Dorothy has a bug - it only escapes double quote characters in
 ;; labels, but not any of the characters below, so we do it here
@@ -1068,23 +962,19 @@ thread."
 ;;(require '[rhizome.dot :as dot])
 
 (defn javaobj->str-dot-escaping [objmap opts]
-  (let [s1 (d/javaobj->str objmap opts)
+  (let [s1 (javaobj->str objmap opts)
         s2 (escape-label-string s1)]
-    (println)
-    (print "s1=")
-    (pr s1)
-    (println)
-    (print "s2=")
-    (pr s2)
-    (println)
+    ;;(println) (print "s1=") (pr s1)
+    ;;(println) (print "s2=") (pr s2)
+    ;;(println)
     s2))
 
-(def opts-for-ubergraph (merge d/default-render-opts
-                               {:node-label-functions [d/address-hex
-                                                       d/size-bytes
-                                                       d/class-description
-                                                       ;;d/field-values
-                                                       ;;d/path-to-object
+(def opts-for-ubergraph (merge default-render-opts
+                               {:node-label-functions [address-hex
+                                                       size-bytes
+                                                       class-description
+                                                       ;;field-values
+                                                       ;;path-to-object
                                                        javaobj->str-dot-escaping
                                                        ]}))
 
@@ -1114,19 +1004,19 @@ s1
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-(d/view m1 opts)
-(d/write-dot-file m1 "m1-rhi.dot" opts)
+(view m1 opts)
+(write-dot-file m1 "m1.dot" opts)
 
 (def my-map {:a 1 :b 2 :c 3})
-(d/view my-map opts)
+(view my-map opts)
 
 (def my-map2 {:a 1 :b 2 :c 3 :d 4 :e 5 :f 6 :g 8})
-(d/view my-map2 opts)
-(d/write-dot-file my-map2 "my-map2.dot" opts)
+(view my-map2 opts)
+(write-dot-file my-map2 "my-map2.dot" opts)
 
 (def my-map3 {:a [1 2] :b "d\u1234of" :c #{:a :b} :d {:e 10 :f 11}})
-(d/view my-map3 opts)
-(d/write-dot-file my-map3 "my-map3.dot" opts)
+(view my-map3 opts)
+(write-dot-file my-map3 "my-map3.dot" opts)
 
 ;; Versions:
 
@@ -1176,12 +1066,12 @@ s1
 
 (def strings1 (into [] (map #(subs "1234567890abcdefghijklmnopqrstuvwxyz" 0 %)
                             (range 37))))
-(d/view strings1 opts)
+(view strings1 opts)
 
 (def s2 (apply str (map char (range 1234 (+ 1234 36)))))
 (def strings2 (into [] (map #(subs s2 0 %)
                             (range 37))))
-(d/view strings2 opts)
+(view strings2 opts)
 
 (defn node-label-no-str-calls [javaobj]
   "")
@@ -1195,19 +1085,19 @@ s1
 
 ;; Interesting!  Self-loop for optimal memory efficiency!
 (def lazy2 (repeat 42))
-(d/view lazy2 opts-no-label)
+(view lazy2 opts-no-label)
 (take 1 lazy2)
 (take 10 lazy2)
 
 ;; Generates a linked list of a Repeat object, each with a count 1
 ;; less than the one before.
 (def lazy3 (repeat 10 "a"))
-(d/view lazy3 opts-no-label)
+(view lazy3 opts-no-label)
 (take 1 lazy3)
 (take 4 lazy3)
 
 (def lazy4 (seq (vec (range 100))))
-(d/view lazy4 opts-no-label)
+(view lazy4 opts-no-label)
 (take 1 lazy4)
 (take 4 lazy4)
 
@@ -1217,14 +1107,14 @@ s1
 ;; the default options for cljol.  I am pretty sure that calling `str`
 ;; to generate a string representation of a value forces the lazy
 ;; sequence to be realized.
-;;(d/write-dot-file lazy-seq1 "lazy-seq1-unrealized.dot" opts)
-(d/view lazy-seq1 opts-no-label)
-(d/write-dot-file lazy-seq1 "lazy-seq1-unrealized.dot" opts-no-label)
+;;(write-dot-file lazy-seq1 "lazy-seq1-unrealized.dot" opts)
+(view lazy-seq1 opts-no-label)
+(write-dot-file lazy-seq1 "lazy-seq1-unrealized.dot" opts-no-label)
 (println (first lazy-seq1))
-(d/view lazy-seq1 opts-no-label)
-(d/view (doall lazy-seq1) opts)
-(d/write-dot-file (doall lazy-seq1) "lazy-seq1-realized.dot" opts)
-(d/write-dot-file (doall (map inc (range 100))) "lazy-seq2-realized.dot" opts)
+(view lazy-seq1 opts-no-label)
+(view (doall lazy-seq1) opts)
+(write-dot-file (doall lazy-seq1) "lazy-seq1-realized.dot" opts)
+(write-dot-file (doall (map inc (range 100))) "lazy-seq2-realized.dot" opts)
 
 ;; TBD: Find examples that show difference between chunked and
 ;; unchunked sequences.
@@ -1234,47 +1124,47 @@ s1
 ;; results.
 ;; map, filter, remove, keep
 
-(d/write-dot-file (doall (filter even? (range 100))) "lazy-seq3-realized.dot" opts)
+(write-dot-file (doall (filter even? (range 100))) "lazy-seq3-realized.dot" opts)
 
 ;; This gives an unchunked lazy sequence:
-(d/view (doall (distinct (range 10))) opts)
-(d/write-dot-file (doall (distinct (range 10))) "lazy-seq4-realized.dot" opts)
+(view (doall (distinct (range 10))) opts)
+(write-dot-file (doall (distinct (range 10))) "lazy-seq4-realized.dot" opts)
 
 (def arr1 (int-array (range 50)))
-(d/view arr1 opts)
+(view arr1 opts)
 (def arr2 (int-array (range 500)))
-(d/view arr2 opts)
+(view arr2 opts)
 (def arr3 (int-array (range 501)))
-(d/view arr3 opts)
+(view arr3 opts)
 (def arr4 (long-array (range 501)))
-(d/view arr4 opts)
+(view arr4 opts)
 (def s1 "The quick brown fox jumped over the lazy lazy frickin' dog.")
-(d/view s1 opts)
+(view s1 opts)
 (count s1)
 (def s2 "The quick br\u1234wn fox jumped over the lazy lazy frickin' dog.")
-(d/view s2 opts)
+(view s2 opts)
 (count s2)
 
 (def m1b (let [x "a" y "b"] {x y y x :c x}))
-(d/view m1b opts)
+(view m1b opts)
 (def m1c {"abc" "def" (str "de" "f") (str "a" "bc") :c "abc"})
-(d/view m1c opts)
+(view m1c opts)
 (def m1d {"abc" "d\u1234f" (str "d\u1234" "f") (str "a" "bc") :c "abc"})
-(d/view m1d opts)
+(view m1d opts)
 
 (def s1e "The qu\u1234ck brown fox jumped over the lazy dog.")
 (def m1e [s1e (subs s1e 1 10) (subs s1e 3 12) (subs s1e 15 20)])
-(d/view m1e opts)
-(d/write-dot-file m1e "substrings.dot" opts)
+(view m1e opts)
+(write-dot-file m1e "substrings.dot" opts)
 
 (def m2 (vec (range 70)))
 (def m2 (vec (range 1000)))
-(def e2 (d/consistent-reachable-objmaps [m2]))
-(def err2 (d/object-graph-errors e2))
-(d/write-dot-file m2 "m2.dot" opts)
+(def e2 (consistent-reachable-objmaps [m2]))
+(def err2 (object-graph-errors e2))
+(write-dot-file m2 "m2.dot" opts)
 
 (def m2 (vec (range 35)))
-(d/write-dot-file m2 "m2.dot" opts)
+(write-dot-file m2 "m2.dot" opts)
 
 (defn int-map [n]
   (into {} (map (fn [i] [(* 2 i) (inc (* 2 i))])
@@ -1282,11 +1172,11 @@ s1
 (def m5 (int-map 5))
 (def m50 (int-map 50))
 ;; TBD: older style opts
-(def opts {:node-label-fn #(d/str-with-limit % 50)})
-(d/view m5 opts)
-(d/view m50 opts)
-(d/write-dot-file m5 "m5.dot" opts)
-(d/write-dot-file m50 "m50.dot" opts)
+(def opts {:node-label-fn #(str-with-limit % 50)})
+(view m5 opts)
+(view m50 opts)
+(write-dot-file m5 "m5.dot" opts)
+(write-dot-file m50 "m50.dot" opts)
 
 (def m5 (int-map 5))
 (def m50 (int-map 50))
@@ -1307,8 +1197,8 @@ i1
 (print (.toPrintable p1))
 
 (def o1 (System/getProperties))
-(d/view o1 opts)
-(d/write-dot-file o1 "getproperties.dot" opts)
+(view o1 opts)
+(write-dot-file o1 "getproperties.dot" opts)
 (def e1 *e)
 (def ed1 (ex-data e1))
 (keys ed1)
@@ -1317,27 +1207,10 @@ i1
 (:err (:errors ed1))
 
 (def o2 (atom [1 2]))
-(d/view o2 opts)
-(d/write-dot-file o2 "atom.dot" opts)
+(view o2 opts)
+(write-dot-file o2 "atom.dot" opts)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(def m1 (let [x :a y :b] {x y y x}))
-(def e1 (d/reachable-objmaps [m1]))
-(pprint e1)
-
-(def a2o (d/make-addr->objmap e1))
-(pprint a2o)
-
-(def em (d/make-edge-map a2o))
-(pprint em)
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(def a (atom {}))
-(d/update-edge-call-count a 1 2)
-(d/update-edge-call-count a 2 2)
-@a
 
 ;; The images produced by GraphLayout/toImage method seem fairly
 ;; useless to me, from these two examples.
@@ -1349,18 +1222,18 @@ i1
 (def p2 (GraphLayout/parseInstance (object-array [m2])))
 (.toImage p2 "m2.png")
 
-(print (d/class-layout->str ""))
-(print (d/class-layout->str "1"))
-(print (d/class-layout->str "1234"))
-(print (d/class-layout->str "12345678"))
-(print (d/class-layout->str "123456789"))
+(print (class-layout->str ""))
+(print (class-layout->str "1"))
+(print (class-layout->str "1234"))
+(print (class-layout->str "12345678"))
+(print (class-layout->str "123456789"))
 
-(print (d/class-layout->str (int 1)))
-(print (d/class-layout->str 1))
-(print (d/class-layout->str (double 1)))
-(print (d/class-layout->str (int-array [])))
-(print (d/class-layout->str (int-array [0])))
-(print (d/class-layout->str (int-array [0 1 2 3 4 5 6 7])))
+(print (class-layout->str (int 1)))
+(print (class-layout->str 1))
+(print (class-layout->str (double 1)))
+(print (class-layout->str (int-array [])))
+(print (class-layout->str (int-array [0])))
+(print (class-layout->str (int-array [0 1 2 3 4 5 6 7])))
 
 (import '(org.openjdk.jol.info ClassData FieldData))
 
@@ -1401,11 +1274,11 @@ f1
                       field-info-seq)))))
 
 (def s1 "a")
-(print (d/class-layout->str s1))
+(print (class-layout->str s1))
 (pprint (obj->map s1))
 
 (def s2 "\u1234")
-(print (d/class-layout->str s2))
+(print (class-layout->str s2))
 (pprint (obj->map s2))
 
 (import '(org.openjdk.jol.info ClassLayout GraphLayout))
@@ -1464,7 +1337,7 @@ f1
 
 (defn per-class-field-names-and-types-via-jol [kls]
   (->> (ClassData/parseClass kls)
-       d/ClassData->map
+       ClassData->map
        :fields
        (map (fn [m]
               {:field-name (:field-name m)
