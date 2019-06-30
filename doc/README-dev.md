@@ -35,14 +35,19 @@ zprint {:mvn/version "0.4.16"}
 fipp {:mvn/version "0.6.18"}
 ```
 
-The function cljol.dig9/default-javaobj->str as of this writing has a
-default behavior of simply using `clojure.core/str` to convert Java
-object values to strings, then truncating them to at most 50
-characters, adding " ..." at the end if a string is truncated.
+The function cljol.dig9/javaobj->str as of this writing has a default
+behavior of using `clojure.core/str` to convert Java object values to
+strings, then truncating them to at most 50 characters, adding " ..."
+at the end if a string is truncated.  The value of 50 can be
+customized using the key `:max-value-len` in opts, with a value equal
+to the desired maximum.
 
-One can provide a different function to convert Java objects to
-strings as the value of the `:node-label-fn` key in the opts map
-provided to function `cljol.dig9/render-object-graph`.
+One can customize all of the parts of a string used to label nodes in
+the drawn graphs, using the `:node-label-functions` key in opts.  Its
+associated value is a list of functions to call on the "objmap", a map
+containing data about the Java object the node represents.  See
+`cljol.dig9/all-builtin-node-labels` for the names of all such
+functions built into cljol.
 
 
 # Other versions of JOL library
@@ -52,7 +57,7 @@ Central.  When first writing this code in 2015, version 0.3.2 was the
 latest version available, and what the code in the namespace cljol.dig
 was written to use.
 
-In 2019 I copied that to the cljol.dig9 namespace and found the
+In 2019 I copied that to the cljol.dig9 namespace and developed the
 changes necessary to make it work with jol-core version 0.9.
 
 https://search.maven.org/search?q=g:org.openjdk.jol%20AND%20a:jol-core&core=gav
