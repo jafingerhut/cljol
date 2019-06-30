@@ -608,6 +608,14 @@ thread."
     (get new-count-map node-pair)))
 
 
+(defn address-hex [objmap opts]
+  (format "@%08x" (:address objmap)))
+
+
+(defn size-bytes [objmap opts]
+  (format "%d bytes" (:size objmap)))
+
+
 (def class-name-prefix-abbreviations
   [
    {:prefix "java.lang." :abbreviation "j.l."}
@@ -625,6 +633,14 @@ thread."
     s))
 
 
+(defn class-description [objmap opts]
+  (let [obj (:obj objmap)]
+    (if (array? obj)
+      (format "array of %d %s" (count obj) (abbreviated-class-name-str
+                                            (pr-str (array-element-type obj))))
+      (abbreviated-class-name-str (pr-str (class obj))))))
+
+
 (defn obj-field-value [obj ^Field fld]
   (. fld setAccessible true)
   (.get fld obj))
@@ -635,7 +651,7 @@ thread."
              name-str))
 
 
-(defn field-values->str [objmap opts]
+(defn field-values [objmap opts]
   (let [obj (:obj objmap)
         cd (ClassData->map (ClassData/parseClass (class obj)))
         flds (sort-by :vm-offset (:fields cd))]
@@ -653,27 +669,14 @@ thread."
                               (if (nil? val) "nil" "->")))))))))
 
 
-(defn class-description [obj]
-  (if (array? obj)
-    (format "array of %d %s" (count obj) (abbreviated-class-name-str
-                                          (pr-str (array-element-type obj))))
-    (abbreviated-class-name-str (pr-str (class obj)))))
+(defn path-to-object [objmap opts]
+  (str "path=" (:path objmap)))
 
 
 (defn node-label [objmap opts]
   (str/join "\n"
-            (remove nil? [(if (:label-node-with-address? opts)
-                            (format "@%08x" (:address objmap)))
-                          (format "%d bytes" (:size objmap))
-                          (if (:label-node-with-class? opts)
-                            (class-description (:obj objmap)))
-                          (if (:label-node-with-field-values? opts)
-                            (field-values->str objmap opts))
-                          (if (:label-node-with-path? opts)
-                            (str "path=" (:path objmap)))
-                          (:value-str objmap)
-                          (if (:node-label-fn opts)
-                            ((:node-label-fn opts) (:obj objmap)))])))
+            (for [f (:node-label-functions opts)]
+              (f objmap opts))))
 
 
 (defn throw-edge-cb-exception [addr1 addr2 edge-map edge-call-count]
@@ -687,6 +690,31 @@ thread."
            :edge-call-count edge-call-count})))
 
 
+;; ubergraph 0.5.3 already prepends double quote characters with
+;; backslash, so we should not do so here.
+(def escapable-characters-not-handled-by-ubergraph-0-5-3 "\\|{}")
+
+(def graphviz-dot-escape-char-map
+  (merge (into {}
+               (for [printable-ascii-char (map char (range 32 127))]
+                 [printable-ascii-char (str printable-ascii-char)]))
+         {\space " "
+          \tab "\t"
+          \newline "\n"}
+         (into {}
+               (for [c escapable-characters-not-handled-by-ubergraph-0-5-3]
+                 [c (str "\\" c)]))))
+
+(defn graphviz-dot-escape-char-fn [ch]
+  (if-let [replacement (graphviz-dot-escape-char-map ch)]
+    replacement
+    (format "\\\\u%04x" (int ch))))
+
+
+(defn graphviz-dot-escape-label-string [s]
+  (str/escape s graphviz-dot-escape-char-fn))
+
+
 (defn truncate-long-str [s n]
   (if (> (count s) n)
     (str (subs s 0 n) " ...")
@@ -696,22 +724,54 @@ thread."
   (truncate-long-str (str obj) n))
 
 
-(defn default-array-label [array]
-  (str-with-limit (vec array) 50))
-
-(defn default-javaobj->str [javaobj]
-  (if (array? javaobj)
-    (default-array-label javaobj)
-    (str-with-limit javaobj 50)))
+(defn array-label [array opts]
+  (str-with-limit (vec array) (get opts :max-value-len 50)))
 
 
-(def default-render-opts
-  {:render-method :view
-   :node-label-fn default-javaobj->str
-   :label-node-with-address? false
-   :label-node-with-class? true
-   :label-node-with-field-values? false
-   :label-node-with-path? false})
+(defn javaobj->str [objmap opts]
+  (let [obj (:obj objmap)]
+    (if (array? obj)
+      (array-label obj opts)
+      (str-with-limit obj (get opts :max-value-len 50)))))
+
+
+(defn ubergraph-0-5-3-javaobj->str [objmap opts]
+  (let [s1 (javaobj->str objmap opts)
+        s2 (graphviz-dot-escape-label-string s1)]
+    (println)
+    (println "s1=" s1)
+    (println "s2=" s2)
+    s2))
+
+
+(def all-builtin-node-labels
+  [address-hex
+   size-bytes
+   class-description
+   field-values
+   path-to-object
+   javaobj->str])
+
+(def default-node-labels
+  [address-hex
+   size-bytes
+   class-description
+   ;;field-values
+   ;;path-to-object
+   javaobj->str])
+
+(def default-node-labels-except-value
+  [address-hex
+   size-bytes
+   class-description
+   ;;field-values
+   ;;path-to-object
+   ;;javaobj->str
+   ])
+
+
+(def default-render-opts {:node-label-functions default-node-labels
+                          :max-value-len 50})
 
 
 (defn render-object-graph [g opts]
@@ -859,33 +919,203 @@ thread."
 (import '(java.lang.reflect Method))
 (import '(org.openjdk.jol.info ClassLayout GraphLayout))
 (import '(org.openjdk.jol.vm VM))
-(require '[cljol.dig9 :as d]
-         '[ubergraph.core :as uber])
 
 (load-file "src/cljol/dig9.clj")
 
+(do
+
+(require '[cljol.dig9 :as d]
+         '[clojure.string :as str]
+         '[ubergraph.core :as uber])
+
 (def opts {})
-(def opts {:label-node-with-field-values? true})
+(def opts
+  (merge d/default-render-opts
+         {:node-label-functions [d/address-hex
+                                 d/size-bytes
+                                 d/class-description
+                                 ;;d/field-values
+                                 ;;d/path-to-object
+                                 d/javaobj->str
+                                 ]}))
+
+;;(require '[rhizome.dot :as dot])
+
+(def opts-for-ubergraph
+  (merge d/default-render-opts
+         {:node-label-functions [d/address-hex
+                                 d/size-bytes
+                                 d/class-description
+                                 ;;d/field-values
+                                 ;;d/path-to-object
+                                 d/ubergraph-0-5-3-javaobj->str
+                                 ]}))
+
+(def m1 (mapv char "a\"b"))
+(def g1 (-> (d/consistent-reachable-objmaps [m1])
+            (d/object-graph->ubergraph opts-for-ubergraph)
+            (d/add-viz-attributes opts-for-ubergraph)))
+(defn write-dot-file [g fname opts-for-ubergraph]
+  (uber/viz-graph g (merge opts-for-ubergraph
+                           {:save {:filename fname :format :dot}})))
+(write-dot-file g1 "m1-uber.dot" {:rankdir :LR})
+(d/write-dot-file m1 "m1-rhi.dot" opts)
+
+
+(def s1 (apply str (map char (range   0  32))))
+(def s2 (apply str (map char (range  32  64))))
+(def s3 (apply str (map char (range  64  96))))
+(def s4 (apply str (map char (range  96 128))))
+(def s5 (apply str (map char (range 128 160))))
+(def s6 (apply str (map char (range 160 192))))
+(def s7 (apply str (map char (range 192 224))))
+(def s8 (apply str (map char (range 224 256))))
+(def s9 (apply str (map char (range 256 271))))
+
+(let [extra-opts {:max-value-len 1024}
+      opts-for-ubergraph (merge opts-for-ubergraph extra-opts)]
+  (doseq [[s name-prefix]
+          [
+           [s1 "s1"]
+           [s2 "s2"]
+           [s3 "s3"]
+           [s4 "s4"]
+           [s5 "s5"]
+           [s6 "s6"]
+           [s7 "s7"]
+           [s8 "s8"]
+           [s9 "s9"]
+           ]]
+    (def g2 (-> (d/consistent-reachable-objmaps [s])
+                (d/object-graph->ubergraph opts-for-ubergraph)
+                (d/add-viz-attributes opts-for-ubergraph)))
+    (write-dot-file g2 (str name-prefix "-uber.dot") {:rankdir :LR})
+    (d/write-dot-file s (str name-prefix "-rhi.dot") (merge opts extra-opts))
+    ))
+
+)
+
+(pprint (into (sorted-map) d/graphviz-dot-escape-char-map))
+
 
 (def m1 (let [x :a y :b] {x y y x}))
+(def m1 (mapv char "a\"b\\c|d{e}f"))
+(def m1 (mapv char "a\"b"))
 (def p1 (GraphLayout/parseInstance (object-array [m1])))
 (def e1 (d/consistent-reachable-objmaps [m1]))
 (d/object-graph-errors e1)
 (count e1)
 (pprint e1)
 
-(def g1 (d/object-graph->ubergraph (d/consistent-reachable-objmaps [m1]) opts))
-(uber/pprint g1)
-(def g1 (d/add-viz-attributes g1 opts))
-
 (def g1 (-> (d/consistent-reachable-objmaps [m1])
-            (d/object-graph->ubergraph opts)
-            (d/add-viz-attributes opts)))
+            (d/object-graph->ubergraph opts-for-ubergraph)
+            (d/add-viz-attributes opts-for-ubergraph)))
+(uber/pprint g1)
 (uber/viz-graph g1 {:rankdir :LR})
+(defn write-dot-file [g fname opts-for-ubergraph]
+  (uber/viz-graph g (merge opts-for-ubergraph
+                           {:save {:filename fname :format :dot}})))
+(write-dot-file g1 "m1-uber.dot" {:rankdir :LR})
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; This code uses the library: ubergraph 0.5.3
+;; which in turn uses the library: dorothy 0.0.6
+
+;; That version of dorothy when given node and edge attributes with
+;; the key :label and a value that is a string, will do these
+;; replacements in function dorothy.core/escape-quotes:
+
+;;   "  replaced with   \"
+
+;; That version of ubergraph, before passing label strings to dorothy,
+;; will do these replacements in function
+;; ubergraph.core/escape-backslashes
+
+;;   \  replaced with   \\
+
+;; rhizome 0.2.9 makes these replacements in label strings, in
+;; function rhizome.dot/escape-string:
+
+;; Replace any of these single characters:
+;;   \  |  {  }  "
+;; with that character prepended with a backslash character.
+
+
+;; What does dot support in label strings?  I am not 100% sure, but
+;; rhizome has been working pretty well so far with what I have thrown
+;; at it.
+
+;; One way to use ubergraph 0.5.3 and dorothy 0.0.6 without changing
+;; them, and get the rhizome set of characters escaped exactly once
+;; each, is, before calling ubergraph to add the labels, to replace
+;; the strings that rhizome does, _except for_ " and \.  Then let
+;; ubergraph replace the \, and let dorothy replace the ".
+
+;; Dorothy has a bug - it only escapes double quote characters in
+;; labels, but not any of the characters below, so we do it here
+
+(def escapable-characters-not-handled-by-dorothy-0-0-6 "\\|{}")
+
+(defn escape-label-string
+  "Escape characters that are significant for the dot format."
+  [s]
+  (reduce
+   #(str/replace %1 (str %2) (str "\\" %2))
+   s
+   escapable-characters-not-handled-by-dorothy-0-0-6))
+
+;;(require '[rhizome.dot :as dot])
+
+(defn javaobj->str-dot-escaping [objmap opts]
+  (let [s1 (d/javaobj->str objmap opts)
+        s2 (escape-label-string s1)]
+    (println)
+    (print "s1=")
+    (pr s1)
+    (println)
+    (print "s2=")
+    (pr s2)
+    (println)
+    s2))
+
+(def opts-for-ubergraph (merge d/default-render-opts
+                               {:node-label-functions [d/address-hex
+                                                       d/size-bytes
+                                                       d/class-description
+                                                       ;;d/field-values
+                                                       ;;d/path-to-object
+                                                       javaobj->str-dot-escaping
+                                                       ]}))
+
+(def s1 (apply str (map char (range 20))))
+s1
+(apropos "readably")
+(doc *print-readably*)
+(binding [*print-readably* false]
+  (println "\nprintln:")
+  (println s1)
+  (println "\npr:")
+  (pr s1)
+  (println "\nret value is from pr-str:")
+  (pr-str s1)
+  )
+(apropos "print-dup")
+(doc *print-dup*)
+(binding [*print-dup* true]
+  (println s1)
+  (pr s1)
+  )
+
+(pr-str s1)
+(mapv int (take 20 s1))
+(mapv int (take 20 (pr-str s1)))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
 (d/view m1 opts)
-(d/write-dot-file m1 "m1.dot" opts)
+(d/write-dot-file m1 "m1-rhi.dot" opts)
 
 (def my-map {:a 1 :b 2 :c 3})
 (d/view my-map opts)
@@ -955,7 +1185,7 @@ thread."
 
 (defn node-label-no-str-calls [javaobj]
   "")
-(def opts-no-label (merge opts {:node-label-fn node-label-no-str-calls}))
+(def opts-no-label (merge opts {:node-label-functions node-label-no-str-calls}))
 
 (def lazy-seq1 (map (fn [x] (println "generating elem for x=" x) (inc x))
                     (range 100)))
@@ -1051,6 +1281,7 @@ thread."
                 (range n))))
 (def m5 (int-map 5))
 (def m50 (int-map 50))
+;; TBD: older style opts
 (def opts {:node-label-fn #(d/str-with-limit % 50)})
 (d/view m5 opts)
 (d/view m50 opts)
