@@ -2,7 +2,7 @@
   (:import (java.lang.reflect Field Modifier))
   (:import (org.openjdk.jol.info ClassLayout
                                  GraphLayout))
-  (:import (org.openjdk.jol.util VMSupport))
+  ;;(:import (org.openjdk.jol.util VMSupport))
   (:require [clojure.set :as set]
             [clojure.java.io :as io]
             [clojure.pprint :as pp]
@@ -89,7 +89,9 @@
     [(. fld getName)
      (if (nil? fld-val)
        nil
-       (VMSupport/addressOf fld-val))]))
+       ;;(VMSupport/addressOf fld-val)
+       -1
+       )]))
 
 
 (defn array-elem-name-and-address [idx array-obj]
@@ -97,7 +99,9 @@
     [(str "[" idx "]")
      (if (nil? array-idx-val)
        nil
-       (VMSupport/addressOf array-idx-val))]))
+       ;;(VMSupport/addressOf array-idx-val)
+       -1
+       )]))
 
 
 (defn myexternals [x]
@@ -113,7 +117,8 @@
                  flds (per-instance-reference-fields (class obj))]
              {:address addr
               :obj obj
-              :size (VMSupport/sizeOf obj)
+              ;;:size (VMSupport/sizeOf obj)
+              :size -1
               :path (. gpr path)
               :fields (if ref-arr?
                         (into {} (map #(array-elem-name-and-address % obj)
@@ -300,7 +305,8 @@
 (defn object-moved? [obj-info]
   (let [obj (:obj obj-info)
         addr (:address obj-info)
-        cur-addr (VMSupport/addressOf obj)]
+        cur-addr ;;(VMSupport/addressOf obj)
+                 -1]
     (if (not= addr cur-addr)
       (assoc obj-info :cur-address cur-addr))))
 
