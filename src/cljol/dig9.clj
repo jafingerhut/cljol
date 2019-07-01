@@ -6,7 +6,9 @@
   (:import (java.lang.reflect Method))
   (:require [clojure.set :as set]
             [clojure.string :as str]
+            [clojure.pprint :as pp]
             [ubergraph.core :as uber]
+            [ubergraph.alg :as ualg]
             [cljol.graph :as gr]))
 
 
@@ -810,19 +812,67 @@ thread."
             g (uber/nodes g))))
 
 
-#_(defn add-attributes [g attr-coll]
-  (let [supported-attrs #{:total-size-bytes :num-reachable-nodes}
-        unsupported-attrs (set/diff (set attr-coll) supported-attrs)
-        ]
-    
-    ))
-
-
 (defn graph-of-reachable-objects [obj-coll opts]
   (-> (consistent-reachable-objmaps obj-coll)
       (object-graph->ubergraph opts)
       (add-total-size-bytes-node-attr)
       (add-viz-attributes opts)))
+
+
+(defn graph-summary [g start-node-coll]
+  (let [size-bytes-freq (frequencies
+                         (map (fn [n]
+                                (-> (uber/attr g n :objmap) :size))
+                              (uber/nodes g)))
+        total-size-bytes (reduce + (for [[size count] size-bytes-freq]
+                                     (* size count)))
+        ;; TBD: The node collections that ualg/connected-components
+        ;; returns can in some cases contain duplicate nodes.  I do
+        ;; not know why, but just make sets out of them for now to
+        ;; eliminate those.
+        weakly-connected-components (map set (ualg/connected-components g))
+        spaths (ualg/shortest-path g {:start-nodes start-node-coll})
+        nodes-by-distance (group-by :cost
+                                    (for [n (uber/nodes g)]
+                                      (ualg/path-to spaths n)))
+        num-nodes-by-distance (into (sorted-map)
+                                    (for [[k v] nodes-by-distance]
+                                      [k (count v)]))]
+
+    (println (uber/count-nodes g) "objects")
+    (println (uber/count-edges g) "references between them")
+    (println total-size-bytes "bytes total in all objects")
+    (println (if (ualg/dag? g)
+               "no cycles"
+               "has at least one cycle"))
+    (println (count weakly-connected-components) "weakly connected components")
+    (println "number of nodes in all weakly connected components,")
+    (println "from most to fewest nodes:")
+    (println (sort > (map count weakly-connected-components)))
+    (println "map where keys are object size in bytes,")
+    (println "values are number of objects with that size:")
+    (pp/pprint (into (sorted-map) size-bytes-freq))
+    (println)
+    (println (count (filter #(= 0 (uber/out-degree g %)) (uber/nodes g)))
+             "leaf objects (no references to other objects)")
+    (println (count (filter #(= 0 (uber/in-degree g %)) (uber/nodes g)))
+             "root nodes (no reference to them from other objects _in this graph_)")
+
+    (println "map where keys are in-degree of an object,")
+    (println "values are number of objects with that in-degree:")
+    (pp/pprint (into (sorted-map)
+                     (frequencies (map #(uber/in-degree g %) (uber/nodes g)))))
+
+    (println "map where keys are out-degree of an object,")
+    (println "values are number of objects with that out-degree:")
+    (pp/pprint (into (sorted-map)
+                     (frequencies (map #(uber/out-degree g %) (uber/nodes g)))))
+
+    ;; TBD: Add stats for total size of all objects at each distance
+    (println "map where keys are distance of an object from a start node,")
+    (println "values are number of objects with that distance:")
+    (pp/pprint num-nodes-by-distance)
+    ))
 
 
 (defn view
@@ -870,10 +920,13 @@ thread."
 (do
 
 (in-ns 'user)
-
 (require '[cljol.dig9 :as d])
 (in-ns 'cljol.dig9)
 (use 'clojure.pprint)
+
+)
+
+(do
 
 (def opts-for-ubergraph
   (merge default-render-opts
@@ -926,8 +979,28 @@ props1
 (def opts opts-no-value-str)
 (pprint opts)
 
+(defn find-node-for-obj [g obj]
+  (first (filter (fn [node]
+                   (identical? obj (:obj (uber/attr g node :objmap))))
+                 (uber/nodes g))))
+
+(defn sum [obj-coll opts]
+  (let [g (graph-of-reachable-objects obj-coll opts)]
+    (graph-summary g (mapv #(find-node-for-obj g %) obj-coll))
+    g))
+(def o2 (mapv char "a\"b"))
+(def g1 (sum [o1 o2] opts))
+(find-node-for-obj g1 o1)
+
+(def wcc (ualg/connected-components g1))
+(require '[clojure.data :as data])
+(data/diff (set (first wcc)) (set (uber/nodes g1)))
+(count (first wcc))
+(count (set (first wcc)))
+
 (def o1 (mapv char "a\"b"))
 (def o1 props1)
+(def o1 (System/getProperties))
 (def o1 (let [x :a y :b] {x y y x}))
 (def o1 fib-seq)
 (def o1 [fib-seq (nthrest fib-seq 1) (nthrest fib-seq 2)
@@ -946,6 +1019,18 @@ props1
 (pprint trnw)
 (uber/pprint gt1)
 (uber/viz-graph (add-viz-attributes gt1 opts) {:rankdir :LR})
+
+(find-obj g1 o1)
+(def s1 (ualg/shortest-path g1 {:start-nodes [(find-obj g1 o1)]}))
+(type s1)
+(pprint (for [n (uber/nodes g1)]
+          [n (:cost (ualg/path-to s1 n))]))
+(def s1 (ualg/shortest-path g1 {:start-nodes [28997820360]}))
+(def nbd1 (into (sorted-map)
+                (group-by :cost
+                          (for [n (uber/nodes g1)]
+                            (ualg/path-to s1 n)))))
+(pprint nbd1)
 
 (uber/pprint g1)
 (view o1 opts)
