@@ -56,7 +56,7 @@ collected."
 
 (def opts-show-field-values
   {:node-label-functions
-   [d/address-hex
+   [;;d/address-hex
     d/size-bytes
     d/total-size-bytes
     d/class-description
@@ -68,7 +68,7 @@ collected."
 ;; sequence if you do not want it to be realized.
 (def opts-dont-realize-values
   {:node-label-functions
-   [d/address-hex
+   [;;d/address-hex
     d/size-bytes
     d/total-size-bytes
     d/class-description
