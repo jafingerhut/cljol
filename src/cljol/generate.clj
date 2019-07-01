@@ -58,6 +58,7 @@ collected."
   {:node-label-functions
    [d/address-hex
     d/size-bytes
+    d/total-size-bytes
     d/class-description
     d/field-values
     ;;d/path-to-object
@@ -69,6 +70,7 @@ collected."
   {:node-label-functions
    [d/address-hex
     d/size-bytes
+    d/total-size-bytes
     d/class-description
     d/field-values
     ;;d/path-to-object

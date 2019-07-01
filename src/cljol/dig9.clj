@@ -6,7 +6,8 @@
   (:import (java.lang.reflect Method))
   (:require [clojure.set :as set]
             [clojure.string :as str]
-            [ubergraph.core :as uber]))
+            [ubergraph.core :as uber]
+            [cljol.graph :as gr]))
 
 
 (set! *warn-on-reflection* true)
@@ -555,6 +556,13 @@ thread."
   (format "%d bytes" (:size objmap)))
 
 
+(defn total-size-bytes [objmap opts]
+  (format "%d object%s, %d bytes reachable"
+          (:num-reachable-nodes objmap)
+          (if (> (:num-reachable-nodes objmap) 1) "s" "")
+          (:total-size objmap)))
+
+
 (def class-name-prefix-abbreviations
   [
    {:prefix "java.lang." :abbreviation "j.l."}
@@ -673,6 +681,7 @@ thread."
 (def all-builtin-node-labels
   [address-hex
    size-bytes
+   total-size-bytes
    class-description
    field-values
    path-to-object
@@ -681,6 +690,7 @@ thread."
 (def default-node-labels
   [address-hex
    size-bytes
+   total-size-bytes
    class-description
    ;;field-values
    ;;path-to-object
@@ -689,6 +699,7 @@ thread."
 (def default-node-labels-except-value
   [address-hex
    size-bytes
+   total-size-bytes
    class-description
    ;;field-values
    ;;path-to-object
@@ -781,9 +792,36 @@ thread."
           obj-graph)))))
 
 
+(defn object-size-bytes [graph node]
+  (:size (:objmap (uber/attrs graph node))))
+
+
+(defn add-total-size-bytes-node-attr
+  "Adds attributes :total-size (in bytes, derived from the
+  existing :size attribute on the nodes) and :num-reachable-nodes to
+  all nodes of g.  All such attributes are actually inside of the
+  one :objmap attribute that is directly on the ubergraph nodes."
+  [g]
+  (let [trnw (gr/total-reachable-node-size g object-size-bytes)]
+    (reduce (fn [g n]
+              (let [objmap (uber/attr g n :objmap)]
+                (uber/add-attr g n
+                               :objmap (merge objmap (trnw n)))))
+            g (uber/nodes g))))
+
+
+#_(defn add-attributes [g attr-coll]
+  (let [supported-attrs #{:total-size-bytes :num-reachable-nodes}
+        unsupported-attrs (set/diff (set attr-coll) supported-attrs)
+        ]
+    
+    ))
+
+
 (defn graph-of-reachable-objects [obj-coll opts]
   (-> (consistent-reachable-objmaps obj-coll)
       (object-graph->ubergraph opts)
+      (add-total-size-bytes-node-attr)
       (add-viz-attributes opts)))
 
 
@@ -803,20 +841,29 @@ thread."
                      ))))
 
 
-(defn write-dot-file
-  ([obj fname]
-   (write-dot-file obj fname {}))
-  ([obj fname opts]
+(defn write-drawing-file
+  ([obj fname format]
+   (write-drawing-file obj fname format {}))
+  ([obj fname format opts]
    (let [g (graph-of-reachable-objects [obj] opts)]
      (uber/viz-graph g {:rankdir :LR
-                        :save {:filename fname :format :dot}}))))
+                        :save {:filename fname :format (keyword format)}}))
+   ;; uber/viz-graph returns contents of dot file as a string, which
+   ;; can be very long.  Return nil always as a convenience to avoid
+   ;; seeing the string printed in a REPL session.
+   nil))
 
+
+(defn write-dot-file
+  ([obj fname]
+   (write-drawing-file obj fname :dot {}))
+  ([obj fname opts]
+   (write-drawing-file obj fname :dot opts)))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (comment
-
-(import '(java.lang.reflect Method))
-(import '(org.openjdk.jol.info ClassLayout GraphLayout))
-(import '(org.openjdk.jol.vm VM))
 
 (load-file "src/cljol/dig9.clj")
 
@@ -824,39 +871,121 @@ thread."
 
 (in-ns 'user)
 
-(require '[cljol.dig9 :as d]
-         '[clojure.string :as str]
-         '[ubergraph.core :as uber])
-(use 'clojure.pprint)
-
+(require '[cljol.dig9 :as d])
 (in-ns 'cljol.dig9)
-
-(def opts {})
-(def opts
-  (merge default-render-opts
-         {:node-label-functions [address-hex
-                                 size-bytes
-                                 class-description
-                                 ;;field-values
-                                 ;;path-to-object
-                                 javaobj->str
-                                 ]}))
+(use 'clojure.pprint)
 
 (def opts-for-ubergraph
   (merge default-render-opts
          {:node-label-functions [address-hex
                                  size-bytes
                                  class-description
-                                 ;;field-values
+                                 field-values
                                  ;;path-to-object
                                  javaobj->str
                                  ]}))
+(def opts-only-address-on-nodes
+  (merge default-render-opts
+         {:node-label-functions [address-hex
+                                 ;;size-bytes
+                                 ;;class-description
+                                 ;;field-values
+                                 ;;path-to-object
+                                 ;;javaobj->str
+                                 ]}))
+(def opts default-render-opts)
+(def opts opts-for-ubergraph)
+(def opts opts-only-address-on-nodes)
+(def opts (update-in opts-for-ubergraph [:node-label-functions]
+                     conj total-size-bytes))
 
-(def m1 (mapv char "a\"b"))
-(def g1 (graph-of-reachable-objects [m1] opts-for-ubergraph))
+(type (System/getProperties))
+(count (System/getProperties))
+
+(do
+(def props1 (java.util.Properties.))
+(. props1 setProperty "prop1" "val1")
+(. props1 setProperty "prop2" "val2")
+)
+props1
+
+(defn fib-fn [a b]
+  (lazy-seq (cons a (fib-fn b (+ a b)))))
+(def fib-seq (fib-fn 0 1))
+(def o1 (fib-fn 0 1))
+(def opts-no-value-str
+  (merge default-render-opts
+         {:node-label-functions [address-hex
+                                 size-bytes
+                                 total-size-bytes
+                                 class-description
+                                 field-values
+                                 ;;path-to-object
+                                 ;;javaobj->str
+                                 ]}))
+(def opts opts-no-value-str)
+(pprint opts)
+
+(def o1 (mapv char "a\"b"))
+(def o1 props1)
+(def o1 (let [x :a y :b] {x y y x}))
+(def o1 fib-seq)
+(def o1 [fib-seq (nthrest fib-seq 1) (nthrest fib-seq 2)
+         (nthrest fib-seq 3) (nthrest fib-seq 4)])
+(def o1 (vec (range 100)))
+(def o1 (into (vector-of :long) (range 100)))
+(def o1 (long-array (range 100)))
+;; see sharing of data between two similar vectors
+(def o1 (let [v1 (vec (range 50))] (list v1 (conj v1 50))))
+(def o1 (let [v1 (into (vector-of :long) (range 100))]
+          (list v1 (conj v1 100))))
+
+(def g1 (graph-of-reachable-objects [o1] opts))
+(def gt1 (add-total-size-bytes-node-attr g1))
+(def trnw (gr/total-reachable-node-size gt1 object-size-bytes))
+(pprint trnw)
+(uber/pprint gt1)
+(uber/viz-graph (add-viz-attributes gt1 opts) {:rankdir :LR})
+
 (uber/pprint g1)
-(view m1 opts-for-ubergraph)
-(write-dot-file m1 "m1.dot" opts-for-ubergraph)
+(view o1 opts)
+(write-dot-file o1 "o1.dot" opts)
+(write-drawing-file o1 "o1.pdf" :pdf opts)
+
+(uber/count-nodes g1)
+(uber/count-edges g1)
+(ualg/scc g1)
+(map set (ualg/scc g1))
+(frequencies (map count (ualg/scc g1)))
+(dissoc (group-by count (ualg/scc g1)) 1)
+
+(uber/nodes g1)
+(uber/edges g1)
+(uber/has-node? g1 1)
+(uber/has-node? g1 28998500328)
+(uber/has-node? g1 {:a 1 :b 2})
+
+(def g1 (uber/multidigraph 1 2 3 4
+                           [1 2] [3 1] [2 3] [3 4]))
+(def g1 (uber/multidigraph 1 2 3 4
+                           [1 2] [1 3] [2 3] [3 4]))
+(def g1 (uber/multidigraph 1 2 3 4
+                           [1 2] [1 3] [2 3] [3 4] [4 1]))
+(def g1 (uber/multidigraph 1 2 3 4
+                                 [1 3] [2 3] [3 4]))
+(def g1 (uber/multidigraph 1 2 3 4
+                           [1 2] [3 4] [4 3]))
+(uber/pprint g1)
+(uber/viz-graph g1 {:auto-label true})
+(dag-reachable-nodes g1)
+(reachable-nodes g1)
+
+(def sccg-and-nodemap (scc-graph g1))
+(uber/pprint (:scc-graph sccg-and-nodemap))
+(uber/viz-graph (:scc-graph sccg-and-nodemap) {:auto-label true})
+
+(ualg/topsort g1)
+(ualg/topsort (:scc-graph sccg-and-nodemap))
 
 
 (do

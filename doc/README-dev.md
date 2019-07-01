@@ -105,3 +105,59 @@ code, but as of Aug 2015 I could only find it here on Github:
     https://github.com/msteindorfer/memory-measurer
 
 Another project: http://sourceforge.net/projects/sizeof/
+
+
+# Development thoughts on graph structures and summary statistics
+
+In particular, a summary statistic I will call total-size, which is
+"the total number of bytes of memory occupied by this object, plus all
+objects reachable from it through following a path of one or more
+references, is N bytes".
+
+For a tree structure of references, total-size is easy to calculate
+for all nodes in a single linear time walk of the tree.
+
+What about for a directed acyclic graph?  If an object A references
+both B and C, it is not in general correct to calculate the total-size
+of A by adding the total-size of B plus the total-size of C plus the
+size of A, because there might be an arbitrary overlap in the set of
+objects reachable starting at B, and the set of objects reachable
+starting at C, i.e. all such objects might be in common, only some, or
+none.
+
+It does seem like it would be correct to do a topological sort of the
+DAG nodes, then iterate through them in the reverse of that
+topological order.  When a node is visited in this order, determine
+the _set_ of all objects reachable from that node, which should be
+itself plus the union of all objects reachable from each of the nodes
+it directly references.  The total-size is then the sum of sizes of
+all objects in that set.
+
+Topological sort of a DAG can be done in linear time, and each node
+would only be visited one time in that iteration, but the union
+operations are not constant time.  In general they are about linear
+(i.e. O(N log N) with Clojure's set implementations) in the size of
+the sets involved, so it seems like the entire operation could be
+about O(N^2) in the worst case.
+
+I cannot think of a way right now to calculate total-size for all
+nodes faster than this.
+
+For a directed graph with cycles, the set of all strongly connected
+components can be found in linear time.  Every node within one
+strongly connected component can reach all others in the component.
+Then the graph can be viewed as a directed acyclic graph _of_
+components.
+
+ubergraph imports and provides to users the `ubergraph.alg/scc`
+function for calculating strongly connected components.
+
+From those components, we can create another graph that I will call
+the scc-graph (for strongly connected component graph).  Each node of
+the scc-graph corresponds to a set of nodes from the original graph,
+all that are in the same scc.  There is an edge from node A to node B
+in the scc-graph if, in the original graph, any node in set A has an
+edge to any node in set B.
+
+The scc-graph is a DAG, and then we can use the method described above
+on that DAG.
