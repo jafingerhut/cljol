@@ -688,7 +688,7 @@ thread."
    javaobj->str])
 
 (def default-node-labels
-  [address-hex
+  [;;address-hex
    size-bytes
    total-size-bytes
    class-description
@@ -697,7 +697,7 @@ thread."
    javaobj->str])
 
 (def default-node-labels-except-value
-  [address-hex
+  [;;address-hex
    size-bytes
    total-size-bytes
    class-description
