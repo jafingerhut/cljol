@@ -1,0 +1,16 @@
+digraph {
+graph [layout=dot,rankdir=LR];
+"26475463296" [shape=box,label="24 bytes
+2 objects, 48 bytes reachable
+j.l.String
+12: value (ref) ->
+16: hash (int) 0
+20: coder (byte) 1
+￿"];
+"26475463680" [shape=box,label="24 bytes
+1 object, 24 bytes reachable
+array of 2 byte
+
+[-1 -1]"];
+"26475463296" -> "26475463680" ["field-name"=value,label=value];
+} 

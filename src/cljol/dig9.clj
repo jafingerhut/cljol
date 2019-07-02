@@ -628,30 +628,20 @@ thread."
               (f objmap opts))))
 
 
-;; ubergraph 0.5.3 already replaces double quote characters with
+;; ubergraph 0.5.3 already prefixes double quote characters with a
 ;; backslash (or actually dorothy 0.0.6 does, but ubergraph 0.5.3 uses
-;; that), so we should not do so here.
-(def escapable-characters-not-handled-by-ubergraph-0-5-3 "\\|{}")
+;; that), so we should not do so here, so do not do that here.
 
 (def graphviz-dot-escape-char-map
-  (merge (into {}
-               (for [printable-ascii-char (map char (range 32 127))]
-                 [printable-ascii-char (str printable-ascii-char)]))
-         {\space " "
-          \tab "\t"
-          \newline "\n"}
-         (into {}
-               (for [c escapable-characters-not-handled-by-ubergraph-0-5-3]
-                 [c (str "\\" c)]))))
-
-(defn graphviz-dot-escape-char-fn [ch]
-  (if-let [replacement (graphviz-dot-escape-char-map ch)]
-    replacement
-    (format "\\\\u%04x" (int ch))))
-
+  {
+   (char 0) "\\\\u0000"
+   (char 65534) "\\\\ufffe"
+   (char 65535) "\\\\uffff"
+   \\ "\\\\"
+   })
 
 (defn graphviz-dot-escape-label-string [s]
-  (str/escape s graphviz-dot-escape-char-fn))
+  (str/escape s graphviz-dot-escape-char-map))
 
 
 (defn truncate-long-str [s n]
@@ -926,8 +916,6 @@ thread."
 
 )
 
-(do
-
 (def opts-for-ubergraph
   (merge default-render-opts
          {:node-label-functions [address-hex
@@ -1083,6 +1071,10 @@ props1
 (def s7 (apply str (map char (range 192 224))))
 (def s8 (apply str (map char (range 224 256))))
 (def s9 (apply str (map char (range 256 271))))
+(def s10 (apply str (map char (range (- 65536 32) 65536))))
+(def s11 (apply str (map char (range (- 0xd800 16) (+ 0xd800 16)))))
+(def s11 (apply str (map char (range (- 0xd800 16) (+ 0xd800 16)))))
+(def s12 (apply str (map char (range (- 0xe000 16) (+ 0xe000 16)))))
 )
 
 (let [extra-opts {:max-value-len 1024}
@@ -1091,19 +1083,21 @@ props1
           [
            [s1 "s1"]
            [s2 "s2"]
-           ;;[s3 "s3"]
+           [s3 "s3"]
            [s4 "s4"]
-           ;;[s5 "s5"]
-           ;;[s6 "s6"]
-           ;;[s7 "s7"]
-           ;;[s8 "s8"]
-           ;;[s9 "s9"]
+           [s5 "s5"]
+           [s6 "s6"]
+           [s7 "s7"]
+           [s8 "s8"]
+           [s9 "s9"]
+           [s10 "s10"]
+           [s11 "s11"]
+           [s12 "s12"]
            ]]
     ;;(def g2 (graph-of-reachable-objects [s] opts-for-ubergraph))
     (write-dot-file s (str name-prefix ".dot") opts-for-ubergraph)
+    (write-drawing-file s (str name-prefix ".pdf") :pdf opts-for-ubergraph)
     ))
-
-)
 
 (pprint (into (sorted-map) graphviz-dot-escape-char-map))
 

@@ -133,6 +133,39 @@ collected."
             "f\u1234od has non-8-bit characters!"]
            "strings-8-bit-and-not" opts))
 
+    (let [opts (merge opts-show-field-values
+                      {:max-value-len 200})]
+      (doseq [[name min-char-code max-char-code]
+              [
+               ["s00-00"   0  1]
+               ["s00"   0  32]
+               ["s01"  32  64]
+               ["s02"  64  96]
+               ["s03"  96 128]
+               ["s04" 128 160]
+               ["s05" 160 192]
+               ["s06" 192 224]
+               ["s07" 224 256]
+               ["s08" 256 271]
+               ["s09" (- 65536 32) 65536]
+               ["s09-00" (- 65536 32) (- 65536 31)]
+               ["s09-01" (- 65536 31) (- 65536 30)]
+               ["s09-02" (- 65536 30) (- 65536 29)]
+               ["s09-03" (- 65536 29) (- 65536 28)]
+               ["s09-04" (- 65536 28) (- 65536 27)]
+
+               ["s09-29" (- 65536 3) (- 65536 2)]
+               ["s09-30" (- 65536 2) (- 65536 1)]
+               ["s09-31" (- 65536 1) (- 65536 0)]
+
+               ["s10" (- 0xd800 16) (+ 0xd800 16)]
+               ["s11" (- 0xd800 16) (+ 0xd800 16)]
+               ["s12" (- 0xe000 16) (+ 0xe000 16)]
+               ]]
+        (let [s (apply str (map char (range min-char-code max-char-code)))]
+          (gen s name opts)
+          (gen (seq s) (str "c" name) opts))))
+
     ;; Show effects of a lazy sequence being generated on demand,
     ;; without chunking.
 
