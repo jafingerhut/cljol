@@ -630,7 +630,7 @@ thread."
 
 ;; ubergraph 0.5.3 already prefixes double quote characters with a
 ;; backslash (or actually dorothy 0.0.6 does, but ubergraph 0.5.3 uses
-;; that), so we should not do so here, so do not do that here.
+;; that), so we should not do so here.
 
 (def graphviz-dot-escape-char-map
   {
