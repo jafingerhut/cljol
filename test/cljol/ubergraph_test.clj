@@ -1,15 +1,31 @@
 (ns cljol.ubergraph-test
   (:require [clojure.test :refer :all]
+            [clojure.java.shell :as sh]
             [ubergraph.core :as uber]))
 
 
+(defn sh-out [& args]
+  (let [{:keys [exit out err]} (apply sh/sh args)]
+    (println "exit status" exit)
+    (println "out" out)
+    (println "err" err)))
+
 (defn gen [g basename]
-  (doseq [format [:dot]]
-    (let [fname (str basename "." (name format))]
-      (println "Writing file" fname "...")
-      (uber/pprint g)
-      (uber/viz-graph g {:save {:filename (str basename "." (name format))
-                                :format format}}))))
+  (println "Writing file" (str basename ".dot") "...")
+  (uber/viz-graph g {:auto-label false
+                     :save {:filename (str basename ".dot")
+                            :format :dot}})
+  (println "Gen file" (str basename ".pdf") "...")
+  (sh-out "dot" "-Tpdf" (str basename ".dot")
+          "-o" (str basename ".pdf"))
+  (println "Writing file" (str basename "-auto.dot") "...")
+  (uber/viz-graph g {:auto-label true
+                     :save {:filename (str basename "-auto.dot")
+                            :format :dot}})
+  (println "Gen file" (str basename "-auto.pdf") "...")
+  (sh-out "dot" "-Tpdf" (str basename "-auto.dot")
+          "-o" (str basename "-auto.pdf"))
+  )
 
 
 (deftest graphs-with-labels-bad-for-graphviz-dot
