@@ -684,7 +684,7 @@ thread."
    size-bytes
    total-size-bytes
    class-description
-   ;;field-values
+   field-values
    ;;path-to-object
    javaobj->str])
 
@@ -693,7 +693,7 @@ thread."
    size-bytes
    total-size-bytes
    class-description
-   ;;field-values
+   field-values
    ;;path-to-object
    ;;javaobj->str
    ])

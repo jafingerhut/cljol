@@ -45,13 +45,17 @@ In the REPL:
 (def my-map {:a 1 :b 2 :c 3})
 (d/view my-map)
 (d/write-dot-file my-map "my-map.dot")
+(d/write-drawing-file my-map "my-map.pdf" :pdf)
 ```
 
 See the "Warning messages" section below for messages that you are
 likely to see when using this code.
 
-To convert a GraphViz dot file into one of many different image
-formats:
+Graphviz dot files are a fairly simple text file format you can read
+in any text editor, and convert to many other graphic formats.  You
+need not use the commands below to create these other formats, as the
+example of creating a PDF format file above shows, but below are some
+sample commands you can run in a shell to do this conversion:
 
 ```bash
 $ dot -Tpdf my-map.dot -o my-map.pdf
@@ -64,9 +68,27 @@ command above.
 Each rectangle is a Java object.  By default each shows:
 
 * the object's size
+* the number of objects reachable from that object, via following a
+  path of references starting from that object, which includes that
+  object itself.  Also the total size in bytes of all of those
+  reachable objects.
 * its type, usually a class name, with common prefixes like
   "clojure.lang." replaced with "c.l." and "java.lang." replaced with
   "j.l.".  Java arrays are shown as "array of N `class-name`".
+* A sequence of lines, one per field stored in the object.  This is
+  all per-instance fields (i.e. not declared static in Java) defined
+  for the object's class, and all of its superclasses.  Each is listed
+  with:
+** its byte offset from the beginning of the object in memory where
+   the field is stored
+** the name of the field
+** its type, in parentheses
+** the value of the field
+* All references to other objects only show "ref" as the type.  The
+  value of a "ref" field is shown as "nil" if it is a Clojure nil
+  value (i.e. Java null), or `->` if the reference is to another
+  object -- you may find the actual class of the referenced object by
+  following the edge labeled with the field name that leaves the node.
 * a string representation of the object's value
 
 The string representation is by default limited to 50 characters, with
