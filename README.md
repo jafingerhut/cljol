@@ -42,7 +42,7 @@ In the REPL:
 
 ```
 (require '[cljol.dig9 :as d])
-(def my-map {:a 1 :b 2 :c 3})
+(def my-map {:a 1 :b "foobar" :c 3.5})
 (d/view my-map)
 (d/write-dot-file my-map "my-map.dot")
 (d/write-drawing-file my-map "my-map.pdf" :pdf)

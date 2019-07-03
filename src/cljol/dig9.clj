@@ -910,7 +910,7 @@ thread."
      ;; passed and what not, but it does appear that
      ;; the :node-label-functions key and value are mentioned in the
      ;; exception.
-     (uber/viz-graph (keep-only-dot-safe-attrs) g
+     (uber/viz-graph (keep-only-dot-safe-attrs g)
                      ;;(merge {:rankdir :LR} opts)
                      {:rankdir :LR}))))
 
