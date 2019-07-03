@@ -252,6 +252,39 @@ functions use keys in the node and edge attribute maps to affect some
 aspects of the drawings, e.g. the `:label` key is used to generate the
 labels.
 
+Another thing that can be interesting to see is the fraction of
+objects shared between a persistent collection, and the persistent
+collection created by making a small change to the first collection.
+
+```
+(def v1 (vec (range 5)))
+(def v2 (conj v1 5))
+(def g (sum [v1 v2]))
+
+;; Create a graph from g, different because of some additional
+;; attributes added to the nodes by the function
+;; add-attributes-by-reachability
+
+;; Any node reachable ":only-from" object v1 will have its attributes
+;; augmented by adding the `:color "red"`.  Any node reachable only
+;; from object v2 will have color green.  Any node reachable from more
+;; than one root node will be blue, and any reachable from no root
+;; will be colored gray.
+
+(def g2 (add-attributes-by-reachability g
+         [{:only-from v1
+           :attrs {:color "red"}}
+          {:only-from v2
+           :attrs {:color "green"}}
+          {:from-multiple true
+           :attrs {:color "blue"}}
+          {:from-none true
+           :attrs {:color "gray"}}]))
+
+(view-graph g2)
+(view-graph g2 {:save {:filename "g2.pdf" :format :pdf}})
+```
+
 
 # Possible future work
 

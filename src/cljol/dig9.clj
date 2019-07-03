@@ -550,6 +550,10 @@ thread."
 ;; of A.
 
 
+(defn address-decimal [objmap opts]
+  (str (:address objmap)))
+
+
 (defn address-hex [objmap opts]
   (format "@%08x" (:address objmap)))
 
@@ -826,6 +830,43 @@ thread."
       (add-viz-attributes opts)))
 
 
+(defn add-attributes-by-reachability [g attr-maps]
+  (let [from-multiple-attrs (-> (filter #(:from-multiple %) attr-maps)
+                                first :attrs)
+        from-none-attrs (-> (filter #(:from-none %) attr-maps)
+                            first :attrs)
+        start-objs (->> (filter #(contains? % :only-from) attr-maps)
+                        (map (fn [attr-map]
+                               (assoc
+                                attr-map :node
+                                (find-node-for-obj g (:only-from attr-map))))))
+        start-node-map (group-by :node start-objs)
+        reachable-node-map-from-sets (gr/reachable-nodes g)
+        reachable-node-map (into {}
+                                 (for [[from-nodes to-nodes]
+                                       reachable-node-map-from-sets
+                                       from-node from-nodes]
+                                   [from-node to-nodes]))
+        nodes-reachable-from
+        (->> (into []
+                   (for [start-node (map :node start-objs)
+                         reachable-node (reachable-node-map start-node)]
+                     {:start-node start-node :reachable-node reachable-node}))
+             (group-by :reachable-node))]
+    (reduce (fn [g n]
+              (uber/add-attrs
+               g n
+               (let [num-starts-reached-from (count (nodes-reachable-from n))]
+                 (cond
+                   (zero? num-starts-reached-from) from-none-attrs
+                   (= 1 num-starts-reached-from)
+                   (let [start-node (-> (nodes-reachable-from n)
+                                        first :start-node)]
+                     (get-in start-node-map [start-node 0 :attrs]))
+                   :else from-multiple-attrs))))
+            g (uber/nodes g))))
+
+
 (defn graph-summary [g]
   (let [size-bytes-freq (frequencies (map #(uber/attr g % :size)
                                           (uber/nodes g)))
@@ -992,6 +1033,50 @@ thread."
 (def opts opts-only-address-on-nodes)
 (def opts (update-in opts-for-ubergraph [:node-label-functions]
                      conj total-size-bytes))
+
+(def o1 (vec (range 5)))
+(def o2 (conj o1 5))
+(d/view [o1 o2])
+(def opts {:node-label-functions [address-decimal
+           size-bytes
+           total-size-bytes
+           class-description
+           field-values
+           ;;path-to-object
+                                  javaobj->str]
+           :max-value-len 50})
+
+(def o1 (vec (range 30)))
+(def o2 (conj o1 30))
+
+(def o1 (vec (range 32)))
+(def o2 (conj o1 32))
+
+(def o1 (set (range 32)))
+(def o2 (conj o1 32))
+
+(def g (sum [o1 o2] opts))
+
+(def g2 (add-attributes-by-reachability
+         g
+         [
+          {:only-from o1
+           :attrs {:color "red"}}
+          {:only-from o2
+           :attrs {:color "green"}}
+          {:from-multiple true
+           :attrs {:color "blue"}}
+          {:from-none true
+           :attrs {:color "gray"}}
+          ]))
+
+(uber/pprint g2)
+(view-graph g2)
+(view-graph g2 {:save {:filename "g2.pdf" :format :pdf}})
+
+(def e1 *e)
+(use 'clojure.repl)
+(pst e1 100)
 
 (type (System/getProperties))
 (count (System/getProperties))
