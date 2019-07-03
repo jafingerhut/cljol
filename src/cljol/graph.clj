@@ -9,6 +9,56 @@
 ;; data structures.
 
 
+(defn induced-subgraph
+  "Given a graph g, and a collection of nodes in that graph, return
+  another graph containing only those nodes, and the edges of g that
+  are between those nodes.  If there are multiple parallel edges in g
+  between two nodes in 'nodes', all of them will be in the returned
+  graph.
+
+  The nodes and edges of the returned graph will have all attributes
+  from g.  The returned graph will have the same allow-parallel? and
+  undirected? properties as the original.
+
+  If 'nodes' contains any values that are not nodes of g, they are
+  ignored.  The returned graph will not contain those values as
+  nodes."
+  [g nodes]
+  (let [nodes (set (filter #(uber/has-node? g %) nodes))
+        old-node-count (uber/count-nodes g)
+        new-node-count (count nodes)]
+    (if (< new-node-count (/ old-node-count 2))
+      ;; Then guess that it will be faster to start with an empty
+      ;; graph and build up from there.  It is a guess, because it
+      ;; really depends upon the number of edges in the resulting
+      ;; graph, too.
+
+      ;; TBD: I haven't tested this yet, but I believe that for graphs
+      ;; that contain undirected edges, out-edges will return an edge
+      ;; e in the collection for both of its endpoint nodes, but for
+      ;; one of those the edges (mirror-edge? e) will return true, and
+      ;; the other false.
+      (as-> (uber/ubergraph (uber/allow-parallel-edges? g)
+                            (uber/undirected-graph? g))
+          new-g
+        (reduce (fn add-node [new-g n]
+                  (uber/add-nodes-with-attrs new-g [n (uber/attrs g n)]))
+                new-g nodes)
+        (reduce (fn add-edges-of-node [new-g n]
+                  (uber/add-edges*
+                   new-g
+                   (for [e (uber/out-edges g n)
+                         :when (and (contains? nodes (uber/dest e))
+                                    (not (uber/mirror-edge? e)))]
+                     [(uber/src e) (uber/dest e)
+                      (uber/attrs g e)])))
+                new-g nodes))
+      ;; else guess that it will be faster to remove the nodes in g
+      ;; that are not in 'nodes'.
+      (let [nodes-to-remove (remove #(contains? nodes %) (uber/nodes g))]
+        (uber/remove-nodes* g nodes-to-remove)))))
+
+
 (defn scc-graph
   "Given a graph g, return a map containing two values.
 
@@ -142,3 +192,57 @@
                 node node-set]
             [node {:total-size sum
                    :num-reachable-nodes (count reachable-node-set)}]))))
+
+(comment
+
+;; Does an ubergraph keep the attributes of a node after it has been
+;; removed using remove-node?  That is, if you remove a node then add
+;; it back, will the node have the same attributes it did before?
+
+(do
+(require '[cljol.graph :as g]
+          [ubergraph.core :as uber])
+(in-ns 'cljol.graph)
+)
+
+(def g1 (uber/multidigraph [1 {:label "n1"}]
+                           [2 {:label "n2"}]
+                           [1 2 {:label "edge12"}]))
+(uber/pprint g1)
+(def g2 (uber/remove-nodes g1 2))
+(uber/pprint g2)
+(def g3 (uber/add-nodes g2 2))
+(uber/pprint g3)
+
+(def g4 (uber/add-nodes-with-attrs g2 [2 {:attr7 8}]))
+(uber/pprint g4)
+
+(def g5 (induced-subgraph g1 [2]))
+(uber/pprint g5)
+
+(def g6 (-> g1
+            (uber/add-nodes-with-attrs
+             [3 {:label "n3"}]
+             [4 {:label "n4"}]
+             [5 {:label "n5"}]
+             [6 {:label "n6"}]
+             [7 {:label "n7"}])
+            (uber/add-edges
+             [2 3 {:label "edge23"}]
+             [3 4 {:label "edge34"}])))
+(uber/pprint g6)
+(def g7 (induced-subgraph g6 [2 4 3]))
+(uber/pprint g7)
+
+
+
+(def g1 (uber/graph [1 {:label "n1"}]
+                    [2 {:label "n2"}]
+                    [1 2 {:label "edge12"}]))
+(uber/pprint g1)
+(def g2 (uber/remove-edges g1 [1 2]))
+(uber/pprint g2)
+(def g3 (uber/add-edges g2 [1 2]))
+(uber/pprint g3)
+
+)

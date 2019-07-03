@@ -825,10 +825,14 @@ thread."
         nodes-by-distance (group-by :cost
                                     (for [n (uber/nodes g)]
                                       (ualg/path-to spaths n)))
-        num-nodes-by-distance (into (sorted-map)
-                                    (for [[k v] nodes-by-distance]
-                                      [k (count v)]))]
-
+        node-stats-by-distance
+        (into (sorted-map)
+              (for [[k node-infos] nodes-by-distance]
+                [k {:distance k
+                    :num-objects (count node-infos)
+                    :total-size
+                    (reduce + (for [x node-infos]
+                                (-> (uber/attr g (:end x) :objmap) :size)))}]))]
     (println (uber/count-nodes g) "objects")
     (println (uber/count-edges g) "references between them")
     (println total-size-bytes "bytes total in all objects")
@@ -858,11 +862,10 @@ thread."
     (pp/pprint (into (sorted-map)
                      (frequencies (map #(uber/out-degree g %) (uber/nodes g)))))
 
-    ;; TBD: Add stats for total size of all objects at each distance
     (println "map where keys are distance of an object from a start node,")
     (println "values are number of objects with that distance:")
-    (pp/pprint num-nodes-by-distance)
-    ))
+    (def nodes-by-dist nodes-by-distance)
+    (pp/pprint node-stats-by-distance)))
 
 
 (defn view
@@ -976,9 +979,19 @@ props1
   (let [g (graph-of-reachable-objects obj-coll opts)]
     (graph-summary g (mapv #(find-node-for-obj g %) obj-coll))
     g))
+(def o1 props1)
+(def g1 (sum [o1] opts))
+(def g1 (sum [(vec (range 1000))] opts))
 (def o2 (mapv char "a\"b"))
 (def g1 (sum [o1 o2] opts))
 (find-node-for-obj g1 o1)
+
+(def spaths (ualg/shortest-path
+             g1 {:start-nodes (mapv #(find-node-for-obj g1 %) [o1])
+                 :traverse true
+                 :max-cost 4}))
+(count spaths)
+(pprint spaths)
 
 (def wcc (ualg/connected-components g1))
 (require '[clojure.data :as data])
