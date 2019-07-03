@@ -111,60 +111,6 @@ of the field in the Java object that the edge comes from.
 even array indexes, and their associated values in the index 1 larger.
 
 
-# Warning messages
-
-Note: I see output like that shown below in my REPL, the first time I
-run `view` or `write-dot-file`, at least on Ubuntu 18.04 Linux with
-OpenJDK 11 and Clojure 1.10.1.  According to its documentation, the
-[Java Object Layout](https://openjdk.java.net/projects/code-tools/jol)
-library is "using the Unsafe, JVMTI, and Serviceability Agent (SA)
-heavily to decoder the actual object layout, footprint, and
-references.  This makes JOL much more accurate than other tools
-relying on heap dumps, specification assumptions, etc."  Some of the
-calls it is making lead to this.
-
-```
-# WARNING: Unable to get Instrumentation. Dynamic Attach failed. You may add this JAR as -javaagent manually, or supply -Djdk.attach.allowAttachSelf
-# WARNING: Unable to attach Serviceability Agent. You can try again with escalated privileges. Two options: a) use -Djol.tryWithSudo=true to try with sudo; b) echo 0 | sudo tee /proc/sys/kernel/yama/ptrace_scope
-WARNING: An illegal reflective access operation has occurred
-WARNING: Illegal reflective access by org.openjdk.jol.util.ObjectUtils (file:/home/jafinger/.m2/repository/org/openjdk/jol/jol-core/0.9/jol-core-0.9.jar) to field java.lang.String.value
-WARNING: Please consider reporting this to the maintainers of org.openjdk.jol.util.ObjectUtils
-WARNING: Use --illegal-access=warn to enable warnings of further illegal reflective access operations
-WARNING: All illegal access operations will be denied in a future release
-```
-
-I have used `cljol` successfully even when these warning messages
-appear, so you need not change anything if you do not mind seeing the
-messages.  If you do want to eliminate the first 2 lines, you may use
-these options when starting your JVM:
-
-```bash
--Djdk.attach.allowAttachSelf -Djol.tryWithSudo=true
-```
-
-For example, when using the `clj` or `clojure` commands:
-
-```bash
-$ clj -J-Djdk.attach.allowAttachSelf -J-Djol.tryWithSudo=true
-```
-
-The lines starting with "WARNING: An illegal reflective access
-operation has occurred" happen when using the JOL library with JDK
-version 9 or later.  See
-[here](https://clojure.org/guides/faq#illegal_access) for more
-details.
-
-Tested with:
-
-* Ubuntu 18.04.2, OpenJDK 11, Clojure 1.10.1
-* Ubuntu 18.04.2, Oracle JDK 8, Clojure 1.10.1
-* Mac OS X 10.13 High Sierra, Oracle JDK 8, Clojure 1.10.1
-
-It should work with older versions of Clojure, too, but I do not know
-how far back it can go.  Probably as far back as Clojure 1.6, in which
-this code was originally developed.
-
-
 # More examples
 
 It does not take much code to create data structures with very large
@@ -284,6 +230,60 @@ collection created by making a small change to the first collection.
 (view-graph g2)
 (view-graph g2 {:save {:filename "g2.pdf" :format :pdf}})
 ```
+
+
+# Warning messages
+
+Note: I see output like that shown below in my REPL, the first time I
+run `view` or `write-dot-file`, at least on Ubuntu 18.04 Linux with
+OpenJDK 11 and Clojure 1.10.1.  According to its documentation, the
+[Java Object Layout](https://openjdk.java.net/projects/code-tools/jol)
+library is "using the Unsafe, JVMTI, and Serviceability Agent (SA)
+heavily to decoder the actual object layout, footprint, and
+references.  This makes JOL much more accurate than other tools
+relying on heap dumps, specification assumptions, etc."  Some of the
+calls it is making lead to this.
+
+```
+# WARNING: Unable to get Instrumentation. Dynamic Attach failed. You may add this JAR as -javaagent manually, or supply -Djdk.attach.allowAttachSelf
+# WARNING: Unable to attach Serviceability Agent. You can try again with escalated privileges. Two options: a) use -Djol.tryWithSudo=true to try with sudo; b) echo 0 | sudo tee /proc/sys/kernel/yama/ptrace_scope
+WARNING: An illegal reflective access operation has occurred
+WARNING: Illegal reflective access by org.openjdk.jol.util.ObjectUtils (file:/home/jafinger/.m2/repository/org/openjdk/jol/jol-core/0.9/jol-core-0.9.jar) to field java.lang.String.value
+WARNING: Please consider reporting this to the maintainers of org.openjdk.jol.util.ObjectUtils
+WARNING: Use --illegal-access=warn to enable warnings of further illegal reflective access operations
+WARNING: All illegal access operations will be denied in a future release
+```
+
+I have used `cljol` successfully even when these warning messages
+appear, so you need not change anything if you do not mind seeing the
+messages.  If you do want to eliminate the first 2 lines, you may use
+these options when starting your JVM:
+
+```bash
+-Djdk.attach.allowAttachSelf -Djol.tryWithSudo=true
+```
+
+For example, when using the `clj` or `clojure` commands:
+
+```bash
+$ clj -J-Djdk.attach.allowAttachSelf -J-Djol.tryWithSudo=true
+```
+
+The lines starting with "WARNING: An illegal reflective access
+operation has occurred" happen when using the JOL library with JDK
+version 9 or later.  See
+[here](https://clojure.org/guides/faq#illegal_access) for more
+details.
+
+Tested with:
+
+* Ubuntu 18.04.2, OpenJDK 11, Clojure 1.10.1
+* Ubuntu 18.04.2, Oracle JDK 8, Clojure 1.10.1
+* Mac OS X 10.13 High Sierra, Oracle JDK 8, Clojure 1.10.1
+
+It should work with older versions of Clojure, too, but I do not know
+how far back it can go.  Probably as far back as Clojure 1.6, in which
+this code was originally developed.
 
 
 # Possible future work
