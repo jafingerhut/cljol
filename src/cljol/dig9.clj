@@ -894,10 +894,6 @@ thread."
   passing the resulting graph to ubergraph.core/viz-graph"
   [g]
   (reduce (fn [g n]
-            (println "node keys before:" (keys (uber/attrs g n)))
-            (println "node keys after:"
-                     (keys (apply dissoc (uber/attrs g n)
-                                  cljol-node-keys-to-remove)))
             (uber/set-attrs g n
                             (apply dissoc (uber/attrs g n)
                                    cljol-node-keys-to-remove)))
