@@ -802,14 +802,37 @@ thread."
             g (uber/nodes g))))
 
 
+(defn find-node-for-obj
+  "Given a graph g returned by graph-of-reachable-objects, find and
+  return a node for the object that is identical the object 'obj', or
+  nil if there is none."
+  [g obj]
+  (first (filter (fn [node]
+                   (identical? obj (:obj (uber/attr g node :objmap))))
+                 (uber/nodes g))))
+
+
+(defn add-shortest-path-distances
+  [g obj-coll]
+  (let [spaths (ualg/shortest-path
+                g {:start-nodes (mapv #(find-node-for-obj g %) obj-coll)})]
+    (reduce (fn [g n]
+              (uber/add-attr g n :objmap
+                             (assoc (:objmap (uber/attrs g n))
+                                    :distance
+                                    (:cost (ualg/path-to spaths n)))))
+            g (uber/nodes g))))
+
+
 (defn graph-of-reachable-objects [obj-coll opts]
   (-> (consistent-reachable-objmaps obj-coll)
       (object-graph->ubergraph opts)
       (add-total-size-bytes-node-attr)
+      (add-shortest-path-distances obj-coll)
       (add-viz-attributes opts)))
 
 
-(defn graph-summary [g start-node-coll]
+(defn graph-summary [g]
   (let [size-bytes-freq (frequencies
                          (map (fn [n]
                                 (-> (uber/attr g n :objmap) :size))
@@ -821,18 +844,17 @@ thread."
         ;; not know why, but just make sets out of them for now to
         ;; eliminate those.
         weakly-connected-components (map set (ualg/connected-components g))
-        spaths (ualg/shortest-path g {:start-nodes start-node-coll})
-        nodes-by-distance (group-by :cost
-                                    (for [n (uber/nodes g)]
-                                      (ualg/path-to spaths n)))
+        nodes-by-distance (group-by (fn [n]
+                                      (-> (uber/attr g n :objmap) :distance))
+                                    (uber/nodes g))
         node-stats-by-distance
         (into (sorted-map)
-              (for [[k node-infos] nodes-by-distance]
+              (for [[k nodes] nodes-by-distance]
                 [k {:distance k
-                    :num-objects (count node-infos)
+                    :num-objects (count nodes)
                     :total-size
-                    (reduce + (for [x node-infos]
-                                (-> (uber/attr g (:end x) :objmap) :size)))}]))]
+                    (reduce + (for [n nodes]
+                                (-> (uber/attr g n :objmap) :size)))}]))]
     (println (uber/count-nodes g) "objects")
     (println (uber/count-edges g) "references between them")
     (println total-size-bytes "bytes total in all objects")
@@ -864,15 +886,14 @@ thread."
 
     (println "map where keys are distance of an object from a start node,")
     (println "values are number of objects with that distance:")
-    (def nodes-by-dist nodes-by-distance)
     (pp/pprint node-stats-by-distance)))
 
 
-(defn view
-  ([obj]
-   (view obj {}))
-  ([obj opts]
-   (let [g (graph-of-reachable-objects [obj] opts)]
+(defn view*
+  ([obj-coll]
+   (view* obj-coll {}))
+  ([obj-coll opts]
+   (let [g (graph-of-reachable-objects obj-coll opts)]
      ;; I have found that I get an error from the dorothy library if I
      ;; pass all of opts to uber/viz-graph.  I am not sure what can be
      ;; passed and what not, but it does appear that
@@ -880,15 +901,18 @@ thread."
      ;; exception.
      (uber/viz-graph g
                      ;;(merge {:rankdir :LR} opts)
-                     {:rankdir :LR}
-                     ))))
+                     {:rankdir :LR}))))
+
+(defn view
+  [one-obj & args]
+  (apply view* [one-obj] args))
 
 
-(defn write-drawing-file
-  ([obj fname format]
-   (write-drawing-file obj fname format {}))
-  ([obj fname format opts]
-   (let [g (graph-of-reachable-objects [obj] opts)]
+(defn write-drawing-file*
+  ([obj-coll fname format]
+   (write-drawing-file* obj-coll fname format {}))
+  ([obj-coll fname format opts]
+   (let [g (graph-of-reachable-objects obj-coll opts)]
      (uber/viz-graph g {:rankdir :LR
                         :save {:filename fname :format (keyword format)}}))
    ;; uber/viz-graph returns contents of dot file as a string, which
@@ -897,11 +921,21 @@ thread."
    nil))
 
 
+(defn write-drawing-file
+  [one-obj & args]
+  (apply write-drawing-file* [one-obj] args))
+
+
+(defn write-dot-file*
+  ([obj-coll fname]
+   (write-drawing-file* obj-coll fname :dot {}))
+  ([obj-coll fname opts]
+   (write-drawing-file* obj-coll fname :dot opts)))
+
+
 (defn write-dot-file
-  ([obj fname]
-   (write-drawing-file obj fname :dot {}))
-  ([obj fname opts]
-   (write-drawing-file obj fname :dot opts)))
+  [one-obj & args]
+  (apply write-dot-file* [one-obj] args))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -923,22 +957,25 @@ thread."
   (merge default-render-opts
          {:node-label-functions [address-hex
                                  size-bytes
+                                 total-size-bytes
                                  class-description
                                  field-values
                                  ;;path-to-object
                                  javaobj->str
                                  ]}))
+(def opts opts-for-ubergraph)
+
 (def opts-only-address-on-nodes
   (merge default-render-opts
          {:node-label-functions [address-hex
                                  ;;size-bytes
+                                 ;;total-size-bytes
                                  ;;class-description
                                  ;;field-values
                                  ;;path-to-object
                                  ;;javaobj->str
                                  ]}))
 (def opts default-render-opts)
-(def opts opts-for-ubergraph)
 (def opts opts-only-address-on-nodes)
 (def opts (update-in opts-for-ubergraph [:node-label-functions]
                      conj total-size-bytes))
@@ -970,18 +1007,12 @@ props1
 (def opts opts-no-value-str)
 (pprint opts)
 
-(defn find-node-for-obj [g obj]
-  (first (filter (fn [node]
-                   (identical? obj (:obj (uber/attr g node :objmap))))
-                 (uber/nodes g))))
-
 (defn sum [obj-coll opts]
   (let [g (graph-of-reachable-objects obj-coll opts)]
-    (graph-summary g (mapv #(find-node-for-obj g %) obj-coll))
+    (graph-summary g)
     g))
+
 (def o1 props1)
-(def g1 (sum [o1] opts))
-(def g1 (sum [(vec (range 1000))] opts))
 (def o2 (mapv char "a\"b"))
 (def g1 (sum [o1 o2] opts))
 (find-node-for-obj g1 o1)
@@ -989,9 +1020,22 @@ props1
 (def spaths (ualg/shortest-path
              g1 {:start-nodes (mapv #(find-node-for-obj g1 %) [o1])
                  :traverse true
-                 :max-cost 4}))
+                 :max-cost 2}))
 (count spaths)
 (pprint spaths)
+
+(def g1 (sum [o1] opts))
+(uber/pprint g1)
+(def o1 (vec (range 1000)))
+(def g1 (sum [o1] opts))
+
+(uber/viz-graph g1 {:rankdir :LR})
+(uber/viz-graph g2 {:rankdir :LR})
+(graph-summary g2)
+
+(def g2 (uber/remove-nodes* g1 (gr/leaf-nodes g1)))
+(def g2 (gr/induced-subgraph g1 (filter #(<= (gr/distance g1 %) 2)
+                                        (uber/nodes g1))))
 
 (def wcc (ualg/connected-components g1))
 (require '[clojure.data :as data])
@@ -1013,6 +1057,7 @@ props1
 (def o1 (let [v1 (vec (range 50))] (list v1 (conj v1 50))))
 (def o1 (let [v1 (into (vector-of :long) (range 100))]
           (list v1 (conj v1 100))))
+(view o1 opts)
 
 (def g1 (graph-of-reachable-objects [o1] opts))
 (def gt1 (add-total-size-bytes-node-attr g1))

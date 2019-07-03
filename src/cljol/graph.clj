@@ -9,6 +9,22 @@
 ;; data structures.
 
 
+;; TBD: If I get rid of the :objmap key in attrs, this can probably be
+;; removed as a function completely, and just replaced with (uber/attr
+;; g n :distance)
+
+(defn distance [g n]
+  (:distance (uber/attr g n :objmap)))
+
+
+(defn leaf-node? [g n]
+  (zero? (uber/out-degree g n)))
+
+
+(defn leaf-nodes [g]
+  (filter #(leaf-node? g %) (uber/nodes g)))
+
+
 (defn induced-subgraph
   "Given a graph g, and a collection of nodes in that graph, return
   another graph containing only those nodes, and the edges of g that
