@@ -100,17 +100,21 @@ of the field in the Java object that the edge comes from.
 
 ![my-map.png](doc/my-map-macos-10.13.6-oraclejdk-1.8.0_192-clj-1.10.1.png)
 
+`cljol` drawing of the objects representing the Clojure map `{:a 1
+"foobar" 3.5}`
+
 
 # Warning messages
 
 Note: I see output like that shown below in my REPL, the first time I
 run `view` or `write-dot-file`, at least on Ubuntu 18.04 Linux with
 OpenJDK 11 and Clojure 1.10.1.  According to its documentation, the
-Java Object Layout library is "using the Unsafe, JVMTI, and
-Serviceability Agent (SA) heavily to decoder the actual object layout,
-footprint, and references.  This makes JOL much more accurate than
-other tools relying on heap dumps, specification assumptions, etc."
-Some of the calls it is making lead to this.
+[Java Object Layout](https://openjdk.java.net/projects/code-tools/jol)
+library is "using the Unsafe, JVMTI, and Serviceability Agent (SA)
+heavily to decoder the actual object layout, footprint, and
+references.  This makes JOL much more accurate than other tools
+relying on heap dumps, specification assumptions, etc."  Some of the
+calls it is making lead to this.
 
 ```
 # WARNING: Unable to get Instrumentation. Dynamic Attach failed. You may add this JAR as -javaagent manually, or supply -Djdk.attach.allowAttachSelf
