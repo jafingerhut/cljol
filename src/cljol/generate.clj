@@ -43,13 +43,13 @@ collected."
 
 (defn gen [obj name opts]
   (println "Generating" name "...")
-  (d/write-dot-file obj (fname name opts) opts))
+  (d/write-dot-file [obj] (fname name opts) opts))
 
 
 (defn parse-args [args]
   (when (not= 1 (count args))
     (binding [*out* *err*]
-      (println (format "usage: %s <directory-to-write-dot-fiels>" *file*))
+      (println (format "usage: %s <directory-to-write-dot-files>" *file*))
       (System/exit 1)))
   {:output-dir (nth args 0)})
 
@@ -202,7 +202,7 @@ collected."
 (def u1 (d/object-graph->ubergraph o1 opts))
 (def g1 (d/add-viz-attributes u1 opts))
 (def r1 (d/graph-of-reachable-objects [repeat-42] opts))
-(d/view repeat-42 opts)
+(d/view [repeat-42] opts)
 (println (take 10 repeat-42))
 
 (defn lazy-fib-sequence* [a b]
@@ -221,7 +221,7 @@ collected."
 (def fib-seq (fib-fn 0 1))
 
 (def opts opts-dont-realize-values)
-(d/view fib-seq opts)
+(d/view [fib-seq] opts)
 (println (take 2 fib-seq))
 (println (take 3 fib-seq))
 (println (take 4 fib-seq))
@@ -231,7 +231,7 @@ collected."
          (nthrest fib-seq 3) (nthrest fib-seq 4)] opts)
 
 (def lazy4 (seq (vec (range 100))))
-(d/view lazy4 opts-dont-realize-values)
+(d/view [lazy4] opts-dont-realize-values)
 (take 1 lazy4)
 (take 4 lazy4)
 
