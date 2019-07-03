@@ -9,12 +9,8 @@
 ;; data structures.
 
 
-;; TBD: If I get rid of the :objmap key in attrs, this can probably be
-;; removed as a function completely, and just replaced with (uber/attr
-;; g n :distance)
-
 (defn distance [g n]
-  (:distance (uber/attr g n :objmap)))
+  (uber/attr g n :distance))
 
 
 (defn leaf-node? [g n]

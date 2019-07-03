@@ -717,7 +717,7 @@ thread."
                 (uber/add-attrs
                  g node
                  {:shape "box"
-                  :label (node-label (:objmap (uber/attrs g node)) opts)}))
+                  :label (node-label (uber/attrs g node) opts)}))
               gr (uber/nodes gr))
       (reduce (fn add-edge-attrs [g edge]
                 (uber/add-attrs
@@ -739,7 +739,7 @@ thread."
   [g opts]
   (-> (uber/multidigraph)
       (uber/add-nodes-with-attrs* (for [objmap g]
-                                    [(:address objmap) {:objmap objmap}]))
+                                    [(:address objmap) objmap]))
       (uber/add-edges*
        (for [from-objmap g
              [from-obj-field-name-str to-addr] (:fields from-objmap)
@@ -785,20 +785,17 @@ thread."
 
 
 (defn object-size-bytes [graph node]
-  (:size (:objmap (uber/attrs graph node))))
+  (uber/attr graph node :size))
 
 
 (defn add-total-size-bytes-node-attr
   "Adds attributes :total-size (in bytes, derived from the
   existing :size attribute on the nodes) and :num-reachable-nodes to
-  all nodes of g.  All such attributes are actually inside of the
-  one :objmap attribute that is directly on the ubergraph nodes."
+  all nodes of g."
   [g]
   (let [trnw (gr/total-reachable-node-size g object-size-bytes)]
     (reduce (fn [g n]
-              (let [objmap (uber/attr g n :objmap)]
-                (uber/add-attr g n
-                               :objmap (merge objmap (trnw n)))))
+              (uber/add-attrs g n (trnw n)))
             g (uber/nodes g))))
 
 
@@ -808,19 +805,16 @@ thread."
   nil if there is none."
   [g obj]
   (first (filter (fn [node]
-                   (identical? obj (:obj (uber/attr g node :objmap))))
+                   (identical? obj (uber/attr g node :obj)))
                  (uber/nodes g))))
 
 
 (defn add-shortest-path-distances
   [g obj-coll]
-  (let [spaths (ualg/shortest-path
-                g {:start-nodes (mapv #(find-node-for-obj g %) obj-coll)})]
+  (let [start-nodes (mapv #(find-node-for-obj g %) obj-coll)
+        spaths (ualg/shortest-path g {:start-nodes start-nodes})]
     (reduce (fn [g n]
-              (uber/add-attr g n :objmap
-                             (assoc (:objmap (uber/attrs g n))
-                                    :distance
-                                    (:cost (ualg/path-to spaths n)))))
+              (uber/add-attr g n :distance (:cost (ualg/path-to spaths n))))
             g (uber/nodes g))))
 
 
@@ -833,10 +827,8 @@ thread."
 
 
 (defn graph-summary [g]
-  (let [size-bytes-freq (frequencies
-                         (map (fn [n]
-                                (-> (uber/attr g n :objmap) :size))
-                              (uber/nodes g)))
+  (let [size-bytes-freq (frequencies (map #(uber/attr g % :size)
+                                          (uber/nodes g)))
         total-size-bytes (reduce + (for [[size count] size-bytes-freq]
                                      (* size count)))
         ;; TBD: The node collections that ualg/connected-components
@@ -844,8 +836,7 @@ thread."
         ;; not know why, but just make sets out of them for now to
         ;; eliminate those.
         weakly-connected-components (map set (ualg/connected-components g))
-        nodes-by-distance (group-by (fn [n]
-                                      (-> (uber/attr g n :objmap) :distance))
+        nodes-by-distance (group-by #(uber/attr g % :distance)
                                     (uber/nodes g))
         node-stats-by-distance
         (into (sorted-map)
@@ -854,7 +845,7 @@ thread."
                     :num-objects (count nodes)
                     :total-size
                     (reduce + (for [n nodes]
-                                (-> (uber/attr g n :objmap) :size)))}]))]
+                                (uber/attr g n :size)))}]))]
     (println (uber/count-nodes g) "objects")
     (println (uber/count-edges g) "references between them")
     (println total-size-bytes "bytes total in all objects")
@@ -950,9 +941,7 @@ thread."
 (require '[cljol.dig9 :as d])
 (in-ns 'cljol.dig9)
 (use 'clojure.pprint)
-
-)
-
+(use 'clojure.repl)
 (def opts-for-ubergraph
   (merge default-render-opts
          {:node-label-functions [address-hex
@@ -964,6 +953,9 @@ thread."
                                  javaobj->str
                                  ]}))
 (def opts opts-for-ubergraph)
+
+)
+
 
 (def opts-only-address-on-nodes
   (merge default-render-opts
@@ -1012,7 +1004,15 @@ props1
     (graph-summary g)
     g))
 
+(def o1 (let [x :a y :b] {x y y x}))
 (def o1 props1)
+(def o1 (System/getProperties))
+(def o1 (vec (range 1000)))
+(def g1 (sum [o1] opts))
+(uber/viz-graph g1 {:rankdir :LR})
+(write-dot-file* [o1] "o1.dot" opts)
+(write-drawing-file* [o1] "o1.pdf" :pdf opts)
+
 (def o2 (mapv char "a\"b"))
 (def g1 (sum [o1 o2] opts))
 (find-node-for-obj g1 o1)
@@ -1023,11 +1023,6 @@ props1
                  :max-cost 2}))
 (count spaths)
 (pprint spaths)
-
-(def g1 (sum [o1] opts))
-(uber/pprint g1)
-(def o1 (vec (range 1000)))
-(def g1 (sum [o1] opts))
 
 (uber/viz-graph g1 {:rankdir :LR})
 (uber/viz-graph g2 {:rankdir :LR})
@@ -1158,6 +1153,23 @@ props1
     ))
 
 (pprint (into (sorted-map) graphviz-dot-escape-char-map))
+
+(def e1 *e)
+(use 'clojure.repl)
+(pst e1 100)
+
+
+(def o1 (mapv char "a\"b"))
+(def e1 (consistent-reachable-objmaps [o1]))
+(pprint e1)
+(def opts {})
+(def u1 (object-graph->ubergraph e1 opts))
+(uber/pprint u1)
+(def t1 (add-total-size-bytes-node-attr u1))
+(uber/pprint t1)
+(def s1 (add-shortest-path-distances t1 [o1]))
+(uber/pprint s1)
+;;      (add-viz-attributes opts)
 
 
 (def m1 (let [x :a y :b] {x y y x}))
