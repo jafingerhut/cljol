@@ -1,0 +1,67 @@
+digraph {
+graph [layout=dot,rankdir=LR];
+"26418006592" [label="80 bytes
+1 object, 80 bytes reachable
+array of 60 byte
+
+[102 0 52 18 111 0 100 0 32 0 104 0 97 0 115 0 32  ...",shape=box];
+"26418007232" [label="24 bytes
+2 objects, 72 bytes reachable
+j.l.String
+12: value (ref) ->
+16: hash (int) 511352126
+20: coder (byte) 0
+food has only 8-bit characters",shape=box];
+"26418005888" [label="40 bytes
+9 objects, 424 bytes reachable
+c.l.PersistentVector
+12: _hash (int) 0
+16: _hasheq (int) 0
+20: cnt (int) 2
+24: shift (int) 5
+28: root (ref) ->
+32: tail (ref) ->
+36: _meta (ref) nil
+[\"food has only 8-bit characters\" \"fሴod has non-8- ...",shape=box];
+"26418007424" [label="48 bytes
+1 object, 48 bytes reachable
+array of 30 byte
+
+[102 111 111 100 32 104 97 115 32 111 110 108 121  ...",shape=box];
+"26418006208" [label="24 bytes
+5 objects, 200 bytes reachable
+array of 2 j.l.Object
+
+[\"food has only 8-bit characters\" \"fሴod has non-8- ...",shape=box];
+"26085442496" [label="16 bytes
+1 object, 16 bytes reachable
+j.u.c.atomic.AtomicReference
+12: value (ref) nil
+null",shape=box];
+"26085442304" [label="24 bytes
+3 objects, 184 bytes reachable
+c.l.PersistentVector$Node
+12: edit (ref) ->
+16: array (ref) ->
+clojure.lang.PersistentVector$Node@180e33b0",shape=box];
+"26085442624" [label="144 bytes
+1 object, 144 bytes reachable
+array of 32 j.l.Object
+
+[nil nil nil nil nil nil nil nil nil nil nil nil n ...",shape=box];
+"26418006400" [label="24 bytes
+2 objects, 104 bytes reachable
+j.l.String
+12: value (ref) ->
+16: hash (int) -938149940
+20: coder (byte) 1
+fሴod has non-8-bit characters!",shape=box];
+"26418007232" -> "26418007424" ["field-name"=value,label=value];
+"26418005888" -> "26085442304" ["field-name"=root,label=root];
+"26418005888" -> "26418006208" ["field-name"=tail,label=tail];
+"26418006208" -> "26418007232" ["field-name"="[0]",label="[0]"];
+"26418006208" -> "26418006400" ["field-name"="[1]",label="[1]"];
+"26085442304" -> "26085442496" ["field-name"=edit,label=edit];
+"26085442304" -> "26085442624" ["field-name"=array,label=array];
+"26418006400" -> "26418006592" ["field-name"=value,label=value];
+} 

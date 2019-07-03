@@ -1,0 +1,65 @@
+digraph {
+graph [layout=dot,rankdir=LR];
+"26151497984" [label="24 bytes
+2 objects, 104 bytes reachable
+j.l.String
+12: value (ref) ->
+16: hash (int) 511352126
+food has only 8-bit characters",shape=box];
+"26071815040" [label="24 bytes
+3 objects, 184 bytes reachable
+c.l.PersistentVector$Node
+12: edit (ref) ->
+16: array (ref) ->
+clojure.lang.PersistentVector$Node@1cc93da4",shape=box];
+"26151498176" [label="80 bytes
+1 object, 80 bytes reachable
+array of 30 char
+
+[\\f \\o \\o \\d \\space \\h \\a \\s \\space \\o \\n \\l \\y \\s ...",shape=box];
+"26151656512" [label="80 bytes
+1 object, 80 bytes reachable
+array of 30 char
+
+[\\f \\ሴ \\o \\d \\space \\h \\a \\s \\space \\n \\o \\n \\- \\8 ...",shape=box];
+"26110404032" [label="16 bytes
+1 object, 16 bytes reachable
+j.u.c.atomic.AtomicReference
+12: value (ref) nil
+null",shape=box];
+"26151831296" [label="40 bytes
+9 objects, 456 bytes reachable
+c.l.PersistentVector
+12: _hash (int) 0
+16: _hasheq (int) 0
+20: cnt (int) 2
+24: shift (int) 5
+28: root (ref) ->
+32: tail (ref) ->
+36: _meta (ref) nil
+[\"food has only 8-bit characters\" \"fሴod has non-8- ...",shape=box];
+"26151831616" [label="24 bytes
+5 objects, 232 bytes reachable
+array of 2 j.l.Object
+
+[\"food has only 8-bit characters\" \"fሴod has non-8- ...",shape=box];
+"26078900864" [label="144 bytes
+1 object, 144 bytes reachable
+array of 32 j.l.Object
+
+[nil nil nil nil nil nil nil nil nil nil nil nil n ...",shape=box];
+"26151656320" [label="24 bytes
+2 objects, 104 bytes reachable
+j.l.String
+12: value (ref) ->
+16: hash (int) -938149940
+fሴod has non-8-bit characters!",shape=box];
+"26151497984" -> "26151498176" ["field-name"=value,label=value];
+"26071815040" -> "26110404032" ["field-name"=edit,label=edit];
+"26071815040" -> "26078900864" ["field-name"=array,label=array];
+"26151831296" -> "26071815040" ["field-name"=root,label=root];
+"26151831296" -> "26151831616" ["field-name"=tail,label=tail];
+"26151831616" -> "26151497984" ["field-name"="[0]",label="[0]"];
+"26151831616" -> "26151656320" ["field-name"="[1]",label="[1]"];
+"26151656320" -> "26151656512" ["field-name"=value,label=value];
+} 
