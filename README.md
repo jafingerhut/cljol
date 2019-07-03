@@ -205,7 +205,7 @@ collection created by making a small change to the first collection.
 ```
 (def v1 (vec (range 5)))
 (def v2 (conj v1 5))
-(def g (sum [v1 v2]))
+(def g (d/sum [v1 v2]))
 
 ;; Create a graph from g, different because of some additional
 ;; attributes added to the nodes by the function
@@ -217,7 +217,7 @@ collection created by making a small change to the first collection.
 ;; than one root node will be blue, and any reachable from no root
 ;; will be colored gray.
 
-(def g2 (add-attributes-by-reachability g
+(def g2 (d/add-attributes-by-reachability g
          [{:only-from v1
            :attrs {:color "red"}}
           {:only-from v2
@@ -227,8 +227,8 @@ collection created by making a small change to the first collection.
           {:from-none true
            :attrs {:color "gray"}}]))
 
-(view-graph g2)
-(view-graph g2 {:save {:filename "g2.pdf" :format :pdf}})
+(d/view-graph g2)
+(d/view-graph g2 {:save {:filename "g2.pdf" :format :pdf}})
 ```
 
 
