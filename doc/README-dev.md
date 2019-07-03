@@ -1,4 +1,4 @@
-# Compressed strings in Java 9 and later
+# Compact strings in Java 9 and later
 
 In Java 8 and earlier, the default was for strings to be represented
 in memory as arrays of Java `char`, which are 2 bytes each.  If most
@@ -7,7 +7,7 @@ twice as much memory as they need, but it enables strings to be
 handled consistently throughout the Java library whether they use a
 larger subset of the full Unicode character set, or not.
 
-Java 9 introduced [Compressed
+Java 9 introduced [Compact
 strings](https://www.codenuclear.com/compact-strings-java-9), where if
 a string contains only characters whose code points fit within a
 single 8-bit byte, then it is stored in memory using only 1 byte per
@@ -31,7 +31,10 @@ each of those chars take 2 bytes of storage:
 Now look at the similar figure below, generated using JDK 9.0.4.  The
 string that contains only 8-bit characters has a reference to an array
 of 30 bytes, whereas the string that has a character that cannot be
-represented in 8 bits has a reference to an array of 60 bytes.
+represented in 8 bits has a reference to an array of 60 bytes.  The
+Java library stores the difference in the array encoding via the field
+`coder` in the object of type `java.lang.String` that references the
+byte array.
 
 ![strings-jdk-9-4](images/strings-8-bit-and-not-Linux-4.15.0-54-jdk-Oracle-9.0.4-clj-1.10.1.png)
 
