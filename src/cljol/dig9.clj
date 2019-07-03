@@ -833,8 +833,8 @@ thread."
                                      (* size count)))
         ;; TBD: The node collections that ualg/connected-components
         ;; returns can in some cases contain duplicate nodes.  I do
-        ;; not know why, but just make sets out of them for now to
-        ;; eliminate those.
+        ;; not know why this happens.  For now, make sets out of them
+        ;; to eliminate those.
         weakly-connected-components (map set (ualg/connected-components g))
         nodes-by-distance (group-by #(uber/attr g % :distance)
                                     (uber/nodes g))
@@ -880,6 +880,15 @@ thread."
     (pp/pprint node-stats-by-distance)))
 
 
+(defn sum
+  ([obj-coll]
+   (sum obj-coll {}))
+  ([obj-coll opts]
+   (let [g (graph-of-reachable-objects obj-coll opts)]
+     (graph-summary g)
+     g)))
+
+
 (def cljol-node-keys-to-remove
   [:address :size :total-size :num-reachable-nodes
    :obj :fields :path :distance])
@@ -900,54 +909,45 @@ thread."
           g (uber/nodes g)))
 
 
-(defn view*
-  ([obj-coll]
-   (view* obj-coll {}))
-  ([obj-coll opts]
-   (let [g (graph-of-reachable-objects obj-coll opts)]
-     ;; I have found that I get an error from the dorothy library if I
-     ;; pass all of opts to uber/viz-graph.  I am not sure what can be
-     ;; passed and what not, but it does appear that
-     ;; the :node-label-functions key and value are mentioned in the
-     ;; exception.
-     (uber/viz-graph (keep-only-dot-safe-attrs g)
-                     ;;(merge {:rankdir :LR} opts)
-                     {:rankdir :LR}))))
-
-(defn view
-  [one-obj & args]
-  (apply view* [one-obj] args))
-
-
-(defn write-drawing-file*
-  ([obj-coll fname format]
-   (write-drawing-file* obj-coll fname format {}))
-  ([obj-coll fname format opts]
-   (let [g (graph-of-reachable-objects obj-coll opts)]
-     (uber/viz-graph (keep-only-dot-safe-attrs g)
-                     {:rankdir :LR
-                      :save {:filename fname :format (keyword format)}}))
-   ;; uber/viz-graph returns contents of dot file as a string, which
-   ;; can be very long.  Return nil always as a convenience to avoid
-   ;; seeing the string printed in a REPL session.
+(defn view-graph
+  ([g]
+   (view-graph g {}))
+  ([g opts]
+   ;; I have found that I get an error from the dorothy library if I
+   ;; pass all of opts to uber/viz-graph.  I am not sure what can be
+   ;; passed and what not, but it does appear that
+   ;; the :node-label-functions key and value are mentioned in the
+   ;; exception.
+   (-> (keep-only-dot-safe-attrs g)
+       (uber/viz-graph (merge {:rankdir :LR} opts)))
+   ;; uber/viz-graph returns contents of dot file as a string when
+   ;; saving to a file in a format other than dot, which can be very
+   ;; long.  Return nil always as a convenience to avoid seeing the
+   ;; string printed in a REPL session.
    nil))
 
 
+(defn view
+  ([obj-coll]
+   (view obj-coll {}))
+  ([obj-coll opts]
+   (let [g (graph-of-reachable-objects obj-coll opts)]
+     (view-graph g))))
+
+
 (defn write-drawing-file
-  [one-obj & args]
-  (apply write-drawing-file* [one-obj] args))
-
-
-(defn write-dot-file*
-  ([obj-coll fname]
-   (write-drawing-file* obj-coll fname :dot {}))
-  ([obj-coll fname opts]
-   (write-drawing-file* obj-coll fname :dot opts)))
+  ([obj-coll fname format]
+   (write-drawing-file obj-coll fname format {}))
+  ([obj-coll fname format opts]
+   (let [g (graph-of-reachable-objects obj-coll opts)]
+     (view-graph g {:save {:filename fname :format (keyword format)}}))))
 
 
 (defn write-dot-file
-  [one-obj & args]
-  (apply write-dot-file* [one-obj] args))
+  ([obj-coll fname]
+   (write-drawing-file obj-coll fname :dot {}))
+  ([obj-coll fname opts]
+   (write-drawing-file obj-coll fname :dot opts)))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1020,19 +1020,14 @@ props1
 (def opts opts-no-value-str)
 (pprint opts)
 
-(defn sum [obj-coll opts]
-  (let [g (graph-of-reachable-objects obj-coll opts)]
-    (graph-summary g)
-    g))
-
 (def o1 (let [x :a y :b] {x y y x}))
 (def o1 props1)
 (def o1 (System/getProperties))
 (def o1 (vec (range 1000)))
 (def g1 (sum [o1] opts))
 (uber/viz-graph (keep-only-dot-safe-attrs g1) {:rankdir :LR})
-(write-dot-file* [o1] "o1.dot" opts)
-(write-drawing-file* [o1] "o1.pdf" :pdf opts)
+(write-dot-file [o1] "o1.dot" opts)
+(write-drawing-file [o1] "o1.pdf" :pdf opts)
 
 (def o2 (mapv char "a\"b"))
 (def g1 (sum [o1 o2] opts))
@@ -1050,7 +1045,7 @@ props1
 (graph-summary g2)
 
 (def g2 (uber/remove-nodes* g1 (gr/leaf-nodes g1)))
-(def g2 (gr/induced-subgraph g1 (filter #(<= (gr/distance g1 %) 2)
+(def g2 (gr/induced-subgraph g1 (filter #(<= (uber/attr g % :distance) 2)
                                         (uber/nodes g1))))
 
 (def wcc (ualg/connected-components g1))

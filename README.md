@@ -43,9 +43,15 @@ In the REPL:
 ```
 (require '[cljol.dig9 :as d])
 (def my-map {:a 1 "foobar" 3.5})
-(d/view my-map)
-(d/write-dot-file my-map "my-map.dot")
-(d/write-drawing-file my-map "my-map.pdf" :pdf)
+
+;; Open a new window containing the figure.  Takes a collection of
+;; objects.
+(d/view [my-map])
+
+;; Write the figure to a Graphviz dot file, or one of many other
+;; formats.
+(d/write-dot-file [my-map] "my-map.dot")
+(d/write-drawing-file [my-map] "my-map.pdf" :pdf)
 ```
 
 See the "Warning messages" section below for messages that you are
@@ -101,7 +107,8 @@ of the field in the Java object that the edge comes from.
 ![my-map.png](doc/my-map-macos-10.13.6-oraclejdk-1.8.0_192-clj-1.10.1.png)
 
 `cljol` drawing of the objects representing the Clojure map `{:a 1
-"foobar" 3.5}`
+"foobar" 3.5}`.  In a `clojure.lang.PersistentArrayMap`, keys are in
+even array indexes, and their associated values in the index 1 larger.
 
 
 # Warning messages
@@ -126,8 +133,10 @@ WARNING: Use --illegal-access=warn to enable warnings of further illegal reflect
 WARNING: All illegal access operations will be denied in a future release
 ```
 
-The first 2 lines can be eliminated by using these options when
-starting your JVM:
+I have used `cljol` successfully even when these warning messages
+appear, so you need not change anything if you do not mind seeing the
+messages.  If you do want to eliminate the first 2 lines, you may use
+these options when starting your JVM:
 
 ```bash
 -Djdk.attach.allowAttachSelf -Djol.tryWithSudo=true
@@ -154,6 +163,94 @@ Tested with:
 It should work with older versions of Clojure, too, but I do not know
 how far back it can go.  Probably as far back as Clojure 1.6, in which
 this code was originally developed.
+
+
+# More examples
+
+It does not take much code to create data structures with very large
+graphs.  For example, this graph likely has more nodes than you want
+to look at:
+
+```
+(def v1 (vec (range 1000)))
+(d/view [v1])
+```
+
+`cljol` includes some code to give you summary statistics about a
+graph, and some functions that can produce a subset of a graph, which
+you can then display.
+
+The `sum` function takes a collection of objects, creates and returns
+a graph representing its objects without drawing it, and prints some
+statistics about this graph.  The example below shows that v1's graph
+has 1067 objects.  The info near the end shows that 1001 of those have
+out-degree 0, where out-degree is the number of edges that leave a
+node directed towards another node.  Those 1001 are 'leaf nodes' of
+the graph.
+
+```
+user=> (def g (d/sum [v1]))
+
+1067 objects
+1097 references between them
+29480 bytes total in all objects
+no cycles
+1 weakly connected components
+number of nodes in all weakly connected components,
+from most to fewest nodes:
+(1067)
+map where keys are object size in bytes,
+values are number of objects with that size:
+{16 1, 24 1032, 40 1, 48 1, 144 32}
+
+1001 leaf objects (no references to other objects)
+1 root nodes (no reference to them from other objects _in this graph_)
+map where keys are in-degree of an object,
+values are number of objects with that in-degree:
+{0 1, 1 1065, 32 1}
+map where keys are out-degree of an object,
+values are number of objects with that out-degree:
+{0 1001, 2 33, 8 1, 31 1, 32 31}
+map where keys are distance of an object from a start node,
+values are number of objects with that distance:
+{0 {:distance 0, :num-objects 1, :total-size 40},
+ 1 {:distance 1, :num-objects 2, :total-size 72},
+ 2 {:distance 2, :num-objects 10, :total-size 352},
+ 3 {:distance 3, :num-objects 31, :total-size 744},
+ 4 {:distance 4, :num-objects 31, :total-size 4464},
+ 5 {:distance 5, :num-objects 992, :total-size 23808}}
+```
+
+Here is a way to create another graph `g2` from `g` with all of `g`'s
+leaves removed, and then draw `g2`:
+
+```
+(require '[ubergraph.core :as uber]
+         '[cljol.graph :as gr])
+
+(def g2 (uber/remove-nodes* g (gr/leaf-nodes g)))
+
+(d/view-graph g2)
+```
+
+Below we demonstrate keeping only those nodes that are within at most
+distance 3 of the starting objects given when creating the graph.
+That is, the Java object is reachable from one of the starting objects
+in 3 or fewer 'hops'.
+
+```
+(def g3 (gr/induced-subgraph g (filter #(<= (uber/attr g % :distance) 3)
+                                        (uber/nodes g))))
+
+(d/view-graph g3)
+```
+
+These graphs `g`, `g2`, and `g3` are all created using the
+[Ubergraph](https://github.com/Engelberg/ubergraph) library.  All of
+its features are available for manipulating these graphs.  The drawing
+functions use keys in the node and edge attribute maps to affect some
+aspects of the drawings, e.g. the `:label` key is used to generate the
+labels.
 
 
 # Possible future work

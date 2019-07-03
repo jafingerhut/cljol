@@ -9,10 +9,6 @@
 ;; data structures.
 
 
-(defn distance [g n]
-  (uber/attr g n :distance))
-
-
 (defn leaf-node? [g n]
   (zero? (uber/out-degree g n)))
 
