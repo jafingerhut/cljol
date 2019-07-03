@@ -79,11 +79,11 @@ Each rectangle is a Java object.  By default each shows:
   all per-instance fields (i.e. not declared static in Java) defined
   for the object's class, and all of its superclasses.  Each is listed
   with:
-** its byte offset from the beginning of the object in memory where
-   the field is stored
-** the name of the field
-** its type, in parentheses
-** the value of the field
+  * its byte offset from the beginning of the object in memory where
+    the field is stored
+  * the name of the field
+  * its type, in parentheses
+  * the value of the field
 * All references to other objects only show "ref" as the type.  The
   value of a "ref" field is shown as "nil" if it is a Clojure nil
   value (i.e. Java null), or `->` if the reference is to another
