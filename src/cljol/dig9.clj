@@ -880,6 +880,30 @@ thread."
     (pp/pprint node-stats-by-distance)))
 
 
+(def cljol-node-keys-to-remove
+  [:address :size :total-size :num-reachable-nodes
+   :obj :fields :path :distance])
+
+
+(defn keep-only-dot-safe-attrs
+  "Remove ubergraph node and/or edge attributes created by cljol that
+  have nothing to do with Graphviz dot file attributes, and may
+  interfere with creation of a valid dot file, e.g. especially the
+  value of :obj when converted to a string can contain characters not
+  supported in dot files.  Intended to be called on a graph before
+  passing the resulting graph to ubergraph.core/viz-graph"
+  [g]
+  (reduce (fn [g n]
+            (println "node keys before:" (keys (uber/attrs g n)))
+            (println "node keys after:"
+                     (keys (apply dissoc (uber/attrs g n)
+                                  cljol-node-keys-to-remove)))
+            (uber/set-attrs g n
+                            (apply dissoc (uber/attrs g n)
+                                   cljol-node-keys-to-remove)))
+          g (uber/nodes g)))
+
+
 (defn view*
   ([obj-coll]
    (view* obj-coll {}))
@@ -890,7 +914,7 @@ thread."
      ;; passed and what not, but it does appear that
      ;; the :node-label-functions key and value are mentioned in the
      ;; exception.
-     (uber/viz-graph g
+     (uber/viz-graph (keep-only-dot-safe-attrs) g
                      ;;(merge {:rankdir :LR} opts)
                      {:rankdir :LR}))))
 
@@ -904,8 +928,9 @@ thread."
    (write-drawing-file* obj-coll fname format {}))
   ([obj-coll fname format opts]
    (let [g (graph-of-reachable-objects obj-coll opts)]
-     (uber/viz-graph g {:rankdir :LR
-                        :save {:filename fname :format (keyword format)}}))
+     (uber/viz-graph (keep-only-dot-safe-attrs g)
+                     {:rankdir :LR
+                      :save {:filename fname :format (keyword format)}}))
    ;; uber/viz-graph returns contents of dot file as a string, which
    ;; can be very long.  Return nil always as a convenience to avoid
    ;; seeing the string printed in a REPL session.
@@ -1009,7 +1034,7 @@ props1
 (def o1 (System/getProperties))
 (def o1 (vec (range 1000)))
 (def g1 (sum [o1] opts))
-(uber/viz-graph g1 {:rankdir :LR})
+(uber/viz-graph (keep-only-dot-safe-attrs g1) {:rankdir :LR})
 (write-dot-file* [o1] "o1.dot" opts)
 (write-drawing-file* [o1] "o1.pdf" :pdf opts)
 
@@ -1024,8 +1049,8 @@ props1
 (count spaths)
 (pprint spaths)
 
-(uber/viz-graph g1 {:rankdir :LR})
-(uber/viz-graph g2 {:rankdir :LR})
+(uber/viz-graph (keep-only-dot-safe-attrs g1) {:rankdir :LR})
+(uber/viz-graph (keep-only-dot-safe-attrs g2) {:rankdir :LR})
 (graph-summary g2)
 
 (def g2 (uber/remove-nodes* g1 (gr/leaf-nodes g1)))
@@ -1102,7 +1127,7 @@ props1
 (def g1 (uber/multidigraph 1 2 3 4
                            [1 2] [3 4] [4 3]))
 (uber/pprint g1)
-(uber/viz-graph g1 {:auto-label true})
+(uber/viz-graph (keep-only-dot-safe-attrs g1) {:auto-label true})
 (dag-reachable-nodes g1)
 (reachable-nodes g1)
 
