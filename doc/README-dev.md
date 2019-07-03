@@ -14,9 +14,26 @@ single 8-bit byte, then it is stored in memory using only 1 byte per
 character.
 
 `cljol` can make this easy to see, by using it to analyze a string
-like `"food"` containing only characters within the ASCII subset, and
-a very similar string like `"fo\u1234d"` that contains a character
-that requires more than 8 bits to represent.
+like `"food has only 8-bit characters"` containing exactly 30
+characters, all within the ASCII subset, and a another string like
+`"f\u1234od has non-8-bit characters!"` that also contains exactly 30
+characters, but one of them requires more than 8 bits to represent its
+Unicode code point -- it is the one represented using Java and
+Clojure/Java's `\u1234` syntax, which means a single character with
+code point of 1234 hexadecimal.
+
+Examine the first figure below, generated using JDK 1.8.0_192.  Notice
+that both strings have a reference to an array of 30 Java chars, where
+each of those chars take 2 bytes of storage:
+
+![strings-jdk-1-8-0-192](images/strings-8-bit-and-not-Linux-4.15.0-54-jdk-Oracle-1.8.0_192-clj-1.10.1.png)
+
+Now look at the similar figure below, generated using JDK 9.0.4.  The
+string that contains only 8-bit characters has a reference to an array
+of 30 bytes, whereas the string that has a character that cannot be
+represented in 8 bits has a reference to an array of 60 bytes.
+
+![strings-jdk-9-4](images/strings-8-bit-and-not-Linux-4.15.0-54-jdk-Oracle-9.0.4-clj-1.10.1.png)
 
 
 # Pretty printing of large values
@@ -131,17 +148,24 @@ topological order.  When a node is visited in this order, determine
 the _set_ of all objects reachable from that node, which should be
 itself plus the union of all objects reachable from each of the nodes
 it directly references.  The total-size is then the sum of sizes of
-all objects in that set.
+all objects in that set.  The function cljol.graph/dag-reachable-nodes
+implements this.
 
-Topological sort of a DAG can be done in linear time, and each node
-would only be visited one time in that iteration, but the union
-operations are not constant time.  In general they are about linear
-(i.e. O(N log N) with Clojure's set implementations) in the size of
-the sets involved, so it seems like the entire operation could be
-about O(N^2) in the worst case.
+Topological sort of a DAG can be done in linear time (O(N+M) where M
+is number of edges), and each node would only be visited one time in
+that iteration, but the union operations are not constant time.  In
+general they are about linear (i.e. O(N log N) with Clojure's set
+implementations) in the size of the sets involved, so it seems like
+the entire operation could be about O(N*(N+M)) in the worst case.
+
+TBD: It might be that the worst case of doing this somewhat more
+complex algorithm is the same as doing N linear-time depth-first
+searches, one starting at each node, and collecting the results?
 
 I cannot think of a way right now to calculate total-size for all
-nodes faster than this.
+nodes faster than this, in the worst case.  It seems like any
+computational compexity results for the transitive closure problem
+apply here, because I believe that _is_ the problem being solved.
 
 For a directed graph with cycles, the set of all strongly connected
 components can be found in linear time.  Every node within one
@@ -157,7 +181,11 @@ the scc-graph (for strongly connected component graph).  Each node of
 the scc-graph corresponds to a set of nodes from the original graph,
 all that are in the same scc.  There is an edge from node A to node B
 in the scc-graph if, in the original graph, any node in set A has an
-edge to any node in set B.
+edge to any node in set B.  See the function cljol.graph/scc-graph for
+an implementation.
 
 The scc-graph is a DAG, and then we can use the method described above
-on that DAG.
+on that DAG.  The function cljol.graph/reachable-nodes implements this
+combination of calculating the scc-graph, then calcalating
+reachable-nodes on the resulting DAG, then transforming the results
+back into results for the original graph.
