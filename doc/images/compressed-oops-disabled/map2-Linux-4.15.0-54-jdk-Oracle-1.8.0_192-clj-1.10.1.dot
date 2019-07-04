@@ -1,0 +1,55 @@
+digraph {
+graph [layout=dot,rankdir=LR];
+"140321209548904" [label="24 bytes
+1 object, 24 bytes reachable
+j.l.Long
+16: value (long) 1
+1",shape=box];
+"140321209562432" [label="32 bytes
+2 objects, 64 bytes reachable
+j.l.String
+16: value (ref) ->
+24: hash (int) 97
+a",shape=box];
+"140321209562464" [label="32 bytes
+1 object, 32 bytes reachable
+array of 1 char
+
+[\\a]",shape=box];
+"140322048228496" [label="32 bytes
+2 objects, 72 bytes reachable
+j.l.String
+16: value (ref) ->
+24: hash (int) -1268878963
+foobar",shape=box];
+"140322048228528" [label="40 bytes
+1 object, 40 bytes reachable
+array of 6 char
+
+[\\f \\o \\o \\b \\a \\r]",shape=box];
+"140322052595408" [label="56 bytes
+7 objects, 240 bytes reachable
+array of 4 j.l.Object
+
+[\"a\" 1 \"foobar\" 3.5]",shape=box];
+"140322052596096" [label="24 bytes
+1 object, 24 bytes reachable
+j.l.Double
+16: value (double) 3.5
+3.5",shape=box];
+"140322052596120" [label="40 bytes
+8 objects, 280 bytes reachable
+c.l.PersistentArrayMap
+16: _hash (int) 0
+20: _hasheq (int) 0
+24: array (ref) ->
+32: _meta (ref) nil
+{\"a\" 1, \"foobar\" 3.5}",shape=box];
+"140321209562432" -> "140321209562464" ["field-name"=value,label=value];
+"140322048228496" -> "140322048228528" ["field-name"=value,label=value];
+"140322052595408" -> "140321209562432" ["field-name"="[0]",label="[0]"];
+"140322052595408" -> "140321209548904" ["field-name"="[1]",label="[1]"];
+"140322052595408" -> "140322048228496" ["field-name"="[2]",label="[2]"];
+"140322052595408" -> "140322052596096" ["field-name"="[3]",label="[3]"];
+"140322052596120" -> "140322052595408" ["field-name"=array,label=array];
+} 

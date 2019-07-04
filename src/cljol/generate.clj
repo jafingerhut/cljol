@@ -87,6 +87,8 @@ collected."
     (let [map1 (let [x :a y :b] {x y y x})]
       (gen map1 "map1" opts))
 
+    (gen {"a" 1 "foobar" 3.5} "map2" opts)
+
 ;; Interesting!  Self-loop for optimal memory efficiency!
     (let [opts opts-dont-realize-values
           repeat-42 (repeat 42)
