@@ -133,6 +133,17 @@ collected."
             "f\u1234od has non-8-bit characters!"]
            "strings-8-bit-and-not" opts))
 
+    (let [opts opts-show-field-values]
+      (gen (list (/ 3 2) 12345678901234567890N true)
+           "various-types1" opts)
+      (gen (object-array [true 12345678901234567890N "hammock time!"])
+           "various-types2" opts))
+
+    (let [opts opts-show-field-values]
+      (gen ["food has only 8-bit characters"
+            "f\u1234od has non-8-bit characters!"]
+           "strings-8-bit-and-not" opts))
+
     (let [opts (merge opts-show-field-values
                       {:max-value-len 200})]
       (doseq [[name min-char-code max-char-code]

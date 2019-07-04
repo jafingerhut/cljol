@@ -23,6 +23,7 @@
   :uberlocal {:override-deps {ubergraph {:mvn/version "0.5.4-andy-mods"}}}
   ;; - start a Socket REPL on port 50505:
   :socket {:jvm-opts ["-Dclojure.server.repl={:port,50505,:accept,clojure.core.server/repl}"]}
+  :disablecompressedoops {:jvm-opts ["-XX:-UseCompressedOops"]}
   }
  :deps {org.openjdk.jol/jol-core {:mvn/version "0.9"}
         ubergraph {:mvn/version "0.5.3"}}}
