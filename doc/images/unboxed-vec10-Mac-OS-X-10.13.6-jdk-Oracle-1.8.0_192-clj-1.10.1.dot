@@ -1,0 +1,38 @@
+digraph {
+graph [layout=dot,rankdir=LR];
+"28992224712" [label="24 bytes
+2 objects, 168 bytes reachable
+clojure.core.VecNode
+12: edit (ref) nil
+16: arr (ref) ->
+clojure.core.VecNode@7d7b4e04",shape=box];
+"28992224736" [label="144 bytes
+1 object, 144 bytes reachable
+array of 32 j.l.Object
+
+[nil nil nil nil nil nil nil nil nil nil nil nil n ...",shape=box];
+"28993415336" [label="16 bytes
+1 object, 16 bytes reachable
+clojure.core$reify__8302
+12: __meta (ref) nil
+clojure.core$reify__8302@3cb195dd",shape=box];
+"31863619368" [label="96 bytes
+1 object, 96 bytes reachable
+array of 10 long
+
+[0 1 2 3 4 5 6 7 8 9]",shape=box];
+"31863619464" [label="40 bytes
+5 objects, 320 bytes reachable
+clojure.core.Vec
+12: cnt (int) 10
+16: shift (int) 5
+20: am (ref) ->
+24: root (ref) ->
+28: tail (ref) ->
+32: _meta (ref) nil
+clojure.core.Vec@9ebadac6",shape=box];
+"28992224712" -> "28992224736" ["field-name"=arr,label=arr];
+"31863619464" -> "28993415336" ["field-name"=am,label=am];
+"31863619464" -> "28992224712" ["field-name"=root,label=root];
+"31863619464" -> "31863619368" ["field-name"=tail,label=tail];
+} 

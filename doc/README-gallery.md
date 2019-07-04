@@ -98,3 +98,61 @@ Java library stores the difference in the array encoding via the field
 byte array.
 
 ![strings-jdk-9-4](images/strings-8-bit-and-not-Linux-4.15.0-54-jdk-Oracle-9.0.4-clj-1.10.1.png)
+
+
+# Different ways of holding vectors of numbers in Clojure
+
+How much memory do these data structures require?
+
+```
+(def vec10 (vec (range 10)))
+(def unboxed-vec10 (apply vector-of :long (range 10)))
+;; This is a mutable Java array, so a significantly different set of
+;; operations supported on them, especially because of mutability.
+(def arr10 (long-array (range 10)))
+```
+
+Let's take a look at the small ones in figure form, then try out much
+larger ones with summary statistics only, since the figures get pretty
+large.
+
+```
+(require '[cljol.dig9 :as d])
+(d/view [vec10])
+```
+![vector of 10 longs, boxed](images/vec10-Mac-OS-X-10.13.6-jdk-Oracle-1.8.0_192-clj-1.10.1.png)
+```
+(d/view [unboxed-vec10])
+```
+![vector of 10 longs, unboxed](images/unboxed-vec10-Mac-OS-X-10.13.6-jdk-Oracle-1.8.0_192-clj-1.10.1.png)
+```
+(d/view [arr10])
+```
+![array of 10 longs, unboxed](images/arr10-Mac-OS-X-10.13.6-jdk-Oracle-1.8.0_192-clj-1.10.1.png)
+
+Every Long integer requires 8 bytes of storage, so 1000 longs requires
+at least 8,000 bytes.  What is the average overhead for using these
+different data structures?
+
+```
+(def vec1000 (vec (range 1000)))
+(def g (d/sum [vec1000]))
+;; 1067 objects, 29,480 total bytes
+(/ 29480.0 (* 8 1000))
+;; 3.685 times more than the long values themselves
+
+(def unboxed-vec1000 (apply vector-of :long (range 1000)))
+(def g (d/sum [unboxed-vec1000]))
+;; 67 objects, 9,480 total bytes
+(/ 9480.0 (* 8 1000))
+;; 1.185 times more than the long values themselves
+
+(def arr1000 (long-array (range 1000)))
+(def g (d/sum [arr1000]))
+;; 1 object, 8,016 total bytes
+(/ 8016.0 (* 8 1000))
+;; 1.002 times more than the long values themselves
+```
+
+
+# Different ways of having a map with integer keys

@@ -1,0 +1,99 @@
+digraph {
+graph [layout=dot,rankdir=LR];
+"28992766680" [label="24 bytes
+1 object, 24 bytes reachable
+j.l.Long
+16: value (long) 8
+8",shape=box];
+"28992316984" [label="24 bytes
+1 object, 24 bytes reachable
+j.l.Long
+16: value (long) 7
+7",shape=box];
+"28992317144" [label="24 bytes
+1 object, 24 bytes reachable
+j.l.Long
+16: value (long) 5
+5",shape=box];
+"28992315896" [label="24 bytes
+1 object, 24 bytes reachable
+j.l.Long
+16: value (long) 9
+9",shape=box];
+"28991354656" [label="24 bytes
+1 object, 24 bytes reachable
+j.l.Long
+16: value (long) 2
+2",shape=box];
+"28991222336" [label="24 bytes
+1 object, 24 bytes reachable
+j.l.Long
+16: value (long) 0
+0",shape=box];
+"31863617304" [label="16 bytes
+1 object, 16 bytes reachable
+j.u.c.atomic.AtomicReference
+12: value (ref) nil
+null",shape=box];
+"28993246184" [label="24 bytes
+1 object, 24 bytes reachable
+j.l.Long
+16: value (long) 6
+6",shape=box];
+"31863617664" [label="40 bytes
+15 objects, 520 bytes reachable
+c.l.PersistentVector
+12: _hash (int) 0
+16: _hasheq (int) 0
+20: cnt (int) 10
+24: shift (int) 5
+28: root (ref) ->
+32: tail (ref) ->
+36: _meta (ref) nil
+[0 1 2 3 4 5 6 7 8 9]",shape=box];
+"28992317288" [label="24 bytes
+1 object, 24 bytes reachable
+j.l.Long
+16: value (long) 4
+4",shape=box];
+"31863617320" [label="144 bytes
+1 object, 144 bytes reachable
+array of 32 j.l.Object
+
+[nil nil nil nil nil nil nil nil nil nil nil nil n ...",shape=box];
+"28991701760" [label="24 bytes
+1 object, 24 bytes reachable
+j.l.Long
+16: value (long) 3
+3",shape=box];
+"28991354680" [label="24 bytes
+1 object, 24 bytes reachable
+j.l.Long
+16: value (long) 1
+1",shape=box];
+"31863617608" [label="56 bytes
+11 objects, 296 bytes reachable
+array of 10 j.l.Object
+
+[0 1 2 3 4 5 6 7 8 9]",shape=box];
+"31863617280" [label="24 bytes
+3 objects, 184 bytes reachable
+c.l.PersistentVector$Node
+12: edit (ref) ->
+16: array (ref) ->
+clojure.lang.PersistentVector$Node@780129bc",shape=box];
+"31863617664" -> "31863617280" ["field-name"=root,label=root];
+"31863617664" -> "31863617608" ["field-name"=tail,label=tail];
+"31863617608" -> "28992766680" ["field-name"="[8]",label="[8]"];
+"31863617608" -> "28992316984" ["field-name"="[7]",label="[7]"];
+"31863617608" -> "28992317144" ["field-name"="[5]",label="[5]"];
+"31863617608" -> "28992315896" ["field-name"="[9]",label="[9]"];
+"31863617608" -> "28991354656" ["field-name"="[2]",label="[2]"];
+"31863617608" -> "28991222336" ["field-name"="[0]",label="[0]"];
+"31863617608" -> "28993246184" ["field-name"="[6]",label="[6]"];
+"31863617608" -> "28992317288" ["field-name"="[4]",label="[4]"];
+"31863617608" -> "28991701760" ["field-name"="[3]",label="[3]"];
+"31863617608" -> "28991354680" ["field-name"="[1]",label="[1]"];
+"31863617280" -> "31863617304" ["field-name"=edit,label=edit];
+"31863617280" -> "31863617320" ["field-name"=array,label=array];
+} 

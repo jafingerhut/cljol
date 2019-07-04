@@ -89,6 +89,13 @@ collected."
 
     (gen {"a" 1 "foobar" 3.5} "map2" opts)
 
+    (let [vec10 (vec (range 10))
+          unboxed-vec10 (apply vector-of :long (range 10))
+          arr10 (long-array (range 10))]
+      (gen vec10 "vec10" opts)
+      (gen unboxed-vec10 "unboxed-vec10" opts)
+      (gen arr10 "arr10" opts))
+
 ;; Interesting!  Self-loop for optimal memory efficiency!
     (let [opts opts-dont-realize-values
           repeat-42 (repeat 42)
