@@ -1,0 +1,83 @@
+digraph {
+graph [layout=dot,rankdir=LR];
+"26518643328" [label="32 bytes
+9 objects, 240 bytes reachable
+array of 4 j.l.Object
+
+[:a :b :b :a]",shape=box];
+"26518643584" [label="32 bytes
+10 objects, 272 bytes reachable
+c.l.PersistentArrayMap
+12: _hash (int) 0
+16: _hasheq (int) 0
+20: array (ref) ->
+24: _meta (ref) nil
+{:a :b, :b :a}",shape=box];
+"26559654592" [label="24 bytes
+1 object, 24 bytes reachable
+array of 1 byte
+
+[98]",shape=box];
+"26559647296" [label="24 bytes
+2 objects, 48 bytes reachable
+j.l.String
+12: value (ref) ->
+16: hash (int) 97
+20: coder (byte) 0
+a",shape=box];
+"26559647936" [label="24 bytes
+4 objects, 104 bytes reachable
+c.l.Keyword
+12: hasheq (int) -2123407586
+16: sym (ref) ->
+20: _str (ref) ->
+:a",shape=box];
+"26559655040" [label="24 bytes
+4 objects, 104 bytes reachable
+c.l.Keyword
+12: hasheq (int) 1482224470
+16: sym (ref) ->
+20: _str (ref) ->
+:b",shape=box];
+"26559647488" [label="24 bytes
+1 object, 24 bytes reachable
+array of 1 byte
+
+[97]",shape=box];
+"26559654784" [label="32 bytes
+3 objects, 80 bytes reachable
+c.l.Symbol
+12: _hasheq (int) -1172211299
+16: ns (ref) nil
+20: name (ref) ->
+24: _meta (ref) nil
+28: _str (ref) ->
+b",shape=box];
+"26559654400" [label="24 bytes
+2 objects, 48 bytes reachable
+j.l.String
+12: value (ref) ->
+16: hash (int) 98
+20: coder (byte) 0
+b",shape=box];
+"26559647680" [label="32 bytes
+3 objects, 80 bytes reachable
+c.l.Symbol
+12: _hasheq (int) -482876059
+16: ns (ref) nil
+20: name (ref) ->
+24: _meta (ref) nil
+28: _str (ref) ->
+a",shape=box];
+"26518643328" -> "26559647936" ["field-name"="[3]",label="[3]"];
+"26518643328" -> "26559647936" ["field-name"="[0]",label="[0]"];
+"26518643328" -> "26559655040" ["field-name"="[1]",label="[1]"];
+"26518643328" -> "26559655040" ["field-name"="[2]",label="[2]"];
+"26518643584" -> "26518643328" ["field-name"=array,label=array];
+"26559647296" -> "26559647488" ["field-name"=value,label=value];
+"26559647936" -> "26559647680" ["field-name"=sym,label=sym];
+"26559655040" -> "26559654784" ["field-name"=sym,label=sym];
+"26559654784" -> "26559654400" ["field-name"=name,label=name];
+"26559654400" -> "26559654592" ["field-name"=value,label=value];
+"26559647680" -> "26559647296" ["field-name"=name,label=name];
+} 
