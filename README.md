@@ -46,7 +46,7 @@ In the REPL:
 
 ```
 (require '[cljol.dig9 :as d])
-(def my-map {:a 1 "foobar" 3.5})
+(def my-map {"a" 1 "foobar" 3.5})
 
 ;; Open a new window containing the figure.  Takes a collection of
 ;; objects.
@@ -111,7 +111,7 @@ The arrows out of an array object are labeled with "[i]", where "i" is
 a number that is the array index.  Other labels on edges are the name
 of the field in the Java object that the edge comes from.
 
-![my-map.png](doc/my-map-macos-10.13.6-oraclejdk-1.8.0_192-clj-1.10.1.png)
+![my-map.png](doc/images/my-map-macos-10.13.6-oraclejdk-1.8.0_192-clj-1.10.1.png)
 
 `cljol` drawing of the objects representing the Clojure map `{:a 1
 "foobar" 3.5}`.  In a `clojure.lang.PersistentArrayMap`, keys are in
