@@ -24,7 +24,7 @@ I have used the `-XX:-UseCompressedOops` option of the JVM to disable
 this option, and you can see the difference in results below.
 
 The next figure below shows the results with the default JVM behavior
-where compressed points are enabled.  I have read that this is the
+where compressed pointers are enabled.  I have read that this is the
 default behavior since Java 7, when the max heap size is 32 GBytes or
 less.  The leftmost object with type `PersistentArrayMap` has field
 `array` starting at offset 20 bytes from the beginning of the object,
