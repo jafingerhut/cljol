@@ -96,7 +96,7 @@ collected."
       (gen unboxed-vec10 "unboxed-vec10" opts)
       (gen arr10 "arr10" opts))
 
-;; Interesting!  Self-loop for optimal memory efficiency!
+    ;; Interesting!  Self-loop for optimal memory efficiency!
     (let [opts opts-dont-realize-values
           repeat-42 (repeat 42)
           repeat-10-a (repeat 10 "a")]
