@@ -1,15 +1,16 @@
 # Compressed pointers in 64-bit JVMs
 
-In looking at several of these figures, you may have noticed that the
-byte offsets of the fields only differ by 4 between most fields, even
-for references.  Those references should be pointers between Java
-objects in memory.  So why are they only 4 bytes long?  Shouldn't they
-be 8 bytes in size, to hold a 64-bit address, on a 64-bit JVM?
+In looking at these figures, you may have noticed that the byte
+offsets of the fields only differ by 4 between most fields, even for
+references.  Those references should be pointers between Java objects
+in memory.  So why are they only 4 bytes long?  When you are running a
+64-bit JVM, shouldn't they be 8 bytes in size, to hold a 64-bit
+address?
 
-They are actually only taking up 4 bytes of storage, due to a memory
-optimization in most JVMs called "Compressed Pointers".  [Here is one
-article](https://www.baeldung.com/jvm-compressed-oops) describing them
-in more detail.
+In most cases, they are only taking up 4 bytes of storage, due to a
+memory optimization in most JVMs called "Compressed Pointers".  [Here
+is one article](https://www.baeldung.com/jvm-compressed-oops)
+describing them in more detail.
 
 The basic idea is that because JVM memory allocation always aligns the
 starting address of objects to be multiples of 8 bytes, the least
@@ -22,15 +23,40 @@ information.
 I have used the `-XX:-UseCompressedOops` option of the JVM to disable
 this option, and you can see the difference in results below.
 
-The next figure below shows
+The next figure below shows the results with the default JVM behavior
+where compressed points are enabled.  I have read that this is the
+default behavior since Java 7, when the max heap size is 32 GBytes or
+less.  The leftmost object with type `PersistentArrayMap` has field
+`array` starting at offset 20 bytes from the beginning of the object,
+and it is a reference.  The next field starts at offset 24 bytes, so
+`array` only occupies 4 bytes.
 
-between
-when compressed pointers are enabled, which is by default since JDK 7,
-or disabled via the command line option.
+Other examples include the `value` field in the two objects with type
+`String`.
 
-![compressed-pointers-enabled](images/compressed-oops-enabled/map1-Linux-4.15.0-54-jdk-Oracle-11.0.3-clj-1.10.1.png)
+![compressed-pointers-enabled](images/compressed-oops-enabled/map2-Linux-4.15.0-54-jdk-Oracle-1.8.0_192-clj-1.10.1.png)
 
-![compressed-pointers-disabled](images/compressed-oops-disabled/map1-Linux-4.15.0-54-jdk-Oracle-11.0.3-clj-1.10.1.png)
+The next figure below shows the results with compressed pointers
+disabled via the `-XX:-UseCompressedOops` command line option when
+starting the JVM.
+
+Here the field `array` in the leftmost object has offset 24, and the
+immediately following field has offset 32, so `array` occupies 8
+bytes.  Similarly for the size of the `value` fields of the objects
+with type `String`.
+
+No offsets are shown for each array element in the object with type
+`array of 4 j.l.Object`, but you can see that it occupies 56 bytes
+total, whereas in the previous figure it only occupied 32 bytes.
+
+Another difference to note is that the minimum offset of any field in
+this figure is 16 bytes, whereas several fields in the figure above
+start at offset 12 bytes.  I believe that the common "header" fields
+at the beginning of every object in the JVM include a reference that
+is not shown in these figures, and this is also 8 bytes instead of 4
+bytes when compressed pointers are disabled.
+
+![compressed-pointers-disabled](images/compressed-oops-disabled/map2-Linux-4.15.0-54-jdk-Oracle-1.8.0_192-clj-1.10.1.png)
 
 
 # Compact strings in Java 9 and later
