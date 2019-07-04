@@ -21,9 +21,11 @@
   :classgraph {:extra-deps {io.github.classgraph/classgraph
                             {:mvn/version "4.8.42"}}}
   :uberlocal {:override-deps {ubergraph {:mvn/version "0.5.4-andy-mods"}}}
+  :generate {:extra-paths ["src/generate"]}
   ;; - start a Socket REPL on port 50505:
   :socket {:jvm-opts ["-Dclojure.server.repl={:port,50505,:accept,clojure.core.server/repl}"]}
   :disablecompressedoops {:jvm-opts ["-XX:-UseCompressedOops"]}
   }
+ :paths ["src/clj"]
  :deps {org.openjdk.jol/jol-core {:mvn/version "0.9"}
         ubergraph {:mvn/version "0.5.3"}}}
