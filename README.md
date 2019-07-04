@@ -18,6 +18,10 @@ the `view` function, or writing to a GraphViz dot file using the
 `cljol` has been tested most with Clojure 1.10.1 so far, but as far as
 I know should work fine with Clojure 1.5.1 or later.
 
+See the [gallery](README-gallery.md) for examples of figures created
+by this library that demonstrate aspects of the Java VM or Clojure's
+implementation that I find interesting.
+
 
 # Quick example
 
@@ -49,7 +53,10 @@ In the REPL:
 (d/view [my-map])
 
 ;; Write the figure to a Graphviz dot file, or one of many other
-;; formats.
+;; formats.  I believe you can get a complete list of formats
+;; supported by Graphviz by looking at the "device" list in the output
+;; of the command "dot -v < /dev/null".
+
 (d/write-dot-file [my-map] "my-map.dot")
 (d/write-drawing-file [my-map] "my-map.pdf" :pdf)
 ```
