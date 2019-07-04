@@ -111,11 +111,13 @@ The arrows out of an array object are labeled with "[i]", where "i" is
 a number that is the array index.  Other labels on edges are the name
 of the field in the Java object that the edge comes from.
 
+Immediately below is the `cljol` drawing of the objects representing
+the Clojure map `{"a" 1 "foobar" 3.5}`.  In a
+`clojure.lang.PersistentArrayMap`, map keys are in even array indices,
+and their associated values in the index 1 larger.
+
 ![my-map.png](doc/images/my-map-macos-10.13.6-oraclejdk-1.8.0_192-clj-1.10.1.png)
 
-`cljol` drawing of the objects representing the Clojure map `{:a 1
-"foobar" 3.5}`.  In a `clojure.lang.PersistentArrayMap`, keys are in
-even array indexes, and their associated values in the index 1 larger.
 
 
 # More examples
