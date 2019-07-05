@@ -36,6 +36,7 @@
 ;; Sample call:
 ;; (println (internals #{}))
 
+;; renamed to cljol.dig9/class-layout->str
 (defn internals [x]
   (let [cls (class x)
         parsed-cls (ClassLayout/parseClass cls)]
@@ -48,11 +49,15 @@
 ;; Sample call:
 ;; (println (externals #{5}))
 
+;; no equivalent in cljol.dig9.  reachable-objmaps does a bit more, but no printing
 (defn externals [x]
   (let [parsed-inst (GraphLayout/parseInstance x)]
     (.toPrintable parsed-inst)))
 
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Copied all of the functions in this block bounded by the semicolon
+;; lines like the previous one above.
 (defn array? [x]
   (if-not (nil? x)
     (. (class x) isArray)))
@@ -81,8 +86,10 @@
 (defn per-instance-reference-fields [cls]
   (filter per-inst-ref-field?
           (all-fields cls)))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
+;; copied then updated for new JOL API to get object address
 (defn field-name-and-address [^Field fld obj]
   (. fld setAccessible true)
   (let [fld-val (. fld get obj)]
@@ -94,6 +101,7 @@
        )]))
 
 
+;; copied then updated for new JOL API to get object address
 (defn array-elem-name-and-address [idx array-obj]
   (let [array-idx-val (aget array-obj idx)]
     [(str "[" idx "]")
@@ -104,6 +112,7 @@
        )]))
 
 
+;; copied, modified, and renamed to reachable-objmaps
 (defn myexternals [x]
   (let [parsed-inst (GraphLayout/parseInstance x)
         addresses (.addresses parsed-inst)]
@@ -161,6 +170,7 @@
 ;;   :fields - value is map, where keys are strings, and values are same
 ;;     as :address, or nil.
 
+;; copied
 (defn validate-one-obj [m]
   (cond (not (map? m))
         {:err :non-map
@@ -221,10 +231,12 @@
 ;; Every field address is equal to the address of some object (no
 ;; references 'leave the object set').
 
+;; copied
 (defn object-addresses [g]
   (set (map :address g)))
 
 
+;; copied
 (defn field-addresses [g]
   (->> g
        (mapcat #(vals (:fields %)))
@@ -232,12 +244,15 @@
        set))
 
 
+;; copied
 (defn root-objects [g]
   (let [obj-addresses (object-addresses g)
         fld-addresses (field-addresses g)]
     (set/difference obj-addresses fld-addresses)))
 
 
+;; copied, then commented out the "exactly 1 root object" check, since
+;; it fails for some correct object graphs that have cycles.
 (defn validate-obj-graph [g]
   (or (some validate-one-obj g)
       (let [obj-addresses (object-addresses g)
@@ -302,6 +317,7 @@
 ;; something will have moved.
 
 
+;; copied, and updated for newer JOL version
 (defn object-moved? [obj-info]
   (let [obj (:obj obj-info)
         addr (:address obj-info)
@@ -311,6 +327,7 @@
       (assoc obj-info :cur-address cur-addr))))
 
 
+;; copied
 (defn any-object-moved?
   "If any object in object graph 'g' is currently at a different
 address than the value of its :address key, return the map for that
@@ -329,6 +346,7 @@ thread."
   (some object-moved? g))
 
 
+;; copied
 (defn two-objects-disjoint?
   [oi1 oi2]
   (or (<= (+ (:address oi1) (:size oi1))
@@ -337,6 +355,7 @@ thread."
           (:address oi1))))
 
 
+;; copied
 (defn two-objects-overlap?
   [oi1 oi2]
 ;;  (println (format "two-objects-overlap oi1: [%x, %x] oi2: [%x, %x]"
@@ -348,6 +367,7 @@ thread."
     [oi1 oi2]))
 
 
+;; copied
 (defn any-objects-overlap?
   "If two objects in the object graph overlap in memory (i.e. the
   range of bytes from :address to :address + :size - 1 includes a byte
@@ -359,6 +379,7 @@ thread."
           (partition 2 1 by-addr))))
 
 
+;; TBD: not copied.  Useful?
 (defn eq-obj-info?
   "The object info for two objects is considered to be for the same
   object if the objects are identical, and all of the
@@ -381,6 +402,7 @@ thread."
 ;; Verify that no objects overlap when the graph objects are
 ;; considered together as a whole.
 
+;; TBD: not copied.  Useful?
 (defn compare-obj-graphs [g1 g2]
   (let [wrap (fn [source obj-info]
                {:address (:address obj-info)
@@ -428,6 +450,7 @@ thread."
   (reduce + (map :size g1)))
 
 
+;; copied
 (defn object-graph-errors [g]
   (or 
    (if-let [x (any-object-moved? g)]
@@ -437,6 +460,11 @@ thread."
      {:err :two-objects-overlap :err-data x :data g})))
 
 
+;; TBD: not copied.  Useful?  I think I can do what I want with a
+;; function similar to cljol.dig9/add-attributes-by-reachability, and
+;; a single object graph with multiple roots.  The sharing of objects
+;; between those is already done, and doesn't have to be determined by
+;; comparing different data structures to each other.
 (defn sizes [obj1 obj2]
   (let [g1 (myexternals obj1)
         g2 (myexternals obj2)]
@@ -475,6 +503,9 @@ thread."
             :both-size both-size}))))))
 
 
+;; This function was in cljol.dig9, but as it is fairly specific to
+;; using the rhizome library, which I have stopped using in favor of
+;; ubergraph, I removed it from cljol.dig9.
 (defn render-object-graph [g opts]
   (let [obj->label-str (get opts :label-fn str)
         addr->obj (into {}
@@ -524,15 +555,18 @@ thread."
            [(keys graph) graph :node->descriptor desc :vertical? false])))
 
 
+;; copied
 (defn truncate-long-str [s n]
   (if (> (count s) n)
     (str (subs s 0 n) " ...")
     s))
 
+;; copied
 (defn str-with-limit [obj n]
   (truncate-long-str (str obj) n))
 
 
+;; copied, then modified several times, but similar functionality
 (defn view
   ([obj]
    (view obj {}))
@@ -540,6 +574,7 @@ thread."
    (render-object-graph (myexternals obj) (merge opts {:render-method :view}))))
 
 
+;; copied, then modified several times, but similar functionality
 (defn write-dot-file
   ([obj fname]
    (write-dot-file obj fname {}))

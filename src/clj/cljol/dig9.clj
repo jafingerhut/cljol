@@ -218,6 +218,11 @@
               :obj obj
               :size (. gpr size)
               :path (. gpr path)
+              ;; TBD: Consider calling both
+              ;; array-elem-name-and-address _and_
+              ;; field-name-and-address for array objects, just in
+              ;; case any Java array objects actually do return
+              ;; fields.
               :fields (if ref-arr?
                         (into {} (map #(array-elem-name-and-address % obj)
                                       (range (count obj))))
@@ -870,6 +875,9 @@ thread."
 (defn graph-summary [g]
   (let [size-bytes-freq (frequencies (map #(uber/attr g % :size)
                                           (uber/nodes g)))
+        size-breakdown (->> (for [[size cnt] size-bytes-freq]
+                              {:size-bytes size :num-objects cnt})
+                            (sort-by :size-bytes))
         total-size-bytes (reduce + (for [[size count] size-bytes-freq]
                                      (* size count)))
         ;; TBD: The node collections that ualg/connected-components
@@ -880,13 +888,12 @@ thread."
         nodes-by-distance (group-by #(uber/attr g % :distance)
                                     (uber/nodes g))
         node-stats-by-distance
-        (into (sorted-map)
-              (for [[k nodes] nodes-by-distance]
-                [k {:distance k
-                    :num-objects (count nodes)
-                    :total-size
-                    (reduce + (for [n nodes]
-                                (uber/attr g n :size)))}]))]
+        (->> (for [[k nodes] nodes-by-distance]
+               {:distance k
+                :num-objects (count nodes)
+                :total-size (reduce + (for [n nodes]
+                                        (uber/attr g n :size)))})
+             (sort-by :distance))]
     (println (uber/count-nodes g) "objects")
     (println (uber/count-edges g) "references between them")
     (println total-size-bytes "bytes total in all objects")
@@ -897,24 +904,32 @@ thread."
     (println "number of nodes in all weakly connected components,")
     (println "from most to fewest nodes:")
     (println (sort > (map count weakly-connected-components)))
-    (println "map where keys are object size in bytes,")
-    (println "values are number of objects with that size:")
-    (pp/pprint (into (sorted-map) size-bytes-freq))
+    (println "number of objects of each size in bytes:")
+    (pp/pprint size-breakdown)
+    (println "number and size of objects of each class:")
+    (pp/pprint (->> (for [[cls nodes] (group-by #(class (uber/attr g % :obj))
+                                                (uber/nodes g))]
+                      {:class (abbreviated-class-name-str (pr-str cls))
+                       :num-objects (count nodes)
+                       :total-size (reduce + (for [n nodes]
+                                               (uber/attr g n :size)))})
+                    (sort-by :total-size)))
     (println)
     (println (count (filter #(= 0 (uber/out-degree g %)) (uber/nodes g)))
              "leaf objects (no references to other objects)")
     (println (count (filter #(= 0 (uber/in-degree g %)) (uber/nodes g)))
              "root nodes (no reference to them from other objects _in this graph_)")
 
-    (println "map where keys are in-degree of an object,")
-    (println "values are number of objects with that in-degree:")
-    (pp/pprint (into (sorted-map)
-                     (frequencies (map #(uber/in-degree g %) (uber/nodes g)))))
-
-    (println "map where keys are out-degree of an object,")
-    (println "values are number of objects with that out-degree:")
-    (pp/pprint (into (sorted-map)
-                     (frequencies (map #(uber/out-degree g %) (uber/nodes g)))))
+    (println "number of objects of each in-degree (references to it):")
+    (pp/pprint (->> (for [[k v] (frequencies (map #(uber/in-degree g %)
+                                                  (uber/nodes g)))]
+                      {:in-degree k :num-objects v})
+                    (sort-by :in-degree)))
+    (println "number of objects of each out-degree (references from it):")
+    (pp/pprint (->> (for [[k v] (frequencies (map #(uber/out-degree g %)
+                                                  (uber/nodes g)))]
+                      {:out-degree k :num-objects v})
+                    (sort-by :out-degree)))
 
     (println "map where keys are distance of an object from a start node,")
     (println "values are number of objects with that distance:")
