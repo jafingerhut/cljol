@@ -5,7 +5,7 @@ _not_ show the value of objects as a label on the nodes.  If you do
 that, it will try to realize the lazy sequence in order to convert its
 value to a string.  You can configure the contents of the node labels
 in figures produced by giving a sequence of functions as the value
-assocaited with the key `:node-label-functions` in a map of options
+associated with the key `:node-label-functions` in a map of options
 passed to most of the `cljol` functions.
 
 Here is the default value used if you do not provide an options map,
@@ -43,33 +43,53 @@ examples of that):
 ```
 (defn fib-fn [a b]
   (lazy-seq (cons a (fib-fn b (+ a b)))))
+```
 
+Here are the first 15 elements of the sequence it returns:
+
+```
 (take 15 (fib-fn 0 1))
 ;; (0 1 1 2 3 5 8 13 21 34 55 89 144 233 377)
+```
 
+Time to make some drawings.  First, what the objects created look like
+before any elements of the sequence have been generated.
+
+```
 (def fib-seq (fib-fn 0 1))
 
 (d/view [fib-seq] opts)
 (d/write-dot-file [fib-seq] "lazy-fib-seq-unrealized.dot" opts)
+```
+![lazy-fib-seq-unrealized](images/lazy-fib-seq-unrealized.png)
 
+Now force the first element of the sequence to be generated.
+```
 (println (take 1 fib-seq))
 (d/view [fib-seq] opts)
 (d/write-dot-file [fib-seq] "lazy-fib-seq-realized1.dot" opts)
+```
+![lazy-fib-seq-realized1](images/lazy-fib-seq-realized1.png)
 
+```
 (println (take 2 fib-seq))
 (d/view [fib-seq] opts)
 (d/write-dot-file [fib-seq] "lazy-fib-seq-realized2.dot" opts)
+```
+![lazy-fib-seq-realized2](images/lazy-fib-seq-realized2.png)
 
-;; Here we view a vector of the head of the sequence, but also the
-;; sequence starting at the second element (nthrest fib-seq 1), and
-;; the sequence starting at the third element (nthrest fib-seq 2), so
-;; you can see explict pointers in the figure to those parts of the
-;; lazy sequence.
+Here we view a vector of the head of the sequence, but also the
+sequence starting at the second element (nthrest fib-seq 1), and the
+sequence starting at the third element (nthrest fib-seq 2), so you can
+see explict pointers in the figure to those parts of the lazy
+sequence.
 
+```
 (d/view [[fib-seq (nthrest fib-seq 1) (nthrest fib-seq 2)]] opts)
 (d/write-dot-file [[fib-seq (nthrest fib-seq 1) (nthrest fib-seq 2)]]
     "lazy-fib-seq-vector-of-nthrest.dot" opts)
 ```
+![lazy-fib-seq-vector-of-nthrest](images/lazy-fib-seq-vector-of-nthrest.png)
 
 
 # Chunked lazy sequences
