@@ -313,6 +313,60 @@ bytes when compressed pointers are disabled.
 ![compressed-pointers-disabled](images/compressed-oops-disabled/map2-Linux-4.15.0-54-jdk-Oracle-1.8.0_192-clj-1.10.1.png)
 
 
+# JVM object headers
+
+I will not try here to explain what the contents of the headers of
+each Java object are.  According to the article [What Heap Dumps Are
+Lying To You About](https://shipilev.net/blog/2014/heapdump-is-a-lie),
+it is dependent upon the developer of the JVM, e.g. Hotspot can be
+different than Azul Zing, which can be different than yet another
+vendor.  It can depend upon whether compressed pointers are enabled or
+disabled, and perhaps other factors.  I will say that sizes I have
+commonly seen are 8, 12, or 16 bytes.
+
+The example output below was obtained running this version of the JVM
+on an Ubuntu 18.04 Linux system, on x86_64 processor architecture.
+
+```
+$ java -version
+openjdk version "11.0.3" 2019-04-16
+OpenJDK Runtime Environment (build 11.0.3+7-Ubuntu-1ubuntu218.04.1)
+OpenJDK 64-Bit Server VM (build 11.0.3+7-Ubuntu-1ubuntu218.04.1, mixed mode)
+```
+
+Sample output showing contents of object headers with compressed
+pointers enabled:
+```
+user=> (print (d/class-layout->str ""))
+java.lang.String object internals:
+ OFFSET  SIZE     TYPE DESCRIPTION                               VALUE
+      0     4          (object header)                           31 00 00 00 (00110001 00000000 00000000 00000000) (49)
+      4     4          (object header)                           00 00 00 00 (00000000 00000000 00000000 00000000) (0)
+      8     4          (object header)                           da 02 00 20 (11011010 00000010 00000000 00100000) (536871642)
+     12     4   char[] String.value                              []
+     16     4      int String.hash                               0
+     20     4          (loss due to the next object alignment)
+Instance size: 24 bytes
+Space losses: 0 bytes internal + 4 bytes external = 4 bytes total
+```
+
+and again with compressed pointers disabled:
+```
+user=> (print (d/class-layout->str ""))
+java.lang.String object internals:
+ OFFSET  SIZE     TYPE DESCRIPTION                               VALUE
+      0     4          (object header)                           01 00 00 00 (00000001 00000000 00000000 00000000) (1)
+      4     4          (object header)                           00 00 00 00 (00000000 00000000 00000000 00000000) (0)
+      8     4          (object header)                           c0 df 3f 28 (11000000 11011111 00111111 00101000) (675274688)
+     12     4          (object header)                           dc 7f 00 00 (11011100 01111111 00000000 00000000) (32732)
+     16     8   char[] String.value                              []
+     24     4      int String.hash                               0
+     28     4          (loss due to the next object alignment)
+Instance size: 32 bytes
+Space losses: 0 bytes internal + 4 bytes external = 4 bytes total
+```
+
+
 # Compact strings in Java 9 and later
 
 In Java 8 and earlier, the default was for strings to be represented
