@@ -178,6 +178,24 @@ been realized.
 ```
 ![images/chunked-seq-realized1](images/chunked-seq-realized1.png)
 
+Because the graph above is already quite large, mostly due to the 32
+`java.lang.Long` objects, let us draw the graph where all nodes for an
+object with type `java.lang.Long` are removed.  We will make a
+function that does this, because I want to do this for creating
+several later graphs, too.
+```
+(require '[ubergraph.core :as uber])
+(defn graph-no-longs [obj-coll fname opts]
+  (let [g (d/sum obj-coll opts)
+        g2 (uber/remove-nodes*
+	     g (filter (fn [n] (instance? Long (uber/attr g n :obj)))
+                       (uber/nodes g)))]
+    (d/view-graph g2)
+    (d/view-graph g2 {:save {:filename fname :format :dot}})))
+
+(graph-no-longs [chunked-seq] "chunked-seq-realized1.dot" opts)
+```
+
 Next we print the first 20 elements of the sequence.  No more
 `println` calls execute, because the first 32 elements were already
 realized above.  We show a drawing that is the same as the previous
@@ -190,7 +208,7 @@ that creates and returns.
 ;; no more "processing element:" lines printed, because the
 ;; first 32 elements have already been realized above.
 
-(d/write-dot-file [[chunked-seq (nthrest chunked-seq 20)]] "chunked-seq-and-nthrest-20-realized20.dot" opts)
+(graph-no-longs [[chunked-seq (nthrest chunked-seq 20)]] "chunked-seq-and-nthrest-20-realized20.dot" opts)
 ```
 ![images/chunked-seq-and-nthrest-20-realized20](images/chunked-seq-and-nthrest-20-realized20.png)
 
@@ -208,11 +226,13 @@ indicates.
 ;; output lines, from processing the second chunk
 
 (d/write-dot-file [chunked-seq] "chunked-seq-realized33.dot" opts)
+(graph-no-longs [chunked-seq] "chunked-seq-realized33.dot" opts)
 ```
 ![images/chunked-seq-realized33](images/chunked-seq-realized33.png)
 
 ```
 (d/write-dot-file [[chunked-seq (nthrest chunked-seq 40)]] "chunked-seq-and-nthrest-40-realized33.dot" opts)
+(graph-no-longs [[chunked-seq (nthrest chunked-seq 40)]] "chunked-seq-and-nthrest-40-realized33.dot" opts)
 ```
 ![images/chunked-seq-and-nthrest-40-realized33](images/chunked-seq-and-nthrest-40-realized33.png)
 
