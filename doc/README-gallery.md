@@ -127,6 +127,7 @@ We will use the same options mentioned in the previous section to
 avoid printing the value of objects in their node labels, to avoid the
 act of creating a graph from causing more of a sequence to be
 realized.
+
 ```
 (require '[cljol.dig9 :as d])
 
@@ -137,6 +138,17 @@ realized.
    d/field-values]})
 ```
 
+The `range` function returns a chunked sequence, and the `map`
+function has special code in its implementation that recognizes when
+the sequence it is given is chunked, and to take advantage of this and
+preserve its 'chunked-ness' in the sequence it returns.
+
+The function given as a first argument to `map` would not normally
+have a `println` call in it.  It is included to make it obvious
+exactly when the function is called on each element.
+
+The first figure we draw is before any elements of the sequence are
+realized, so the data structures are relatively small.
 ```
 (def chunked-seq (map (fn [x]
                        (println "processing element:" x)
@@ -146,6 +158,14 @@ realized.
 (d/view [chunked-seq] opts)
 (d/write-dot-file [chunked-seq] "chunked-seq-unrealized.dot" opts)
 ```
+![chunked-seq-unrealized](images/chunked-seq-unrealized.png)
+
+Next we force exactly one element of the sequence to be realized, so
+we can print it.  Because of the chunked nature of the sequence, this
+causes not only one element to be realized but the first 32, as you
+can tell from the `println` printing 32 "processing element:" lines of
+output.  The figure also shows that all of the first 32 elements have
+been realized.
 
 ```
 (println (take 1 chunked-seq))
@@ -155,9 +175,15 @@ realized.
 
 (d/view [chunked-seq] opts)
 (d/write-dot-file [chunked-seq] "chunked-seq-realized1.dot" opts)
-
 ```
+![images/chunked-seq-realized1](images/chunked-seq-realized1.png)
 
+Next we print the first 20 elements of the sequence.  No more
+`println` calls execute, because the first 32 elements were already
+realized above.  We show a drawing that is the same as the previous
+one, except it also has a vector where the second element is the
+return value of `(nthrest chunked-seq 20)`, so you can see the object
+that creates and returns.
 ```
 (println (take 20 chunked-seq))
 ;; => (1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20)
@@ -166,7 +192,12 @@ realized.
 
 (d/write-dot-file [[chunked-seq (nthrest chunked-seq 20)]] "chunked-seq-and-nthrest-20-realized20.dot" opts)
 ```
+![images/chunked-seq-and-nthrest-20-realized20](images/chunked-seq-and-nthrest-20-realized20.png)
 
+Printing the first 32 elements again causes no new elements of the
+sequence to be realized.  Printing the first 33 causes the 33rd
+through 64th elements to be realized, as the `println` output
+indicates.
 ```
 (println (take 32 chunked-seq))
 ;; no "processing element:" lines printed for this either
@@ -177,9 +208,13 @@ realized.
 ;; output lines, from processing the second chunk
 
 (d/write-dot-file [chunked-seq] "chunked-seq-realized33.dot" opts)
+```
+![images/chunked-seq-realized33](images/chunked-seq-realized33.png)
 
+```
 (d/write-dot-file [[chunked-seq (nthrest chunked-seq 40)]] "chunked-seq-and-nthrest-40-realized33.dot" opts)
 ```
+![images/chunked-seq-and-nthrest-40-realized33](images/chunked-seq-and-nthrest-40-realized33.png)
 
 
 # Compressed pointers in 64-bit JVMs
