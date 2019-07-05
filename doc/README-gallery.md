@@ -111,6 +111,39 @@ sequence.  Look for the object with three pointers out of it labeled
 
 # Chunked lazy sequences
 
+While there are some lazily realized sequences in Clojure that look
+like the one demonstrated in the previous section, a fairly large
+number of them take advantage of a 'chunked' implementation.  The
+basic idea is to reduce the number of objects and pointers that must
+be followed for long sequences, by creating 'chunk' objects that
+contain pointers to up to 32 consecutive elements.  This not only
+saves memory, but also improves performance, in part because it takes
+advantage of locality of reference in processor caches -- once one
+part of an array of 32 pointers is brought into the cache and
+referenced, some or all of the rest of them are brought into the
+cache, too.
+
+We will use the same options mentioned in the previous section to
+avoid printing the value of objects in their node labels, to avoid the
+act of creating a graph from causing more of a sequence to be
+realized.
+```
+(require '[cljol.dig9 :as d])
+
+(def opts {:node-label-functions
+  [d/size-bytes
+   d/total-size-bytes
+   d/class-description
+   d/field-values]})
+```
+
+```
+(def chunked (map (fn [x]
+                    (println "processing element:" x)
+                    (inc x))
+		  (range 1000)))
+```
+
 
 # Compressed pointers in 64-bit JVMs
 
