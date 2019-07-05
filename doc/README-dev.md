@@ -28,6 +28,9 @@ containing data about the Java object the node represents.  See
 `cljol.dig9/all-builtin-node-labels` for the names of all such
 functions built into cljol.
 
+See a section "Customizing Clojure's pprint function" written by Alex
+Miller on one way to customize Clojure's pprint behavior.
+
 
 # Other versions of JOL library
 
@@ -151,3 +154,69 @@ on that DAG.  The function cljol.graph/reachable-nodes implements this
 combination of calculating the scc-graph, then calcalating
 reachable-nodes on the resulting DAG, then transforming the results
 back into results for the original graph.
+
+
+# Customizing Clojure's pprint function
+
+From a discussion on the Clojurians Slack channel 2019-Jul-05:
+
+I'm trying to generate some specs and write them to a file.  When I
+pretty print them, they look like so:
+
+```
+(s/def
+ ::addresses
+ (s/keys
+  :req-un
+  [:addresses/addressable-id
+   :addresses/addressable-type
+   :addresses/city
+```
+
+Is there any way I can convince the pretty-printer to get the
+`::addresses` to come out on the same line as the `s/def`?
+
+alexmiller: Yes, there are some tricks if you use the "code" modes of
+the pretty printer.  Let me find you a link to an example.
+
+This is dark arts :)
+
+```
+user=> (require '[clojure.spec.alpha :as s] '[clojure.pprint :as pp])
+nil
+(def c `(s/def
+ :user/addresses
+ (s/keys
+  :req-un
+  [:addresses/addressable-id
+   :addresses/addressable-type
+   :addresses/city])))
+#'user/c
+
+user=> (binding [pp/*code-table* (assoc @#'pp/*code-table* 'clojure.spec.alpha/def #'pp/pprint-hold-first)] (pp/with-pprint-dispatch pp/code-dispatch (pp/pprint c)))
+(clojure.spec.alpha/def :user/addresses
+ (clojure.spec.alpha/keys
+   :req-un
+   [:addresses/addressable-id
+    :addresses/addressable-type
+    :addresses/city]))
+```
+
+Note that here c is your code (as data) -- it's important that you
+fully namespace the symbols (I'm using back tick to get that).
+
+Then you want to pprint, with specialized dispatch, using the
+code-dispatch which already knows how to handle most clojure code, and
+extend the code-table to understand how to handle s/def.
+
+You can look at the pprint code to see more about the default code
+table and how things like pprint-hold-first are defined (which is,
+again, another dark arts subset of this dark art) :)
+
+mpenet: cljfmt can do that too, I think.
+
+alexmiller: Undoubtedly, but this is "in the box" with both clj and
+cljs, and this is an extensible system so you can do other customized
+things with your own macros or whatever.  Like, you could tweak this
+to put the req keys next to the :req-un if you were determined enough
+(see pprint-let for something probably similar).
