@@ -1,7 +1,7 @@
-For any of the figures in this document, if you are reading this via
-Github's web site, you can click on the image, and it will show it on
-a page zoomed in to a larger size, and that you can scroll around up,
-down, left, and right.
+If you are reading this via Github's web site, you can click on any of
+the figures and it will show it on a page zoomed in to a larger size.
+This zoomed in image allows you to scroll up, down, left, and right
+within it.
 
 
 # Lazy sequences realized one element at a time
