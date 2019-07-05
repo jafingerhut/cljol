@@ -138,10 +138,47 @@ realized.
 ```
 
 ```
-(def chunked (map (fn [x]
-                    (println "processing element:" x)
-                    (inc x))
-		  (range 1000)))
+(def chunked-seq (map (fn [x]
+                       (println "processing element:" x)
+                       (inc x))
+                      (range 1000)))
+
+(d/view [chunked-seq] opts)
+(d/write-dot-file [chunked-seq] "chunked-seq-unrealized.dot" opts)
+```
+
+```
+(println (take 1 chunked-seq))
+;; => (1)
+;; prints "processing element: 0" through "processing element: 31"
+;; output lines, from processing one entire chunk.
+
+(d/view [chunked-seq] opts)
+(d/write-dot-file [chunked-seq] "chunked-seq-realized1.dot" opts)
+
+```
+
+```
+(println (take 20 chunked-seq))
+;; => (1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20)
+;; no more "processing element:" lines printed, because the
+;; first 32 elements have already been realized above.
+
+(d/write-dot-file [[chunked-seq (nthrest chunked-seq 20)]] "chunked-seq-and-nthrest-20-realized20.dot" opts)
+```
+
+```
+(println (take 32 chunked-seq))
+;; no "processing element:" lines printed for this either
+
+(println (take 33 chunked-seq))
+;; => (1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33)
+;; prints "processing element: 32" through "processing element: 63"
+;; output lines, from processing the second chunk
+
+(d/write-dot-file [chunked-seq] "chunked-seq-realized33.dot" opts)
+
+(d/write-dot-file [[chunked-seq (nthrest chunked-seq 40)]] "chunked-seq-and-nthrest-40-realized33.dot" opts)
 ```
 
 

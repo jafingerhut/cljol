@@ -1,0 +1,41 @@
+digraph {
+graph [layout=dot,rankdir=LR];
+"32281182400" [label="16 bytes
+1 object, 16 bytes reachable
+user$fn__6500
+12: __methodImplCache (ref) nil",shape=box];
+"32281183872" [label="64 bytes
+2 objects, 88 bytes reachable
+c.l.LongRange
+12: _meta (ref) nil
+16: _hash (int) 0
+20: _hasheq (int) 0
+24: start (long) 0
+32: end (long) 1000
+40: step (long) 1
+48: boundsCheck (ref) ->
+52: _chunk (ref) nil
+56: _chunkNext (ref) nil
+60: _next (ref) nil",shape=box];
+"32281184384" [label="24 bytes
+1 object, 24 bytes reachable
+c.l.LongRange$1
+16: val$end (long) 1000",shape=box];
+"32281186368" [label="32 bytes
+5 objects, 160 bytes reachable
+c.l.LazySeq
+12: _meta (ref) nil
+16: fn (ref) ->
+20: sv (ref) nil
+24: s (ref) nil",shape=box];
+"32281186624" [label="24 bytes
+4 objects, 128 bytes reachable
+clojure.core$map$fn__5866
+12: __methodImplCache (ref) nil
+16: f (ref) ->
+20: coll (ref) ->",shape=box];
+"32281183872" -> "32281184384" ["field-name"=boundsCheck,label=boundsCheck];
+"32281186368" -> "32281186624" ["field-name"=fn,label=fn];
+"32281186624" -> "32281182400" ["field-name"=f,label=f];
+"32281186624" -> "32281183872" ["field-name"=coll,label=coll];
+} 
