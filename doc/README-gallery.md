@@ -71,6 +71,17 @@ Now force the first element of the sequence to be generated.
 ```
 ![lazy-fib-seq-realized1](images/lazy-fib-seq-realized1.png)
 
+Note that the leftmost object is the _same object_ as the leftmost
+object in the previous figure, but now its field `fn` has been changed
+from pointing at a Clojure function object, to nil, and its field `s`
+has changed from nil to a `Cons` object.  That `Cons` object has a
+`_first` field pointing to the first element of the sequence, 0, and a
+`_more` field pointing to another `LazySeq` object, which points at a
+Clojure function object.
+
+That function object will be called when we force the second element
+of the sequence to be realized, as we do next.
+
 ```
 (println (take 2 fib-seq))
 (d/view [fib-seq] opts)
@@ -78,11 +89,17 @@ Now force the first element of the sequence to be generated.
 ```
 ![lazy-fib-seq-realized2](images/lazy-fib-seq-realized2.png)
 
-Here we view a vector of the head of the sequence, but also the
-sequence starting at the second element (nthrest fib-seq 1), and the
-sequence starting at the third element (nthrest fib-seq 2), so you can
-see explict pointers in the figure to those parts of the lazy
-sequence.
+The leftmost object has not changed from the previous figure to the
+one above, but the second `LazySeq` object has, from pointing at a
+function with its `fn` field, to pointing at a new `Cons` object with
+its `s` field.
+
+Below we view a vector of the head of the sequence, but also the
+sequence starting at the second element `(nthrest fib-seq 1)`, and the
+sequence starting at the third element `(nthrest fib-seq 2)`, so you
+can see explict pointers in the figure to those parts of the lazy
+sequence.  Look for the object with three pointers out of it labeled
+`[0]`, `[1]`, and `[2]`.
 
 ```
 (d/view [[fib-seq (nthrest fib-seq 1) (nthrest fib-seq 2)]] opts)
