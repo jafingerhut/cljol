@@ -47,8 +47,12 @@ several buit-in Clojure functions use (see the next section for
 examples of that):
 
 ```
+;; We use +' instead of + in case you want to experiment on your own
+;; with taking over about 92 elements from the sequence, when a 64-bit
+;; long integer overflows.
+
 (defn fib-fn [a b]
-  (lazy-seq (cons a (fib-fn b (+ a b)))))
+  (lazy-seq (cons a (fib-fn b (+' a b)))))
 ```
 
 Here are the first 15 elements of the sequence it returns:
