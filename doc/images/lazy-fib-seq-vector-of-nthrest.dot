@@ -1,0 +1,101 @@
+digraph {
+graph [layout=dot,rankdir=LR];
+"26102496384" [label="24 bytes
+3 objects, 184 bytes reachable
+c.l.PersistentVector$Node
+12: edit (ref) ->
+16: array (ref) ->",shape=box];
+"26106721920" [label="24 bytes
+1 object, 24 bytes reachable
+j.l.Long
+16: value (long) 0",shape=box];
+"26124227456" [label="32 bytes
+9 objects, 256 bytes reachable
+c.l.LazySeq
+12: _meta (ref) nil
+16: fn (ref) nil
+20: sv (ref) nil
+24: s (ref) ->",shape=box];
+"26102496704" [label="144 bytes
+1 object, 144 bytes reachable
+array of 32 j.l.Object
+",shape=box];
+"26102850176" [label="24 bytes
+1 object, 24 bytes reachable
+j.l.Long
+16: value (long) 1",shape=box];
+"31713887808" [label="32 bytes
+6 objects, 168 bytes reachable
+c.l.LazySeq
+12: _meta (ref) nil
+16: fn (ref) nil
+20: sv (ref) nil
+24: s (ref) ->",shape=box];
+"31713888256" [label="32 bytes
+8 objects, 224 bytes reachable
+c.l.Cons
+12: _meta (ref) nil
+16: _hash (int) 0
+20: _hasheq (int) 0
+24: _first (ref) ->
+28: _more (ref) ->",shape=box];
+"31809817088" [label="24 bytes
+3 objects, 72 bytes reachable
+user$fib_fn$fn__6376
+12: __methodImplCache (ref) nil
+16: a (ref) ->
+20: b (ref) ->",shape=box];
+"31883972928" [label="32 bytes
+10 objects, 288 bytes reachable
+array of 3 j.l.Object
+",shape=box];
+"31809816832" [label="32 bytes
+4 objects, 104 bytes reachable
+c.l.LazySeq
+12: _meta (ref) nil
+16: fn (ref) ->
+20: sv (ref) nil
+24: s (ref) nil",shape=box];
+"31809817280" [label="32 bytes
+5 objects, 136 bytes reachable
+c.l.Cons
+12: _meta (ref) nil
+16: _hash (int) 0
+20: _hasheq (int) 0
+24: _first (ref) ->
+28: _more (ref) ->",shape=box];
+"26102849984" [label="24 bytes
+1 object, 24 bytes reachable
+j.l.Long
+16: value (long) 2",shape=box];
+"26102496576" [label="16 bytes
+1 object, 16 bytes reachable
+j.u.c.atomic.AtomicReference
+12: value (ref) nil",shape=box];
+"31883973184" [label="40 bytes
+14 objects, 512 bytes reachable
+c.l.PersistentVector
+12: _hash (int) 0
+16: _hasheq (int) 0
+20: cnt (int) 3
+24: shift (int) 5
+28: root (ref) ->
+32: tail (ref) ->
+36: _meta (ref) nil",shape=box];
+"26102496384" -> "26102496576" ["field-name"=edit,label=edit];
+"26102496384" -> "26102496704" ["field-name"=array,label=array];
+"26124227456" -> "31713888256" ["field-name"=s,label=s];
+"31713887808" -> "31809817280" ["field-name"=s,label=s];
+"31713888256" -> "26106721920" ["field-name"=_first,label=_first];
+"31713888256" -> "31713887808" ["field-name"=_more,label=_more];
+"31809817088" -> "26102850176" ["field-name"=a,label=a];
+"31809817088" -> "26102849984" ["field-name"=b,label=b];
+"31883972928" -> "26124227456" ["field-name"="[0]",label="[0]"];
+"31883972928" -> "31713887808" ["field-name"="[1]",label="[1]"];
+"31883972928" -> "31809816832" ["field-name"="[2]",label="[2]"];
+"31809816832" -> "31809817088" ["field-name"=fn,label=fn];
+"31809817280" -> "26102850176" ["field-name"=_first,label=_first];
+"31809817280" -> "31809816832" ["field-name"=_more,label=_more];
+"31883973184" -> "26102496384" ["field-name"=root,label=root];
+"31883973184" -> "31883972928" ["field-name"=tail,label=tail];
+} 

@@ -1,3 +1,80 @@
+# Lazy sequences realized one element at a time
+
+For this example, it is important to configure `cljol` so that it does
+_not_ show the value of objects as a label on the nodes.  If you do
+that, it will try to realize the lazy sequence in order to convert its
+value to a string.  You can configure the contents of the node labels
+in figures produced by giving a sequence of functions as the value
+assocaited with the key `:node-label-functions` in a map of options
+passed to most of the `cljol` functions.
+
+Here is the default value used if you do not provide an options map,
+copied from the code in the `cljol.dig9` namespace:
+
+```
+(def default-node-labels
+  [;;address-hex
+   size-bytes
+   total-size-bytes
+   class-description
+   field-values
+   ;;path-to-object
+   javaobj->str])
+```
+
+We will use this options map for the examples in this section.  Note
+that we leave out `javaobj->str`:
+
+```
+(require '[cljol.dig9 :as d])
+
+(def opts {:node-label-functions
+  [d/size-bytes
+   d/total-size-bytes
+   d/class-description
+   d/field-values]})
+```
+
+We will use the following function to create and return a lazy
+sequence, one element at a time, with no 'chunking' optimization that
+several buit-in Clojure functions use (see the next section for
+examples of that):
+
+```
+(defn fib-fn [a b]
+  (lazy-seq (cons a (fib-fn b (+ a b)))))
+
+(take 15 (fib-fn 0 1))
+;; (0 1 1 2 3 5 8 13 21 34 55 89 144 233 377)
+
+(def fib-seq (fib-fn 0 1))
+
+(d/view [fib-seq] opts)
+(d/write-dot-file [fib-seq] "lazy-fib-seq-unrealized.dot" opts)
+
+(println (take 1 fib-seq))
+(d/view [fib-seq] opts)
+(d/write-dot-file [fib-seq] "lazy-fib-seq-realized1.dot" opts)
+
+(println (take 2 fib-seq))
+(d/view [fib-seq] opts)
+(d/write-dot-file [fib-seq] "lazy-fib-seq-realized2.dot" opts)
+
+;; Here we view a vector of the head of the sequence, but also the
+;; sequence starting at the second element (nthrest fib-seq 1), and
+;; the sequence starting at the third element (nthrest fib-seq 2), so
+;; you can see explict pointers in the figure to those parts of the
+;; lazy sequence.
+
+(d/view [[fib-seq (nthrest fib-seq 1) (nthrest fib-seq 2)]] opts)
+(d/write-dot-file [[fib-seq (nthrest fib-seq 1) (nthrest fib-seq 2)]]
+    "lazy-fib-seq-vector-of-nthrest.dot" opts)
+```
+
+
+# Chunked lazy sequences
+
+
 # Compressed pointers in 64-bit JVMs
 
 In looking at these figures, you may have noticed that the byte
@@ -153,6 +230,3 @@ different data structures?
 (/ 8016.0 (* 8 1000))
 ;; 1.002 times more than the long values themselves
 ```
-
-
-# Different ways of having a map with integer keys
