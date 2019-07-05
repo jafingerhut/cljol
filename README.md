@@ -154,26 +154,41 @@ no cycles
 number of nodes in all weakly connected components,
 from most to fewest nodes:
 (1067)
-map where keys are object size in bytes,
-values are number of objects with that size:
-{16 1, 24 1032, 40 1, 48 1, 144 32}
+number of objects of each size in bytes:
+({:size-bytes 16, :num-objects 1, :total-size 16}
+ {:size-bytes 24, :num-objects 1032, :total-size 24768}
+ {:size-bytes 40, :num-objects 1, :total-size 40}
+ {:size-bytes 48, :num-objects 1, :total-size 48}
+ {:size-bytes 144, :num-objects 32, :total-size 4608})
+number and size of objects of each class:
+({:total-size 16,
+  :num-objects 1,
+  :class "j.u.c.atomic.AtomicReference"}
+ {:total-size 40, :num-objects 1, :class "c.l.PersistentVector"}
+ {:total-size 768, :num-objects 32, :class "c.l.PersistentVector$Node"}
+ {:total-size 4656, :num-objects 33, :class "[Ljava.lang.Object;"}
+ {:total-size 24000, :num-objects 1000, :class "j.l.Long"})
 
 1001 leaf objects (no references to other objects)
 1 root nodes (no reference to them from other objects _in this graph_)
-map where keys are in-degree of an object,
-values are number of objects with that in-degree:
-{0 1, 1 1065, 32 1}
-map where keys are out-degree of an object,
-values are number of objects with that out-degree:
-{0 1001, 2 33, 8 1, 31 1, 32 31}
+number of objects of each in-degree (# of references to it):
+({:in-degree 0, :num-objects 1}
+ {:in-degree 1, :num-objects 1065}
+ {:in-degree 32, :num-objects 1})
+number of objects of each out-degree (# of references from it):
+({:out-degree 0, :num-objects 1001}
+ {:out-degree 2, :num-objects 33}
+ {:out-degree 8, :num-objects 1}
+ {:out-degree 31, :num-objects 1}
+ {:out-degree 32, :num-objects 31})
 map where keys are distance of an object from a start node,
 values are number of objects with that distance:
-{0 {:distance 0, :num-objects 1, :total-size 40},
- 1 {:distance 1, :num-objects 2, :total-size 72},
- 2 {:distance 2, :num-objects 10, :total-size 352},
- 3 {:distance 3, :num-objects 31, :total-size 744},
- 4 {:distance 4, :num-objects 31, :total-size 4464},
- 5 {:distance 5, :num-objects 992, :total-size 23808}}
+({:distance 0, :num-objects 1, :total-size 40}
+ {:distance 1, :num-objects 2, :total-size 72}
+ {:distance 2, :num-objects 10, :total-size 352}
+ {:distance 3, :num-objects 31, :total-size 744}
+ {:distance 4, :num-objects 31, :total-size 4464}
+ {:distance 5, :num-objects 992, :total-size 23808})
 ```
 
 Here is a way to create another graph `g2` from `g` with all of `g`'s

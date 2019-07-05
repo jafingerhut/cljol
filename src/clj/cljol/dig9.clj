@@ -876,10 +876,11 @@ thread."
   (let [size-bytes-freq (frequencies (map #(uber/attr g % :size)
                                           (uber/nodes g)))
         size-breakdown (->> (for [[size cnt] size-bytes-freq]
-                              {:size-bytes size :num-objects cnt})
+                              {:size-bytes size
+                               :num-objects cnt
+                               :total-size (* size cnt)})
                             (sort-by :size-bytes))
-        total-size-bytes (reduce + (for [[size count] size-bytes-freq]
-                                     (* size count)))
+        total-size-bytes (reduce + (for [x size-breakdown] (:total-size x)))
         ;; TBD: The node collections that ualg/connected-components
         ;; returns can in some cases contain duplicate nodes.  I do
         ;; not know why this happens.  For now, make sets out of them
@@ -909,10 +910,10 @@ thread."
     (println "number and size of objects of each class:")
     (pp/pprint (->> (for [[cls nodes] (group-by #(class (uber/attr g % :obj))
                                                 (uber/nodes g))]
-                      {:class (abbreviated-class-name-str (pr-str cls))
+                      {:total-size (reduce + (for [n nodes]
+                                               (uber/attr g n :size)))
                        :num-objects (count nodes)
-                       :total-size (reduce + (for [n nodes]
-                                               (uber/attr g n :size)))})
+                       :class (abbreviated-class-name-str (pr-str cls))})
                     (sort-by :total-size)))
     (println)
     (println (count (filter #(= 0 (uber/out-degree g %)) (uber/nodes g)))
@@ -920,12 +921,12 @@ thread."
     (println (count (filter #(= 0 (uber/in-degree g %)) (uber/nodes g)))
              "root nodes (no reference to them from other objects _in this graph_)")
 
-    (println "number of objects of each in-degree (references to it):")
+    (println "number of objects of each in-degree (# of references to it):")
     (pp/pprint (->> (for [[k v] (frequencies (map #(uber/in-degree g %)
                                                   (uber/nodes g)))]
                       {:in-degree k :num-objects v})
                     (sort-by :in-degree)))
-    (println "number of objects of each out-degree (references from it):")
+    (println "number of objects of each out-degree (# of references from it):")
     (pp/pprint (->> (for [[k v] (frequencies (map #(uber/out-degree g %)
                                                   (uber/nodes g)))]
                       {:out-degree k :num-objects v})
