@@ -1,3 +1,9 @@
+For any of the figures in this document, if you are reading this via
+Github's web site, you can click on the image, and it will show it on
+a page zoomed in to a larger size, and that you can scroll around up,
+down, left, and right.
+
+
 # Lazy sequences realized one element at a time
 
 For this example, it is important to configure `cljol` so that it does
