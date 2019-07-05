@@ -21,7 +21,8 @@
   :classgraph {:extra-deps {io.github.classgraph/classgraph
                             {:mvn/version "4.8.42"}}}
   :uberlocal {:override-deps {ubergraph {:mvn/version "0.5.4-andy-mods"}}}
-  :generate {:extra-paths ["src/generate"]}
+  :generate {:extra-paths ["src/generate"]
+             :extra-deps {org.clojure/data.int-map {:mvn/version "0.2.4"}}}
   ;; - start a Socket REPL on port 50505:
   :socket {:jvm-opts ["-Dclojure.server.repl={:port,50505,:accept,clojure.core.server/repl}"]}
   :disablecompressedoops {:jvm-opts ["-XX:-UseCompressedOops"]}

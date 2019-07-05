@@ -2,7 +2,8 @@
   (:gen-class)
   (:import (java.io File))
   (:require [cljol.dig9 :as d]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [clojure.data.int-map :as im]))
 
 
 (def props (into (sorted-map) (System/getProperties)))
@@ -210,11 +211,58 @@ collected."
 
 (do
 
-(require 'cljol.generate)
-(require '[cljol.dig9 :as d])
-(in-ns 'cljol.generate)
+(require 'gen.generate)
+(require '[cljol.dig9 :as d]
+         '[clojure.data.int-map :as im]
+         '[ubergraph.core :as uber])
+(in-ns 'gen.generate)
 
 )
+
+(defn pairs-2i-to-inc [n]
+  (for [i (range 0 (* 2 n) 2)]
+    [(* 2 i) (inc (* 2 i))]))
+(pairs-2i-to-inc 5)
+
+(def map12 (into {} (pairs-2i-to-inc 12)))
+(def intmap12 (into (im/int-map) (pairs-2i-to-inc 12)))
+(d/view [map12])
+(d/view [intmap12])
+
+(def map1e4 (into {} (pairs-2i-to-inc 1e4)))
+(def intmap1e4 (into (im/int-map) (pairs-2i-to-inc 1e4)))
+(println "map1e4")
+(def g (d/sum [map1e4]))
+(println "intmap1e4")
+(def g (d/sum [intmap1e4]))
+
+(def e1 *e)
+(use 'clojure.repl)
+(pst e1 100)
+
+(def set1e4 (set (range 1e4)))
+(def intset1e4 (set (into (im/int-set) (range 1e4))))
+(def denseintset1e4 (set (into (im/dense-int-set) (range 1e4))))
+(println "set1e4")
+(def g (d/sum [set1e4]))
+;; 14,795 objects, 464,088 bytes
+(println "intset1e4")
+(def g (d/sum [intset1e4]))
+;; 821 objects, 33,016 bytes
+(println "denseintset1e4")
+(def g (d/sum [denseintset1e4]))
+;; 25 objects, 2,056 bytes
+(d/view-graph g)
+
+
+;; Examine the data structures of ubergraph library using itself
+
+(def gr1 (uber/multidigraph [1 {:label "n1"}]
+                            [2 {:label "n2"}]
+                            [1 2 {:label "edge12"}]))
+(uber/pprint gr1)
+(d/view [gr1])
+
 
 (def opts opts-dont-realize-values)
 (def repeat-42 (repeat 42))
