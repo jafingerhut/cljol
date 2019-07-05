@@ -7,15 +7,21 @@ within it.
 # Lazy sequences realized one element at a time
 
 For this example, it is important to configure `cljol` so that it does
-_not_ show the value of objects as a label on the nodes.  If you do
-that, it will try to realize the lazy sequence in order to convert its
-value to a string.  You can configure the contents of the node labels
-in figures produced by giving a sequence of functions as the value
-associated with the key `:node-label-functions` in a map of options
-passed to most of the `cljol` functions.
+_not_ show the value of objects as a label on the nodes.  If you try
+to view such graphs with the default `cljol` behavior of labeling
+nodes with strings representing the object's value, it will try to
+realize the lazy sequence, which _changes the objects_.  In this
+particular example, it will also go into an infinite loop trying to
+realize an infinite lazy sequence.
 
-Here is the default value used if you do not provide an options map,
-copied from the code in the `cljol.dig9` namespace:
+You can configure the contents of the node labels by giving a sequence
+of functions as the value associated with the key
+`:node-label-functions` in a map of options passed to most of the
+`cljol` functions.
+
+Here is the default list of functions used to create node labels if
+you do not provide an options map, copied from the code in the
+`cljol.dig9` namespace:
 
 ```
 (def default-node-labels
