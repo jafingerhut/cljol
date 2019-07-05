@@ -193,8 +193,9 @@ several later graphs, too.
     (d/view-graph g2)
     (d/view-graph g2 {:save {:filename fname :format :dot}})))
 
-(graph-no-longs [chunked-seq] "chunked-seq-realized1.dot" opts)
+(graph-no-longs [chunked-seq] "chunked-seq-realized1-no-longs.dot" opts)
 ```
+![images/chunked-seq-realized1-no-longs](images/chunked-seq-realized1-no-longs.png)
 
 Next we print the first 20 elements of the sequence.  No more
 `println` calls execute, because the first 32 elements were already
@@ -225,13 +226,11 @@ indicates.
 ;; prints "processing element: 32" through "processing element: 63"
 ;; output lines, from processing the second chunk
 
-(d/write-dot-file [chunked-seq] "chunked-seq-realized33.dot" opts)
 (graph-no-longs [chunked-seq] "chunked-seq-realized33.dot" opts)
 ```
 ![images/chunked-seq-realized33](images/chunked-seq-realized33.png)
 
 ```
-(d/write-dot-file [[chunked-seq (nthrest chunked-seq 40)]] "chunked-seq-and-nthrest-40-realized33.dot" opts)
 (graph-no-longs [[chunked-seq (nthrest chunked-seq 40)]] "chunked-seq-and-nthrest-40-realized33.dot" opts)
 ```
 ![images/chunked-seq-and-nthrest-40-realized33](images/chunked-seq-and-nthrest-40-realized33.png)

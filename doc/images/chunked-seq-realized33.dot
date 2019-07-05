@@ -1,159 +1,10 @@
 digraph {
 graph [layout=dot,rankdir=LR];
-"26096604288" [label="24 bytes
+"32315478592" [label="24 bytes
 1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 52",shape=box];
-"32405841152" [label="24 bytes
-4 objects, 128 bytes reachable
-clojure.core$map$fn__5866
-12: __methodImplCache (ref) nil
-16: f (ref) ->
-20: coll (ref) ->",shape=box];
-"26096602176" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 63",shape=box];
-"26103391488" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 9",shape=box];
-"26101839872" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 30",shape=box];
-"26096606592" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 39",shape=box];
-"26103396928" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 40",shape=box];
-"26096604480" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 51",shape=box];
-"26103389632" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 23",shape=box];
-"26104296448" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 24",shape=box];
-"32281186368" [label="32 bytes
-77 objects, 2160 bytes reachable
-c.l.LazySeq
-12: _meta (ref) nil
-16: fn (ref) nil
-20: sv (ref) nil
-24: s (ref) ->",shape=box];
-"32405840704" [label="24 bytes
-34 objects, 936 bytes reachable
-c.l.ArrayChunk
-12: off (int) 0
-16: end (int) 32
-20: array (ref) ->",shape=box];
-"26096606784" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 38",shape=box];
-"26098244928" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 2",shape=box];
-"32281182400" [label="16 bytes
-1 object, 16 bytes reachable
-user$fn__6500
-12: __methodImplCache (ref) nil",shape=box];
-"26103389248" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 27",shape=box];
-"26096604672" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 50",shape=box];
-"32286838976" [label="32 bytes
-41 objects, 1160 bytes reachable
-c.l.LazySeq
-12: _meta (ref) nil
-16: fn (ref) nil
-20: sv (ref) nil
-24: s (ref) ->",shape=box];
-"26099045184" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 20",shape=box];
-"26096605056" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 48",shape=box];
-"32405841344" [label="32 bytes
-40 objects, 1128 bytes reachable
-c.l.ChunkedCons
-12: _meta (ref) nil
-16: _hash (int) 0
-20: _hasheq (int) 0
-24: chunk (ref) ->
-28: _more (ref) ->",shape=box];
-"26096602368" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 62",shape=box];
-"26103396160" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 16",shape=box];
-"26104296640" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 22",shape=box];
-"26096607168" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 36",shape=box];
-"26103392192" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 4",shape=box];
-"32405840896" [label="32 bytes
-5 objects, 160 bytes reachable
-c.l.LazySeq
-12: _meta (ref) nil
-16: fn (ref) ->
-20: sv (ref) nil
-24: s (ref) nil",shape=box];
-"32286536512" [label="144 bytes
-33 objects, 912 bytes reachable
-array of 32 j.l.Object
-",shape=box];
-"26096606016" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 43",shape=box];
-"26101840064" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 28",shape=box];
-"26096607744" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 33",shape=box];
-"26101839680" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 31",shape=box];
-"26101841152" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 29",shape=box];
-"26096606208" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 42",shape=box];
-"32286839424" [label="32 bytes
+c.l.LongRange$1
+16: val$end (long) 1000",shape=box];
+"32321159296" [label="32 bytes
 76 objects, 2128 bytes reachable
 c.l.ChunkedCons
 12: _meta (ref) nil
@@ -161,173 +12,52 @@ c.l.ChunkedCons
 20: _hasheq (int) 0
 24: chunk (ref) ->
 28: _more (ref) ->",shape=box];
-"26096603136" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 58",shape=box];
-"26096601984" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 64",shape=box];
-"26103389952" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 21",shape=box];
-"26096605248" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 47",shape=box];
-"26096605440" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 46",shape=box];
-"26096602560" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 61",shape=box];
-"26103391808" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 7",shape=box];
-"26096603520" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 56",shape=box];
-"26103392000" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 5",shape=box];
-"26103396736" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 8",shape=box];
-"26096603328" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 57",shape=box];
-"26103390272" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 19",shape=box];
-"26096607936" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 26",shape=box];
-"26096603904" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 54",shape=box];
-"26096605632" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 45",shape=box];
-"26105150336" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 32",shape=box];
-"26103391104" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 13",shape=box];
-"26103390912" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 15",shape=box];
-"26096605824" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 44",shape=box];
-"32281184384" [label="24 bytes
-1 object, 24 bytes reachable
-c.l.LongRange$1
-16: val$end (long) 1000",shape=box];
-"26103395968" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 25",shape=box];
-"26096603712" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 55",shape=box];
-"26098245120" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 1",shape=box];
-"26096606976" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 37",shape=box];
-"26096604096" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 53",shape=box];
-"26096602752" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 60",shape=box];
-"26096604864" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 49",shape=box];
-"32286838784" [label="24 bytes
+"32321158656" [label="24 bytes
 34 objects, 936 bytes reachable
 c.l.ArrayChunk
 12: off (int) 0
 16: end (int) 32
 20: array (ref) ->",shape=box];
-"26103389440" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 18",shape=box];
-"26096607360" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 35",shape=box];
-"26096607552" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 34",shape=box];
-"32405542592" [label="144 bytes
+"32320856384" [label="144 bytes
 33 objects, 912 bytes reachable
 array of 32 j.l.Object
 ",shape=box];
-"26103390464" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 17",shape=box];
-"26104296832" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 6",shape=box];
-"26103391296" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 12",shape=box];
-"26096602944" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 59",shape=box];
-"26096606400" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 41",shape=box];
-"26103396544" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 11",shape=box];
-"26103396352" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 14",shape=box];
-"26103388800" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 10",shape=box];
-"26098667520" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 3",shape=box];
-"32405541632" [label="64 bytes
+"32771045568" [label="144 bytes
+33 objects, 912 bytes reachable
+array of 32 j.l.Object
+",shape=box];
+"32771344320" [label="32 bytes
+40 objects, 1128 bytes reachable
+c.l.ChunkedCons
+12: _meta (ref) nil
+16: _hash (int) 0
+20: _hasheq (int) 0
+24: chunk (ref) ->
+28: _more (ref) ->",shape=box];
+"32315480576" [label="32 bytes
+77 objects, 2160 bytes reachable
+c.l.LazySeq
+12: _meta (ref) nil
+16: fn (ref) nil
+20: sv (ref) nil
+24: s (ref) ->",shape=box];
+"32771344128" [label="24 bytes
+4 objects, 128 bytes reachable
+clojure.core$map$fn__5866
+12: __methodImplCache (ref) nil
+16: f (ref) ->
+20: coll (ref) ->",shape=box];
+"32771343680" [label="24 bytes
+34 objects, 936 bytes reachable
+c.l.ArrayChunk
+12: off (int) 0
+16: end (int) 32
+20: array (ref) ->",shape=box];
+"32315476608" [label="16 bytes
+1 object, 16 bytes reachable
+user$fn__6559
+12: __methodImplCache (ref) nil",shape=box];
+"32771044608" [label="64 bytes
 2 objects, 88 bytes reachable
 c.l.LongRange
 12: _meta (ref) nil
@@ -340,80 +70,30 @@ c.l.LongRange
 52: _chunk (ref) nil
 56: _chunkNext (ref) nil
 60: _next (ref) nil",shape=box];
-"32405841152" -> "32281182400" ["field-name"=f,label=f];
-"32405841152" -> "32405541632" ["field-name"=coll,label=coll];
-"32281186368" -> "32286839424" ["field-name"=s,label=s];
-"32405840704" -> "32405542592" ["field-name"=array,label=array];
-"32286838976" -> "32405841344" ["field-name"=s,label=s];
-"32405841344" -> "32405840704" ["field-name"=chunk,label=chunk];
-"32405841344" -> "32405840896" ["field-name"=_more,label=_more];
-"32405840896" -> "32405841152" ["field-name"=fn,label=fn];
-"32286536512" -> "26103391488" ["field-name"="[8]",label="[8]"];
-"32286536512" -> "26101839872" ["field-name"="[29]",label="[29]"];
-"32286536512" -> "26103389632" ["field-name"="[22]",label="[22]"];
-"32286536512" -> "26104296448" ["field-name"="[23]",label="[23]"];
-"32286536512" -> "26098244928" ["field-name"="[1]",label="[1]"];
-"32286536512" -> "26103389248" ["field-name"="[26]",label="[26]"];
-"32286536512" -> "26099045184" ["field-name"="[19]",label="[19]"];
-"32286536512" -> "26103396160" ["field-name"="[15]",label="[15]"];
-"32286536512" -> "26104296640" ["field-name"="[21]",label="[21]"];
-"32286536512" -> "26103392192" ["field-name"="[3]",label="[3]"];
-"32286536512" -> "26101840064" ["field-name"="[27]",label="[27]"];
-"32286536512" -> "26101839680" ["field-name"="[30]",label="[30]"];
-"32286536512" -> "26101841152" ["field-name"="[28]",label="[28]"];
-"32286536512" -> "26103389952" ["field-name"="[20]",label="[20]"];
-"32286536512" -> "26103391808" ["field-name"="[6]",label="[6]"];
-"32286536512" -> "26103392000" ["field-name"="[4]",label="[4]"];
-"32286536512" -> "26103396736" ["field-name"="[7]",label="[7]"];
-"32286536512" -> "26103390272" ["field-name"="[18]",label="[18]"];
-"32286536512" -> "26096607936" ["field-name"="[25]",label="[25]"];
-"32286536512" -> "26105150336" ["field-name"="[31]",label="[31]"];
-"32286536512" -> "26103391104" ["field-name"="[12]",label="[12]"];
-"32286536512" -> "26103390912" ["field-name"="[14]",label="[14]"];
-"32286536512" -> "26103395968" ["field-name"="[24]",label="[24]"];
-"32286536512" -> "26098245120" ["field-name"="[0]",label="[0]"];
-"32286536512" -> "26103389440" ["field-name"="[17]",label="[17]"];
-"32286536512" -> "26103390464" ["field-name"="[16]",label="[16]"];
-"32286536512" -> "26104296832" ["field-name"="[5]",label="[5]"];
-"32286536512" -> "26103391296" ["field-name"="[11]",label="[11]"];
-"32286536512" -> "26103396544" ["field-name"="[10]",label="[10]"];
-"32286536512" -> "26103396352" ["field-name"="[13]",label="[13]"];
-"32286536512" -> "26103388800" ["field-name"="[9]",label="[9]"];
-"32286536512" -> "26098667520" ["field-name"="[2]",label="[2]"];
-"32286839424" -> "32286838784" ["field-name"=chunk,label=chunk];
-"32286839424" -> "32286838976" ["field-name"=_more,label=_more];
-"32286838784" -> "32286536512" ["field-name"=array,label=array];
-"32405542592" -> "26096604288" ["field-name"="[19]",label="[19]"];
-"32405542592" -> "26096602176" ["field-name"="[30]",label="[30]"];
-"32405542592" -> "26096606592" ["field-name"="[6]",label="[6]"];
-"32405542592" -> "26103396928" ["field-name"="[7]",label="[7]"];
-"32405542592" -> "26096604480" ["field-name"="[18]",label="[18]"];
-"32405542592" -> "26096606784" ["field-name"="[5]",label="[5]"];
-"32405542592" -> "26096604672" ["field-name"="[17]",label="[17]"];
-"32405542592" -> "26096605056" ["field-name"="[15]",label="[15]"];
-"32405542592" -> "26096602368" ["field-name"="[29]",label="[29]"];
-"32405542592" -> "26096607168" ["field-name"="[3]",label="[3]"];
-"32405542592" -> "26096606016" ["field-name"="[10]",label="[10]"];
-"32405542592" -> "26096607744" ["field-name"="[0]",label="[0]"];
-"32405542592" -> "26096606208" ["field-name"="[9]",label="[9]"];
-"32405542592" -> "26096603136" ["field-name"="[25]",label="[25]"];
-"32405542592" -> "26096601984" ["field-name"="[31]",label="[31]"];
-"32405542592" -> "26096605248" ["field-name"="[14]",label="[14]"];
-"32405542592" -> "26096605440" ["field-name"="[13]",label="[13]"];
-"32405542592" -> "26096602560" ["field-name"="[28]",label="[28]"];
-"32405542592" -> "26096603520" ["field-name"="[23]",label="[23]"];
-"32405542592" -> "26096603328" ["field-name"="[24]",label="[24]"];
-"32405542592" -> "26096603904" ["field-name"="[21]",label="[21]"];
-"32405542592" -> "26096605632" ["field-name"="[12]",label="[12]"];
-"32405542592" -> "26096605824" ["field-name"="[11]",label="[11]"];
-"32405542592" -> "26096603712" ["field-name"="[22]",label="[22]"];
-"32405542592" -> "26096606976" ["field-name"="[4]",label="[4]"];
-"32405542592" -> "26096604096" ["field-name"="[20]",label="[20]"];
-"32405542592" -> "26096602752" ["field-name"="[27]",label="[27]"];
-"32405542592" -> "26096604864" ["field-name"="[16]",label="[16]"];
-"32405542592" -> "26096607360" ["field-name"="[2]",label="[2]"];
-"32405542592" -> "26096607552" ["field-name"="[1]",label="[1]"];
-"32405542592" -> "26096602944" ["field-name"="[26]",label="[26]"];
-"32405542592" -> "26096606400" ["field-name"="[8]",label="[8]"];
-"32405541632" -> "32281184384" ["field-name"=boundsCheck,label=boundsCheck];
+"32771343872" [label="32 bytes
+5 objects, 160 bytes reachable
+c.l.LazySeq
+12: _meta (ref) nil
+16: fn (ref) ->
+20: sv (ref) nil
+24: s (ref) nil",shape=box];
+"32321158848" [label="32 bytes
+41 objects, 1160 bytes reachable
+c.l.LazySeq
+12: _meta (ref) nil
+16: fn (ref) nil
+20: sv (ref) nil
+24: s (ref) ->",shape=box];
+"32321159296" -> "32321158656" ["field-name"=chunk,label=chunk];
+"32321159296" -> "32321158848" ["field-name"=_more,label=_more];
+"32321158656" -> "32320856384" ["field-name"=array,label=array];
+"32771344320" -> "32771343680" ["field-name"=chunk,label=chunk];
+"32771344320" -> "32771343872" ["field-name"=_more,label=_more];
+"32315480576" -> "32321159296" ["field-name"=s,label=s];
+"32771344128" -> "32315476608" ["field-name"=f,label=f];
+"32771344128" -> "32771044608" ["field-name"=coll,label=coll];
+"32771343680" -> "32771045568" ["field-name"=array,label=array];
+"32771044608" -> "32315478592" ["field-name"=boundsCheck,label=boundsCheck];
+"32771343872" -> "32771344128" ["field-name"=fn,label=fn];
+"32321158848" -> "32771344320" ["field-name"=s,label=s];
 } 
