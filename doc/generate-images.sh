@@ -16,9 +16,9 @@ SCRIPTPATH="$( cd "$(dirname "$0")" ; pwd -P )"
 OUTPUT_DIR="${SCRIPTPATH}/tryout-images"
 mkdir -p "${OUTPUT_DIR}"
 
-ALIAS=""
-#ALIAS="-A:disablecompressedoops"
-clojure $ALIAS -m cljol.generate "${OUTPUT_DIR}"
+ALIAS="-A:generate"
+#ALIAS="${ALIAS}:disablecompressedoops"
+clojure $ALIAS -m gen.generate "${OUTPUT_DIR}"
 
 cd "${OUTPUT_DIR}"
 for j in *.dot

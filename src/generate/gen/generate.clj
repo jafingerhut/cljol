@@ -1,4 +1,4 @@
-(ns cljol.generate
+(ns gen.generate
   (:gen-class)
   (:import (java.io File))
   (:require [cljol.dig9 :as d]
