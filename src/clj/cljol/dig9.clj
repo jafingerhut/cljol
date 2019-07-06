@@ -142,16 +142,20 @@
 (def inaccessible-field-val-sentinel (Object.))
 
 
+(defn obj-field-value [obj ^Field fld]
+  (try
+    (. fld setAccessible true)
+    (.get fld obj)
+    (catch java.lang.reflect.InaccessibleObjectException e
+      inaccessible-field-val-sentinel)))
+
+
 (defn field-name-and-address [^Field fld obj]
   [(. fld getName)
-   (try
-     (. fld setAccessible true)
-     (let [fld-val (. fld get obj)]
-       (if (nil? fld-val)
-         nil
-         (address-of fld-val)))
-     (catch java.lang.reflect.InaccessibleObjectException e
-       inaccessible-field-val-sentinel))])
+   (let [fld-val (obj-field-value obj fld)]
+     (if (nil? fld-val)
+       nil
+       (address-of fld-val)))])
 
 
 ;; Several Java interop calls in the next few lines of code cause
@@ -576,11 +580,22 @@ thread."
   (format "%d bytes" (:size objmap)))
 
 
-(defn total-size-bytes [objmap opts]
-  (format "%d object%s, %d bytes reachable"
-          (:num-reachable-nodes objmap)
-          (if (> (:num-reachable-nodes objmap) 1) "s" "")
-          (:total-size objmap)))
+(defn total-size-bytes
+  "Return a string describing the number of reachable objects from
+  this object, and the total size in bytes of those objects.  Shows ?
+  instead of the values if they have not been calculated for this
+  node."
+  [objmap opts]
+  (let [num (:num-reachable-nodes objmap)
+        num-known? (number? num)
+        total (:total-size objmap)
+        total-known? (number? total)]
+    (format "%s object%s, %s bytes reachable"
+            (if num-known? (str num) "?")
+            (if num-known?
+              (if (> (:num-reachable-nodes objmap) 1) "s" "")
+              "s")
+            (if total-known? (str total) "?"))))
 
 
 (def class-name-prefix-abbreviations
@@ -608,11 +623,6 @@ thread."
       (abbreviated-class-name-str (pr-str (class obj))))))
 
 
-(defn obj-field-value [obj ^Field fld]
-  (. fld setAccessible true)
-  (.get fld obj))
-
-
 (defn primitive-class-name? [name-str]
   (contains? #{"boolean" "byte" "short" "char" "int" "float" "long" "double"}
              name-str))
@@ -626,14 +636,18 @@ thread."
       (str/join "\n"
                 (for [fld-info flds]
                   (let [primitive? (primitive-class-name? (:type-class fld-info))
-                        val (obj-field-value obj (:ref-field fld-info))]
+                        val (obj-field-value obj (:ref-field fld-info))
+                        inaccessible? (identical?
+                                       val inaccessible-field-val-sentinel)]
                     (format "%d: %s (%s) %s"
                             (:vm-offset fld-info)
                             (:field-name fld-info)
                             (if primitive? (:type-class fld-info) "ref")
-                            (if primitive?
-                              val
-                              (if (nil? val) "nil" "->")))))))))
+                            (cond
+                              inaccessible? ".setAccessible failed"
+                              primitive? val
+                              (nil? val) "nil"
+                              :else "->"))))))))
 
 
 (defn path-to-object [objmap opts]
@@ -861,15 +875,21 @@ thread."
 
 (defn graph-of-reachable-objects [obj-coll opts]
   (let [debug-level (get opts :graph-of-reachable-objects-debuglevel 0)
+        calc-tot-size? (get opts :calculate-total-size-node-attribute true)
         objmaps (consistent-reachable-objmaps obj-coll opts)
         {t :time-nsec g :ret} (my-time (object-graph->ubergraph objmaps opts))
         _ (when (>= debug-level 1)
             (println (/ t 1000000.0) "msec to convert" (count objmaps)
                      "objmaps into ubergraph with" (uber/count-edges g)
                      "edges"))
-        {t :time-nsec g :ret} (my-time (add-total-size-bytes-node-attr g))
-        _ (when (>= debug-level 1)
-            (println (/ t 1000000.0) "msec to calculate total sizes"))
+        g (if calc-tot-size?
+            (let [{t :time-nsec g :ret} (my-time
+                                         (add-total-size-bytes-node-attr g))]
+              (when (>= debug-level 1)
+                (println (/ t 1000000.0) "msec to calculate total sizes"))
+              g)
+            (do (println "skipping calculation of total size")
+                g))
         {t :time-nsec g :ret} (my-time (add-shortest-path-distances g obj-coll))
         _ (when (>= debug-level 1)
             (println (/ t 1000000.0) "msec to calculate shortest paths"))
