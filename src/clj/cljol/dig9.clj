@@ -139,13 +139,19 @@
   (. (VM/current) addressOf obj))
 
 
+(def inaccessible-field-val-sentinel (Object.))
+
+
 (defn field-name-and-address [^Field fld obj]
-  (. fld setAccessible true)
-  (let [fld-val (. fld get obj)]
-    [(. fld getName)
-     (if (nil? fld-val)
-       nil
-       (address-of fld-val))]))
+  [(. fld getName)
+   (try
+     (. fld setAccessible true)
+     (let [fld-val (. fld get obj)]
+       (if (nil? fld-val)
+         nil
+         (address-of fld-val)))
+     (catch java.lang.reflect.InaccessibleObjectException e
+       inaccessible-field-val-sentinel))])
 
 
 ;; Several Java interop calls in the next few lines of code cause
@@ -302,7 +308,8 @@
          :data m}
         
         (not (every? #(or (nil? %)
-                          (and (integer? %) (>= % 0)))
+                          (and (integer? %) (>= % 0))
+                          (identical? % inaccessible-field-val-sentinel))
                      (vals (:fields m))))
         {:err :fields-has-val-neither-nil-nor-natural-integer
          :data m}
@@ -331,7 +338,9 @@
 (defn field-addresses [g]
   (->> g
        (mapcat #(vals (:fields %)))
-       (remove nil?)
+       (remove #(or
+                 (nil? %)
+                 (identical? % inaccessible-field-val-sentinel)))
        set))
 
 
@@ -758,6 +767,13 @@ thread."
           {:field-name from-obj-field-name-str}]))))
 
 
+(defmacro my-time [expr]
+  `(let [start# (. System (nanoTime))
+         ret# ~expr]
+     {:time-nsec (- (. System (nanoTime)) start#)
+      :ret ret#}))
+
+
 (defn consistent-reachable-objmaps
   "As described in the documentation for reachable-objmaps, it can
   return inconsistent results for the addresses of different objects.
@@ -774,16 +790,32 @@ thread."
   Note: See object-graph-errors documentation for some notes about a
   possible way that it might not detect any errors, even though the
   set of object data is not actually all consistent with each other."
-  [obj-coll]
-  (let [max-tries 4]
-    (loop [obj-graph (reachable-objmaps obj-coll)
+  [obj-coll opts]
+  (let [max-tries (get opts :max-reachable-objects-tries 4)
+        debug-level (get opts :consistent-reachable-objects-debuglevel 0)]
+    (when (>= debug-level 1)
+      (println "Calling reachable-objmaps try 1"))
+    (loop [{time-nsec :time-nsec obj-graph :ret} (my-time (reachable-objmaps
+                                                           obj-coll))
            num-tries 1]
-      (let [errs (object-graph-errors obj-graph)]
+      (when (>= debug-level 1)
+        (println (/ time-nsec 1000000.0) "msec to find" (count obj-graph)
+                 "objects on try" num-tries "calling reachable-objmaps"))
+      (let [{time-nsec :time-nsec errs :ret} (my-time (object-graph-errors
+                                                       obj-graph))]
+        (when (>= debug-level 1)
+          (println (/ time-nsec 1000000.0) "msec to check for errors on try"
+                   num-tries)
+          (if errs
+            (println "Found error of type" (:err errs))
+            (println "No errors found.")))
         (if errs
           (if (< num-tries max-tries)
             (do
-              (System/gc)
-              (recur (reachable-objmaps obj-coll) (inc num-tries)))
+              (let [{time-nsec :time-nsec} (my-time (System/gc))]
+                (when (>= debug-level 1)
+                  (println (/ time-nsec 1000000.0) "msec to run GC")))
+              (recur (my-time (reachable-objmaps obj-coll)) (inc num-tries)))
             (throw
              (ex-info
               (format "reachable-objmaps returned erroneous obj-graphs on all of %d tries"
@@ -828,11 +860,23 @@ thread."
 
 
 (defn graph-of-reachable-objects [obj-coll opts]
-  (-> (consistent-reachable-objmaps obj-coll)
-      (object-graph->ubergraph opts)
-      (add-total-size-bytes-node-attr)
-      (add-shortest-path-distances obj-coll)
-      (add-viz-attributes opts)))
+  (let [debug-level (get opts :graph-of-reachable-objects-debuglevel 0)
+        objmaps (consistent-reachable-objmaps obj-coll opts)
+        {t :time-nsec g :ret} (my-time (object-graph->ubergraph objmaps opts))
+        _ (when (>= debug-level 1)
+            (println (/ t 1000000.0) "msec to convert" (count objmaps)
+                     "objmaps into ubergraph with" (uber/count-edges g)
+                     "edges"))
+        {t :time-nsec g :ret} (my-time (add-total-size-bytes-node-attr g))
+        _ (when (>= debug-level 1)
+            (println (/ t 1000000.0) "msec to calculate total sizes"))
+        {t :time-nsec g :ret} (my-time (add-shortest-path-distances g obj-coll))
+        _ (when (>= debug-level 1)
+            (println (/ t 1000000.0) "msec to calculate shortest paths"))
+        {t :time-nsec g :ret} (my-time (add-viz-attributes g opts))
+        _ (when (>= debug-level 1)
+            (println (/ t 1000000.0) "msec to add graphviz attributes"))]
+    g))
 
 
 (defn add-attributes-by-reachability [g attr-maps]
