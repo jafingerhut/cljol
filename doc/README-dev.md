@@ -220,3 +220,166 @@ cljs, and this is an extensible system so you can do other customized
 things with your own macros or whatever.  Like, you could tweak this
 to put the req keys next to the :req-un if you were determined enough
 (see pprint-let for something probably similar).
+
+
+# What goes wrong when I try to get consistent-reachable-objmaps for a Var?
+
+Several things were going wrong with the `cljol` code as it was when I
+first tried to create a graph for a Clojure var, e.g. `(def o1 2)`
+followed by `(view [#'o1])`.
+
+One, I was having a hard time getting a set of objects returned that
+would not find errors when checked using
+`cljol.dig9/object-graph-errors.  I do not know if I did something
+that got past that issue in particular, although I did start using the
+alias `:priv` in `deps.edn`, which adds these JVM command line options
+suggested by some warning messages that appear when using JOL without
+them:
+
+```
+-Djdk.attach.allowAttachSelf -Djol.tryWithSudo=true
+```
+
+Even with those options, at least with Java 11 that I was testing
+with, there are objects reachable from a Clojure var that have fields
+that cause an exception to be thrown when you try to call the
+`setAccessible` method on them.  I added some handling of this
+exception within `cljol` code so that it should keep going if that
+happens, remembering the field value as a special "inaccessible"
+object created by `cljol`.
+
+I also added some debug options that enable printing elapsed execution
+times for several of the steps within functions
+`consistent-reachable-objects` and `graph-of-reachable-objects`, which
+you can enable using the example `opts` map below:
+
+```
+(def opts {:node-label-functions [d/size-bytes
+                                  d/total-size-bytes
+                                  d/class-description
+                                  d/field-values]
+           :consistent-reachable-objects-debuglevel 1
+           :graph-of-reachable-objects-debuglevel 1
+           :calculate-total-size-node-attribute false})
+```
+
+When using those options on successively larger Clojure vectors, they
+showed that `add-total-size-bytes-node-attr` was one of the longest
+steps within `graph-of-reachable-objects` as the number of nodes and
+edges increased.  That doesn't surprise me, as it is the only step
+that isn't linear time.  I added the
+`:calculate-total-size-node-attribute` option shown above that
+defaults to true, but can be given as false to skip that step.
+
+With all of those changes, I can now often create a graph of objects
+from a Clojure var.  It often takes 2 or 3 tries at calling
+`reachable-objmaps` inside of `consistent-reachable-objmaps` before it
+gets a set of objects that have no errors in them.
+
+Strangely, `sum` shows that there are typically many weakly connected
+components, which seems to indicate that some changes in inter-object
+references are occurring somewhere during the computation of the
+graph.  I don't know why this happens, but it might have something to
+do with references that are not strong, but either weak, soft, or
+phantom.
+
+
+```
+(do
+(require '[cljol.dig9 :as d]
+         '[cljol.graph :as gr]
+	 '[ubergraph.core :as uber])
+(def opts
+  {:node-label-functions
+   [d/size-bytes
+    d/total-size-bytes
+    d/class-description
+    d/field-values]
+   :consistent-reachable-objects-debuglevel 1
+   :graph-of-reachable-objects-debuglevel 1
+   :calculate-total-size-node-attribute false})
+(def v1 (vector 2))
+)
+(System/gc)
+(def g (d/sum [v1] opts))
+(d/view-graph g)
+(def g nil)
+
+(def g (d/sum [(vec (range 1e5))] opts))
+(def o1 (d/consistent-reachable-objmaps [#'v1]))
+
+(def g (d/sum [#'v1] opts))
+(d/view-graph g {:save {:filename "clojure-var.dot" :format :dot}})
+(type g)
+(doseq [dist [3 4 5 6 7 8]]
+  (let [g2 (gr/induced-subgraph g (filter #(let [d (uber/attr g % :distance)]
+                                             (and (number? d) (<= d dist)))
+                                          (uber/nodes g)))
+        fname (str "clojure-var-dist-" dist ".dot")]
+    (d/view-graph g2 {:save {:filename fname :format :dot}})))
+
+(type o1)
+(def e1 *e)
+(pprint (Throwable->map e1))
+(def r1 (clojure.repl/root-cause e1))
+(def e2 (-> (ex-data r1) :errors))
+(-> e2 :err)
+(keys e2)
+(keys (-> e2 :data))
+(pprint (:fields (-> e2 :data)))
+d/inaccessible-field-val-sentinel
+(identical? d/inaccessible-field-val-sentinel (get (-> e2 :data :fields) "handler"))
+(def e3 (-> e2 :err-data))
+
+;; Trying the following starts printing a large amount of Clojure data
+;; as the ex-data of the exception, I believe.  Don't do that.  For
+;; all I know, it might even experience an infinite loop in its
+;; attempt to print cyclic structures.
+(pst e1 100)
+
+(type e1)
+(type (ex-data e1))
+;; This is small data
+(keys (ex-data e1))
+
+;; Maybe big data is in root-casue of exception?
+(def r1 (clojure.repl/root-cause e1))
+
+(type r1)
+(type (ex-data r1))
+(keys (ex-data r1))
+
+(-> (ex-data r1) :errors type)
+;; => clojure.lang.PersistentArrayMap
+(-> (ex-data r1) :obj-coll type)
+;; => clojure.lang.PersistentVector
+
+(def e2 (-> (ex-data r1) :errors))
+(-> e2 :err)
+;; => :object-moved
+(-> e2 :err-data type)
+(-> e2 :err-data keys)
+;; => (:address :obj :size :path :fields :cur-address)
+(def e3 (-> e2 :err-data))
+
+(:address e3)
+;; => 27006116544
+(d/address-of (:obj e3))
+;; => 26168262656
+(-> e3 :obj type)
+;; => java.lang.ref.SoftReference
+```
+
+The Clojure implementation mentions SoftReference in its
+clojure.lang.DynamicClassLoader class, and clojure.lang.Keyword.
+
+This makes me think that perhaps SoftReference objects might move
+around frequently enough in memory that my current approach of
+calculating an address for every object on one pass, then on a later
+pass checking whether they are still at the same address, is too
+fragile for this kind of object graph?
+
+Perhaps I should instead consider using a Java IdentityHashMap object
+to create and store a map from object identities to UUIDs, and then
+use those UUIDs as the values in the ubergraph values that cljol
+creates, instead of addresses.
