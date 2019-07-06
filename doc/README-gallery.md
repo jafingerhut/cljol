@@ -384,7 +384,7 @@ character.
 
 `cljol` can make this easy to see, by using it to analyze a string
 like `"food has only 8-bit characters"` containing exactly 30
-characters, all within the ASCII subset, and a another string like
+characters, all within the ASCII subset, and another string like
 `"f\u1234od has non-8-bit characters!"` that also contains exactly 30
 characters, but one of them requires more than 8 bits to represent its
 Unicode code point -- it is the one represented using Java and
