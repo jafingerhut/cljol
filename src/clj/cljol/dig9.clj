@@ -142,17 +142,26 @@
 (def inaccessible-field-val-sentinel (Object.))
 
 
-(defn obj-field-value [obj ^Field fld]
-  (try
-    (. fld setAccessible true)
-    (.get fld obj)
-    (catch java.lang.reflect.InaccessibleObjectException e
-      inaccessible-field-val-sentinel)))
+;; Conditionally require one of cljol.jdk8-and-earlier or
+;; cljol.jdk-9-and-later to get a definition of fn obj-field-value
+;; appropriate for the JDK running.  JDK 9 and later define a new
+;; java.lang.reflect.InaccessibleObjectException exception that did
+;; not exist in JDK 8 and earlier.
+(def jvm-major-version
+  (-> (get (System/getProperties) "java.version")
+      (str/split #"\.")
+      first
+      (Integer/parseInt)))
+
+
+(if (>= jvm-major-version 9)
+  (require '[cljol.jdk9-and-later :as ofv])
+  (require '[cljol.jdk8-and-earlier :as ofv]))
 
 
 (defn field-name-and-address [^Field fld obj]
   [(. fld getName)
-   (let [fld-val (obj-field-value obj fld)]
+   (let [fld-val (ofv/obj-field-value obj fld)]
      (if (nil? fld-val)
        nil
        (address-of fld-val)))])
@@ -636,7 +645,7 @@ thread."
       (str/join "\n"
                 (for [fld-info flds]
                   (let [primitive? (primitive-class-name? (:type-class fld-info))
-                        val (obj-field-value obj (:ref-field fld-info))
+                        val (ofv/obj-field-value obj (:ref-field fld-info))
                         inaccessible? (identical?
                                        val inaccessible-field-val-sentinel)]
                     (format "%d: %s (%s) %s"
@@ -1718,17 +1727,13 @@ f1
 (. fld0 setAccessible true)
 (.get fld0 s1)
 
-(defn obj-field-value [obj fld]
-  (. fld setAccessible true)
-  (.get fld obj))
-
 (defn obj->map [obj]
   (let [cdm (ClassData->map (ClassData/parseInstance obj))]
     (update-in cdm [:fields]
                (fn [field-info-seq]
                  (map (fn [field-info]
                         (assoc field-info
-                               :field-value (obj-field-value
+                               :field-value (ofv/obj-field-value
                                              obj (:ref-field field-info))))
                       field-info-seq)))))
 
