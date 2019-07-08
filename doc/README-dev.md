@@ -288,30 +288,82 @@ phantom.
 (do
 (require '[cljol.dig9 :as d]
          '[cljol.graph :as gr]
-	 '[ubergraph.core :as uber])
+	 '[ubergraph.core :as uber]
+	 '[clojure.reflect :as ref])
+(import '(org.openjdk.jol.info ClassLayout GraphLayout GraphPathRecord
+                               ClassData FieldData))
+(import '(org.openjdk.jol.vm VM))
 (def opts
   {:node-label-functions
-   [d/size-bytes
+   [d/address-hex
+    d/address-decimal
+    d/size-bytes
     d/total-size-bytes
     d/class-description
-    d/field-values]
+    d/field-values
+    d/non-realizing-javaobj->str]
+   :reachable-objects-debuglevel 1
    :consistent-reachable-objects-debuglevel 1
    :graph-of-reachable-objects-debuglevel 1
    :calculate-total-size-node-attribute false})
 (def v1 (vector 2))
+(def o1 (let [x :a y :b] {x y y x}))
+(def c1 (class 5))
+(def c2 (class (java.lang.ref.SoftReference. 5)))
 )
+(def g nil)
 (System/gc)
 (def g (d/sum [v1] opts))
+(def g (d/sum [#'v1] opts))
+(def g (d/sum [o1] opts))
+(def g (d/sum [c1] opts))
+(def g (d/sum [c2] opts))
 (d/view-graph g)
-(def g nil)
+(d/view-graph g {:save {:filename "clojure-var.dot" :format :dot}})
+
+(println (d/class-layout->str c1))
+
+(uber/count-nodes g)
+(uber/count-edges g)
+
+(def x1 (d/consistent-reachable-objmaps [c2] opts))
+(count x1)
+(def x2 (d/object-graph->ubergraph x1 opts))
+(uber/count-nodes x2)
+(def x3 (d/add-shortest-path-distances x2 [c2]))
+(uber/count-nodes x3)
+(def x4 (d/add-viz-attributes x3 opts))
+(defn nodes-with-nil-obj [g]
+  (filter #(nil? (:obj (uber/attrs g %))) (uber/nodes g)))
+
+(def ns3 (nodes-with-nil-obj x3))
+(count ns3)
+ns3
+(uber/attrs x3 (first ns3))
+(uber/attrs x2 (first ns3))
+(def ns2 (nodes-with-nil-obj x2))
+(count ns2)
+ns2
+(uber/attrs x2 (first ns2))
+
+d/inaccessible-field-val-sentinel
+d/softreference-sentinel
+d/weakreference-sentinel
+d/phantomreference-sentinel
+d/unknowntypereference-sentinel
+d/unknown-sentinel
+
 
 (def g (d/sum [(vec (range 1e5))] opts))
 (def o1 (d/consistent-reachable-objmaps [#'v1]))
 
+(def r1 (ref/type-reflect 'java.lang.Class :ancestors true))
+(pprint r1)
+
 (def g (d/sum [#'v1] opts))
 (d/view-graph g {:save {:filename "clojure-var.dot" :format :dot}})
 (type g)
-(doseq [dist [3 4 5 6 7 8]]
+(doseq [dist [3 4 5 6 7 8 9 10 11]]
   (let [g2 (gr/induced-subgraph g (filter #(let [d (uber/attr g % :distance)]
                                              (and (number? d) (<= d dist)))
                                           (uber/nodes g)))
@@ -321,12 +373,49 @@ phantom.
 (type o1)
 (def e1 *e)
 (pprint (Throwable->map e1))
+(pprint (Throwable->map (ex-cause e1)))
+(pprint (Throwable->map (ex-cause (ex-cause e1))))
+
+(type e1)
+(type (ex-data e1))
+(keys (ex-data e1))
+
+(type (ex-cause e1))
+(type (ex-data (ex-cause e1)))
+(keys (ex-data (ex-cause e1)))
+
+(def ed1 (ex-data (ex-cause e1)))
+
+(-> ed1 :obj class)
+(-> ed1 :obj)
+
 (def r1 (clojure.repl/root-cause e1))
+(keys (ex-data r1))
+(keys (:errors (ex-data r1)))
+(-> r1 ex-data :obj type)
 (def e2 (-> (ex-data r1) :errors))
 (-> e2 :err)
 (keys e2)
-(keys (-> e2 :data))
+(type (-> e2 :err-data))
+(count (-> e2 :err-data))
 (pprint (:fields (-> e2 :data)))
+(def o1 (-> e2 :data (nth 0) :obj))
+(type o1)
+(def o2 (-> e2 :data (nth 1) :obj))
+(type o2)
+;; long sizeOf = (instance != null) ? VM.current().sizeOf(instance) : instanceSize();
+(. (VM/current) sizeOf o1)
+;; => 632
+(. (VM/current) sizeOf o2)
+;; => 648
+(. (ClassLayout/parseInstance o1) instanceSize)
+;; => 96
+(. (ClassLayout/parseInstance o2) instanceSize)
+;; => 96
+
+;; TBD: Why different results from sizeOf and ClassLayout/instanceSize?
+;; The sizeOf results appear too large to me in this scenario.
+
 d/inaccessible-field-val-sentinel
 (identical? d/inaccessible-field-val-sentinel (get (-> e2 :data :fields) "handler"))
 (def e3 (-> e2 :err-data))
@@ -383,3 +472,30 @@ Perhaps I should instead consider using a Java IdentityHashMap object
 to create and store a map from object identities to UUIDs, and then
 use those UUIDs as the values in the ubergraph values that cljol
 creates, instead of addresses.
+
+
+
+# Information about different types of references in the JVM
+
+Modern JVMs have 4 types of references: strong, soft, weak, and
+phantom.
+
+In a Clojure application, unless you go out of your way to create a
+specific kind of reference, all of them will be strong references.  If
+you use Java libraries, they may internally create other kinds of
+references.  Clojure itself contains a few uses of `SoftReference` in
+the `clojure.lang.DynamicClassLoader` and `clojure.lang.Keyword`
+classes, and one use of a `WeakReference` in `clojure.lang.Keyword`.
+
+Some articles that attempt to describe the differences between them.
+
+
+https://plumbr.io/blog/garbage-collection/weak-soft-and-phantom-references-impact-on-gc
+
+https://www.geeksforgeeks.org/types-references-java/
+
+https://stackoverflow.com/questions/299659/whats-the-difference-between-softreference-and-weakreference-in-java
+
+https://dzone.com/articles/weak-soft-and-phantom-references-in-java-and-why-they-matter
+
+https://blog.shiftleft.io/understanding-jvm-soft-references-for-great-good-and-building-a-cache-244a4f7bb85d

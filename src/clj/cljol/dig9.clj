@@ -1,6 +1,6 @@
 (ns cljol.dig9
   (:import (java.lang.reflect Field Modifier))
-  (:import (org.openjdk.jol.info ClassLayout GraphLayout
+  (:import (org.openjdk.jol.info ClassLayout GraphLayout GraphPathRecord
                                  ClassData FieldData))
   (:import (org.openjdk.jol.vm VM))
   (:import (java.lang.reflect Method))
@@ -140,6 +140,31 @@
 
 
 (def inaccessible-field-val-sentinel (Object.))
+(def softreference-sentinel (Object.))
+(def weakreference-sentinel (Object.))
+(def phantomreference-sentinel (Object.))
+(def unknowntypereference-sentinel (Object.))
+(def unknown-sentinel (Object.))
+
+
+(defn cljol-sentinel-value? [obj]
+  (or (identical? obj inaccessible-field-val-sentinel)
+      (identical? obj softreference-sentinel)
+      (identical? obj weakreference-sentinel)
+      (identical? obj phantomreference-sentinel)
+      (identical? obj unknowntypereference-sentinel)
+      (identical? obj unknown-sentinel)))
+
+
+(defn cljol-sentinel-value->str [obj]
+  (cond
+    (identical? obj inaccessible-field-val-sentinel) ".setAccessible failed"
+    (identical? obj softreference-sentinel) "SoftReference"
+    (identical? obj weakreference-sentinel) "WeakReference"
+    (identical? obj phantomreference-sentinel) "PhantomReference"
+    (identical? obj unknowntypereference-sentinel) "java.lang.ref.Reference"
+    (identical? obj unknown-sentinel) "JOL returned no info about this object"
+    :else "INTERNAL ERROR: not a sentinel"))
 
 
 ;; Conditionally require one of cljol.jdk8-and-earlier or
@@ -159,12 +184,52 @@
   (require '[cljol.jdk8-and-earlier :as ofv]))
 
 
-(defn field-name-and-address [^Field fld obj]
-  [(. fld getName)
-   (let [fld-val (ofv/obj-field-value obj fld)]
-     (if (nil? fld-val)
-       nil
-       (address-of fld-val)))])
+(defn non-strong-reference? [obj]
+  (instance? java.lang.ref.Reference obj))
+
+
+(defn non-strong-reference-sentinel [obj]
+  (cond
+    (instance? java.lang.ref.SoftReference obj) softreference-sentinel
+    (instance? java.lang.ref.WeakReference obj) weakreference-sentinel
+    (instance? java.lang.ref.PhantomReference obj) phantomreference-sentinel
+    (instance? java.lang.ref.Reference obj) unknowntypereference-sentinel
+    :else (throw (ex-info (format "Called non-strong-reference-sentinel with an object %s that is not a subclass of java.lang.ref.Reference"
+                                  (class obj))))))
+
+
+(defn address-from-snapshot [obj ^java.util.IdentityHashMap obj->gpr
+                             parent-obj parent-obj-field-name-str]
+  (cond
+    (nil? obj) nil
+    (cljol-sentinel-value? obj) obj
+    ;;(non-strong-reference? obj) (non-strong-reference-sentinel obj)
+    (non-strong-reference? parent-obj) nil
+    :else
+    (let [^GraphPathRecord gpr (.get obj->gpr obj)]
+      (if (nil? gpr)
+        (let [^GraphPathRecord parent-gpr (.get obj->gpr parent-obj)
+              msg (format "Failed to find GraphPathRecord in IdentityHashMap obj->grp for object with %s.  Parent object has %s address %s and refers to object through field named '%s'"
+                          (class obj) (class parent-obj)
+                          (if (nil? parent-gpr)
+                            "(unknown)"
+                            (. parent-gpr address))
+                          parent-obj-field-name-str)
+              exception-data {:obj obj :obj->gpr :obj->gpr}]
+          ;;(throw (ex-info msg exception-data))
+          (println msg)
+          unknown-sentinel)
+        (. gpr address)))))
+
+
+(defn field-name-and-snapshot-address [^Field fld obj obj->gpr]
+  (let [field-name (. fld getName)]
+    [field-name
+     (let [fld-val (ofv/obj-field-value obj fld)]
+       ;; TBD: Should there be a check for whether a field is a
+       ;; primitive here, to avoid looking up primitive values in
+       ;; obj->gpr?
+       (address-from-snapshot fld-val obj->gpr obj field-name))]))
 
 
 ;; Several Java interop calls in the next few lines of code cause
@@ -174,12 +239,12 @@
 
 (set! *warn-on-reflection* false)
 
-(defn array-elem-name-and-address [idx array-obj]
-  (let [array-idx-val (aget array-obj idx)]
-    [(str "[" idx "]")
-     (if (nil? array-idx-val)
-       nil
-       (address-of array-idx-val))]))
+(defn array-elem-name-and-snapshot-address [idx array-obj obj->gpr]
+  (let [field-name (str "[" idx "]")]
+    [field-name
+     (let [array-idx-val (aget array-obj idx)]
+       (address-from-snapshot array-idx-val obj->gpr
+                              array-obj field-name))]))
 
 
 ;; obj() is a private method of class GraphPathRecord.  Use some Java
@@ -222,9 +287,15 @@
   See also consistent-reachable-objmaps, which you may prefer to use
   over this one for the assistance it provides in trying to return a
   consistent set of addresses across all objects."
-  [obj-coll]
+  [obj-coll opts]
   (let [parsed-inst (GraphLayout/parseInstance (object-array obj-coll))
-        addresses (.addresses parsed-inst)]
+        debug-level (get opts :reachable-objects-debuglevel 0)
+        _ (when (>= debug-level 1)
+            (println (str "Footprint of objects returned by"
+                          " GraphLayout/parseInstance:"))
+            (print (. parsed-inst toFootprint)))
+        addresses (.addresses parsed-inst)
+        obj->gpr (.objectsFound parsed-inst)]
     (map (fn [addr]
            (let [gpr (. parsed-inst record addr)
                  obj (gpr->java-obj gpr)
@@ -237,15 +308,22 @@
               :obj obj
               :size (. gpr size)
               :path (. gpr path)
+              ;; Should be shortest path from any 'root' object in
+              ;; obj-coll to the given object, where following one
+              ;; reference counts as distance 1.
+              :jol-distance (. gpr depth)
               ;; TBD: Consider calling both
-              ;; array-elem-name-and-address _and_
-              ;; field-name-and-address for array objects, just in
-              ;; case any Java array objects actually do return
-              ;; fields.
+              ;; array-elem-name-and-snapshot-address _and_
+              ;; field-name-and-snapshot-address for array objects,
+              ;; just in case any Java array objects actually do
+              ;; return fields.
               :fields (if ref-arr?
-                        (into {} (map #(array-elem-name-and-address % obj)
+                        (into {} (map #(array-elem-name-and-snapshot-address
+                                        % obj obj->gpr)
                                       (range (count obj))))
-                        (into {} (map #(field-name-and-address % obj) flds)))}))
+                        (into {} (map #(field-name-and-snapshot-address
+                                        % obj obj->gpr)
+                                      flds)))}))
          addresses)))
 
 
@@ -292,6 +370,10 @@
         {:err :obj-map-missing-required-key
          :data m}
         
+        (nil? (:obj m))
+        {:err :nil-object
+         :data m}
+
         (not (integer? (:address m)))
         {:err :address-not-natural-integer
          :data m}
@@ -321,8 +403,8 @@
          :data m}
         
         (not (every? #(or (nil? %)
-                          (and (integer? %) (>= % 0))
-                          (identical? % inaccessible-field-val-sentinel))
+                          (cljol-sentinel-value? %)
+                          (and (integer? %) (>= % 0)))
                      (vals (:fields m))))
         {:err :fields-has-val-neither-nil-nor-natural-integer
          :data m}
@@ -353,7 +435,9 @@
        (mapcat #(vals (:fields %)))
        (remove #(or
                  (nil? %)
-                 (identical? % inaccessible-field-val-sentinel)))
+                 (cljol-sentinel-value? %)
+                 ;;(identical? % inaccessible-field-val-sentinel)
+                 ))
        set))
 
 
@@ -434,7 +518,7 @@
 ;; something will have moved.
 
 
-(defn object-moved? [objmap]
+#_(defn object-moved? [objmap]
   (let [obj (:obj objmap)
         addr (:address objmap)
         cur-addr (address-of obj)]
@@ -442,7 +526,7 @@
       (assoc objmap :cur-address cur-addr))))
 
 
-(defn any-object-moved?
+#_(defn any-object-moved?
   "If any object in object graph 'g' is currently at a different
 address than the value of its :address key, return the map for that
 object with a new key :cur-address containing the value of the
@@ -475,8 +559,26 @@ thread."
 ;;                   (+ (:address oi1) (:size oi1))
 ;;                   (:address oi2)
 ;;                   (+ (:address oi2) (:size oi2))))
-  (if-not (two-objects-disjoint? oi1 oi2)
-    [oi1 oi2]))
+  (cond
+    (two-objects-disjoint? oi1 oi2) nil
+
+    ;; I have seen some cases where JOL 0.9 returns start addresses
+    ;; and sizes for two Class objects such that they overlap, but it
+    ;; seems to be using the VM/current sizeOf that returns a value
+    ;; over 600 bytes, when ClassLayout/parseInstance instanceSize
+    ;; method return 96 bytes, and the latter size appears to me to be
+    ;; correct from the layout of the fields in the object, which all
+    ;; end by 96 bytes from the beginning.
+
+    ;; Try adding an exception if the earlier of the two objects is an
+    ;; instance of java.lang.Class, as a hack workaround for now, to
+    ;; see if other things are working well.  It would be nice to get
+    ;; JOL to return the correct size, though.
+    (and (instance? java.lang.Class (:obj oi1))
+         (> (:size oi1) 100))
+    nil
+
+    :else [oi1 oi2]))
 
 
 (defn any-objects-overlap?
@@ -508,8 +610,8 @@ thread."
   object-graph-errors would not be able to detect that."
   [g]
   (or 
-   (if-let [x (any-object-moved? g)]
-     {:err :object-moved :err-data x :data g})
+;;   (if-let [x (any-object-moved? g)]
+;;     {:err :object-moved :err-data x :data g})
    (validate-obj-graph g)
    (if-let [x (any-objects-overlap? g)]
      {:err :two-objects-overlap :err-data x :data g})))
@@ -638,14 +740,33 @@ thread."
 
 
 (defn field-values [objmap opts]
+  (assert (and (map? objmap)
+               (contains? objmap :obj)))
   (let [obj (:obj objmap)
-        cd (ClassData->map (ClassData/parseClass (class obj)))
+        cd (try
+             (ClassData->map (ClassData/parseClass (class obj)))
+             (catch Throwable e
+               (throw
+                (ex-info "parseClass exception"
+                         {:obj obj :klass (class obj) :objmap objmap}
+                         e))))
         flds (sort-by :vm-offset (:fields cd))]
     (if (seq flds)
       (str/join "\n"
                 (for [fld-info flds]
                   (let [primitive? (primitive-class-name? (:type-class fld-info))
                         val (ofv/obj-field-value obj (:ref-field fld-info))
+                        have-val2? (contains? (:fields objmap)
+                                              (:field-name fld-info))
+                        val2 (if have-val2?
+                               (get (:fields objmap) (:field-name fld-info)))
+                        _ (println "field name" (:field-name fld-info))
+                        _ (println "have-val2?" have-val2?)
+                        _ (println "val2" val2)
+                        ;;_ (println "primitive?" primitive?)
+                        ;;_ (println "(class val)" (class val))
+                        sentinel? (cljol-sentinel-value? val2)
+                        ;;_ (println "sentinel?" sentinel?)
                         inaccessible? (identical?
                                        val inaccessible-field-val-sentinel)]
                     (format "%d: %s (%s) %s"
@@ -653,7 +774,7 @@ thread."
                             (:field-name fld-info)
                             (if primitive? (:type-class fld-info) "ref")
                             (cond
-                              inaccessible? ".setAccessible failed"
+                              sentinel? (cljol-sentinel-value->str val2)
                               primitive? val
                               (nil? val) "nil"
                               :else "->"))))))))
@@ -709,6 +830,47 @@ thread."
   (let [s1 (javaobj->str-no-escaping objmap opts)
         s2 (graphviz-dot-escape-label-string s1)]
     s2))
+
+
+(defn non-realizing-value? [x depth-remaining]
+  (if (zero? depth-remaining)
+    ;; to avoid a stack overflow error, give up after a certain depth,
+    ;; and assume the worst, that the overall value could cause
+    ;; realization of lazy objects to occur if it was str'ed.
+    false
+    (or (nil? x)
+        (number? x)
+        (string? x)
+        (keyword? x)
+        (symbol? x)
+        (boolean? x)
+        (bytes? x)
+        (inst? x)
+        (uri? x)
+        (uuid? x)
+        (class? x)
+        (and (array? x)
+             (let [ref-arr? (not (. (array-element-type x) isPrimitive))]
+               (or (not ref-arr?)
+                   (every? #(non-realizing-value? % (dec depth-remaining))
+                           (seq x)))))
+        (and (or (map? x) (vector? x) (set? x))
+             (every? #(non-realizing-value? % (dec depth-remaining))
+                     (seq x)))
+        (and (list? x)
+             (non-realizing-value? (first x) (dec depth-remaining))
+             (non-realizing-value? (rest x) (dec depth-remaining))))))
+
+
+(defn non-realizing-javaobj->str
+  "Convert values to strings that should never cause any Clojure lazy
+  values to be realized."
+  [objmap opts]
+  (let [obj (:obj objmap)
+        max-depth 10]
+    (if (non-realizing-value? obj max-depth)
+      (javaobj->str objmap opts)
+      "val maybe realizes if str'ed")))
 
 
 (def all-builtin-node-labels
@@ -778,16 +940,47 @@ thread."
   TBD: Document the attributes present on the nodes and edges in the
   graph created."
   [g opts]
-  (-> (uber/multidigraph)
-      (uber/add-nodes-with-attrs* (for [objmap g]
-                                    [(:address objmap) objmap]))
-      (uber/add-edges*
-       (for [from-objmap g
-             [from-obj-field-name-str to-addr] (:fields from-objmap)
-             ;; Do not create edges for null references
-             :when (not (nil? to-addr))]
-         [(:address from-objmap) to-addr
-          {:field-name from-obj-field-name-str}]))))
+  (let [uberg (-> (uber/multidigraph)
+                  (uber/add-nodes-with-attrs* (for [objmap g]
+                                                [(:address objmap) objmap])))
+        edges (for [from-objmap g
+                    [from-obj-field-name-str to-addr] (:fields from-objmap)
+                    ;; Do not create edges for null references
+                    :when (not (nil? to-addr))]
+                [(:address from-objmap) to-addr
+                 {:field-name from-obj-field-name-str}])
+        edges2 (group-by (fn [[from to attr-map]]
+                           (and (uber/has-node? uberg from)
+                                (uber/has-node? uberg to)))
+                         edges)]
+    (println "(count edges):" (count edges))
+    (println "(count (edges2 true)):" (count (edges2 true)))
+    (println "(count (edges2 false)):" (count (edges2 false)))
+    (when-not (zero? (count (edges2 false)))
+      (println "(edges2 false):")
+      (pp/pprint (edges2 false)))
+    (uber/add-edges* uberg (edges2 true))))
+
+
+(defn overlap-error-obj->str [objmap]
+  (let [obj (:obj objmap)
+        addr (:address objmap)
+        size (:size objmap)
+        cur-addr (address-of obj)]
+    (format "%s snapshot-address 0x%08x size %d sum 0x%08x cur-address 0x%08x"
+            (class obj) addr size (+ addr size) cur-addr)))
+
+
+(defn object-graph-error->str [err]
+  (case (:err err)
+    :two-objects-overlap
+    (let [[objmap1 objmap2] (:err-data err)]
+      (str "o1 " (overlap-error-obj->str objmap1) "\n"
+           "o2 " (overlap-error-obj->str objmap2)
+           "\n"
+           (class-layout->str (:obj objmap1))
+           "\n"
+           (class-layout->str (:obj objmap2))))))
 
 
 (defmacro my-time [expr]
@@ -819,7 +1012,7 @@ thread."
     (when (>= debug-level 1)
       (println "Calling reachable-objmaps try 1"))
     (loop [{time-nsec :time-nsec obj-graph :ret} (my-time (reachable-objmaps
-                                                           obj-coll))
+                                                           obj-coll opts))
            num-tries 1]
       (when (>= debug-level 1)
         (println (/ time-nsec 1000000.0) "msec to find" (count obj-graph)
@@ -830,7 +1023,10 @@ thread."
           (println (/ time-nsec 1000000.0) "msec to check for errors on try"
                    num-tries)
           (if errs
-            (println "Found error of type" (:err errs))
+            (do
+              (println "Found error of type" (:err errs))
+              (when (= :two-objects-overlap (:err errs))
+                (println (object-graph-error->str errs))))
             (println "No errors found.")))
         (if errs
           (if (< num-tries max-tries)
@@ -838,7 +1034,8 @@ thread."
               (let [{time-nsec :time-nsec} (my-time (System/gc))]
                 (when (>= debug-level 1)
                   (println (/ time-nsec 1000000.0) "msec to run GC")))
-              (recur (my-time (reachable-objmaps obj-coll)) (inc num-tries)))
+              (recur (my-time (reachable-objmaps obj-coll opts))
+                     (inc num-tries)))
             (throw
              (ex-info
               (format "reachable-objmaps returned erroneous obj-graphs on all of %d tries"
@@ -1851,9 +2048,10 @@ f1
 
 
 ;; Separate out differences that are only because JOL
-;; found "__methodImplCache" and java reflection API did not.  Note:
-;; Later I found out that the reason for those differences was that
-;; JOL returned all per-instance fields of a class, whereas
+;; found "__methodImplCache" and java reflection API did not.
+
+;; Note: Later I found out that the reason for those differences was
+;; that JOL returned all per-instance fields of a class, whereas
 ;; clojure.reflect/type-reflect was only returning the fields declared
 ;; directly in that class, ignoring any fields defined in
 ;; superclasses.  When I added the `:ancestors true` options to the
