@@ -160,7 +160,7 @@
 
 (defn field-name-and-address [^Field fld obj]
   [(. fld getName)
-   (let [fld-val (ofv/obj-field-value obj fld)]
+   (let [fld-val (ofv/obj-field-value obj fld inaccessible-field-val-sentinel)]
      (if (nil? fld-val)
        nil
        (address-of fld-val)))])
@@ -644,7 +644,9 @@ thread."
       (str/join "\n"
                 (for [fld-info flds]
                   (let [primitive? (primitive-class-name? (:type-class fld-info))
-                        val (ofv/obj-field-value obj (:ref-field fld-info))
+                        val (ofv/obj-field-value
+                             obj (:ref-field fld-info)
+                             inaccessible-field-val-sentinel)
                         inaccessible? (identical?
                                        val inaccessible-field-val-sentinel)]
                     (format "%d: %s (%s) %s"
@@ -1733,7 +1735,8 @@ f1
                  (map (fn [field-info]
                         (assoc field-info
                                :field-value (ofv/obj-field-value
-                                             obj (:ref-field field-info))))
+                                             obj (:ref-field field-info)
+                                             inaccessible-field-val-sentinel)))
                       field-info-seq)))))
 
 (def s1 "a")
