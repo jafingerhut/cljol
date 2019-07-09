@@ -214,6 +214,31 @@
         class-infos))
 
 
+(defn size-difference-info [obj]
+  (let [cls (class obj)
+	parsed-inst (ClassLayout/parseInstance obj)
+        parsed-cls (ClassLayout/parseClass cls)
+	vm-size (. (VM/current) sizeOf obj)
+        inst-size (. parsed-inst instanceSize)
+        cl-size (. parsed-cls instanceSize)]
+    ;;(println "toPrintable of parseInstance ret value:")
+    ;;(print (.toPrintable parsed-inst))
+    ;;(println)
+    ;;(println "toPrintable of parseClass ret value:")
+    ;;(print (.toPrintable parsed-cls))
+    ;;(println)
+    ;;(println "cls:" cls)
+    ;;(println vm-size "(. (VM/current) sizeOf obj)")
+    ;;(println inst-size "(. (ClassLayout/parseInstance obj) instanceSize)")
+    ;;(println cl-size "(. (ClassLayout/parseClass cls) instanceSize)")
+    (if (= vm-size cl-size inst-size)
+      {:difference false :obj obj :class (class obj) :vm-size vm-size}
+      {:difference true :obj obj :class (class obj)
+       :vm-size vm-size
+       :classlayout-parseclass-size cl-size
+       :classlayout-pareinstance-size inst-size})))
+
+
 (defn report []
   (with-open [wrtr (io/writer (str "report-"
                                    (get @ver/version-data :stack-desc) ".txt"))]
@@ -238,14 +263,18 @@
             no-differences (get by-diff-results true)
             differences (get by-diff-results false)
 
-            pif-diffs (for [{:keys [klass]} diffs
-                            :when (not (nil? klass))
+            loaded-klass-infos (remove #(nil? (:klass %)) diffs)
+            pif-diffs (for [{:keys [klass]} loaded-klass-infos
                             :let [pif-custom (set (per-instance-fields-common-data-via-custom-api klass))
                                   pif-jra (set (per-instance-fields-via-java-reflect-api klass))]
                             :when (not= pif-custom pif-jra)]
                         {:class-name (str klass)
                          :pif-custom pif-custom
-                         :pif-jra pif-jra})]
+                         :pif-jra pif-jra})
+            inst-size-diffs (for [{:keys [klass]} loaded-klass-infos
+                                  :let [results (size-difference-info klass)]
+                                  :when (:difference results)]
+                              results)]
         
         (println (count no-differences)
                  "classes with no difference in their field data.")
@@ -255,6 +284,10 @@
         (println "Found" (count pif-diffs) "classes with different"
                  "per-instance field lists according to different APIs.")
         (println "Wrote differences below after heading '# pif-diffs'.")
+
+        (println "Found" (count inst-size-diffs) "classes with different"
+                 "sizes according to different JOL APIs.")
+        (println "Wrote differences below after heading '# inst-size-diffs'.")
 
         (println)
         (println "############################################################")
@@ -276,6 +309,14 @@
         (println "############################################################")
         (when (not= 0 (count pif-diffs))
           (pp/pprint pif-diffs))
+
+        (println)
+        (println "############################################################")
+        (println "# inst-size-diffs")
+        (println "############################################################")
+        (when (not= 0 (count inst-size-diffs))
+          (pp/pprint inst-size-diffs))
+
         pif-diffs))))
 
 
