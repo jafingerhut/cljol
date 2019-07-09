@@ -69,13 +69,15 @@
 
 
 (defn FieldData->map [^FieldData fd]
-  {:field-name (.name fd)
-   :type-class (.typeClass fd)
-   :host-class (.hostClass fd)
-   :is-contended? (.isContended fd)
-   :contended-group (.contendedGroup fd)
-   :ref-field (.refField fd)
-   :vm-offset (.vmOffset fd)})
+  (let [^Field ref-field (.refField fd)]
+    {:field-name (.name fd)
+     :type-class (.typeClass fd)
+     :host-class (.hostClass fd)
+     :is-contended? (.isContended fd)
+     :contended-group (.contendedGroup fd)
+     :ref-field ref-field
+     :is-primitive? (. (. ref-field getType) isPrimitive)
+     :vm-offset (.vmOffset fd)}))
 
 
 ;; Note that much of the information about a class returned by
@@ -229,8 +231,7 @@
                  obj (gpr->java-obj gpr)
                  arr? (array? obj)
                  ref-arr? (and arr?
-                               (not (. (array-element-type obj)
-                                       isPrimitive)))
+                               (not (. (array-element-type obj) isPrimitive)))
                  flds (per-instance-reference-fields (class obj))]
              {:address addr
               :obj obj
@@ -631,11 +632,6 @@ thread."
       (abbreviated-class-name-str (pr-str (class obj))))))
 
 
-(defn primitive-class-name? [name-str]
-  (contains? #{"boolean" "byte" "short" "char" "int" "float" "long" "double"}
-             name-str))
-
-
 (defn field-values [objmap opts]
   (let [obj (:obj objmap)
         cd (ClassData->map (ClassData/parseClass (class obj)))
@@ -643,7 +639,7 @@ thread."
     (if (seq flds)
       (str/join "\n"
                 (for [fld-info flds]
-                  (let [primitive? (primitive-class-name? (:type-class fld-info))
+                  (let [primitive? (:is-primitive? fld-info)
                         val (ofv/obj-field-value
                              obj (:ref-field fld-info)
                              inaccessible-field-val-sentinel)
@@ -1201,6 +1197,7 @@ props1
 (def o1 (vec (range 1000)))
 (def g1 (sum [o1] opts))
 (uber/viz-graph (keep-only-dot-safe-attrs g1) {:rankdir :LR})
+(view-graph g1)
 (write-dot-file [o1] "o1.dot" opts)
 (write-drawing-file [o1] "o1.pdf" :pdf opts)
 

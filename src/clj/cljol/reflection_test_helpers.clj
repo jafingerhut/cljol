@@ -79,11 +79,21 @@
 ;;     all examples I have seen have :is-contended? false.
 ;; :vm-offset - long
 
+(defn primitive-class-name? [name-str]
+  (contains? #{"boolean" "byte" "short" "char" "int" "float" "long" "double"}
+             name-str))
+
+
 (defn per-instance-fields-common-data-via-java-reflect-api [klass]
   (->> (per-instance-fields-via-java-reflect-api klass)
        (map (fn [m]
               {:field-name (str (:name m))
                :type-str (convert-jra-type-name (str (:type m)))
+               ;; This value is really derived fairly indirectly from
+               ;; what the clojure.reflect API returns, but I want to
+               ;; compare its accuracy against a more direct Java
+               ;; method to see if it always gives the same result.
+               :is-primitive? (primitive-class-name? (str (:type m)))
                :declaring-class-str (convert-jra-type-name
                                      (str (:declaring-class m)))}))
        set))
@@ -98,9 +108,12 @@
   (->> (full-data-via-jol klass)
        :fields
        (map (fn [m]
-              {:field-name (:field-name m)
-               :type-str (convert-jra-type-name (:type-class m))
-               :declaring-class-str (convert-jra-type-name (:host-class m))}))
+              (let [^Field ref-field (:ref-field m)]
+                {:field-name (:field-name m)
+                 :type-str (convert-jra-type-name (:type-class m))
+                 :is-primitive? (. (. ref-field getType) isPrimitive)
+                 :declaring-class-str (convert-jra-type-name
+                                       (:host-class m))})))
        set))
 
 
@@ -283,5 +296,39 @@
 (def f2 (per-instance-fields-common-data-via-jol (class 1)))
 (def f2 (per-instance-fields-common-data-via-jol (class (class 1))))
 (pprint f2)
+
+(def c1 (Class/forName "clojure.lang.Cons"))
+(require '[clojure.reflect :as ref])
+(def r1 (ref/type-reflect c1 :ancestors true))
+(first (:members r1))
+(def f1 (filter #(and (instance? clojure.reflect.Field %)
+                      (not (contains? (:flags %) :static)))
+                (:members r1)))
+(count f1)
+(pprint (first f1))
+(map type f1)
+(map :name f1)
+(pprint f1)
+(-> f1 first :name type)
+(def f2 (first (filter #(= '_hash (:name %)) f1)))
+(count f2)
+f2
+(-> f2 :type type)
+(. c1 getField "_hash")
+(seq (. c1 getFields))
+(require '[cljol.dig9 :as d])
+(import '(org.openjdk.jol.info ClassLayout GraphLayout
+                               ClassData FieldData))
+(def cd (d/ClassData->map (ClassData/parseClass c1)))
+(pprint (-> cd :fields))
+(def int-field (-> cd :fields (nth 1) :ref-field))
+(= (. int-field getType) Integer/TYPE)
+
+(type Integer/TYPE)
+(. Integer/TYPE isPrimitive)
+(type java.lang.Integer)
+(type (int 5))
+(. java.lang.Integer isPrimitive)
+(. (type (int 5)) isPrimitive)
 
 )
