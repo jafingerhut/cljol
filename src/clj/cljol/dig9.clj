@@ -115,27 +115,6 @@
   (. (class arr) getComponentType))
 
 
-(defn superclasses [cls]
-  (take-while identity (iterate (memfn ^Class getSuperclass) cls)))
-
-
-(defn all-fields
-  "Return all fields of the class 'cls', and its superclasses"
-  [cls]
-  (mapcat #(.getDeclaredFields ^Class %)
-          (superclasses cls)))
-
-
-(defn per-inst-ref-field? [^Field fld]
-  (and (not (. (. fld getType) isPrimitive))
-       (not (Modifier/isStatic (. fld getModifiers)))))
-
-
-(defn per-instance-reference-fields [cls]
-  (filter per-inst-ref-field?
-          (all-fields cls)))
-
-
 (defn address-of [obj]
   (. (VM/current) addressOf obj))
 
@@ -199,6 +178,34 @@
 (set! *warn-on-reflection* true)
 
 
+(def size-mismatch-warnings (atom {}))
+
+
+(defn warn-size-mismatch! [obj gpr gpr-size cl-size sorted-offsets]
+  (let [cls (class obj)
+        earlier-report-for-cls? (contains? @size-mismatch-warnings cls)]
+    (when-not earlier-report-for-cls?
+      (println "WARNING:" cls "has GraphPathRecord size" gpr-size
+               "but ClassLayout size" cl-size "sorted-offsets" sorted-offsets)
+      (swap! size-mismatch-warnings assoc cls
+             {:cls cls :gpr gpr :gpr-size gpr-size :cl-size cl-size}))))
+
+
+(def classes-already-sanity-checked (atom #{}))
+
+
+(defn sanity-checked? [cls]
+  (if (contains? @classes-already-sanity-checked cls)
+    true
+    (do
+      (swap! classes-already-sanity-checked conj cls)
+      false)))
+
+
+(defn clear-atoms! []
+  (swap! size-mismatch-warnings (constantly {}))
+  (swap! classes-already-sanity-checked (constantly #{})))
+
 
 (defn reachable-objmaps
   "Starting from the given collection of objects, follow the
@@ -232,20 +239,58 @@
                  arr? (array? obj)
                  ref-arr? (and arr?
                                (not (. (array-element-type obj) isPrimitive)))
-                 flds (per-instance-reference-fields (class obj))]
+                 cd (ClassData/parseClass (class obj))
+                 flds (->> cd ClassData->map :fields (remove :is-primitive?)
+                           (map :ref-field))
+                 refd-objs (if ref-arr?
+                             (into {} (map #(array-elem-name-and-address % obj)
+                                           (range (count obj))))
+                             (into {} (map #(field-name-and-address % obj)
+                                           flds)))
+                 gpr-size (. gpr size)
+                 ;; I have seen issues before with objects of class
+                 ;; java.lang.Class where the size in bytes determined
+                 ;; by (. gpr size) was significantly larger, e.g. 632
+                 ;; bytes, than the size reported using
+                 ;; ClassLayout/parseClass followed by the
+                 ;; instanceSize method, e.g. 96 bytes.  This can
+                 ;; cause later sanity checks of objects that overlap
+                 ;; in memory to fail, when they should succeed.  This
+                 ;; is likely a bug in JOL 0.9.  Warn about such
+                 ;; things in order to help collect a little more data
+                 ;; about the issue.
+                 sanity-checked-already? (cond
+                                           arr? true
+                                           (= java.lang.Class (class obj)) false
+                                           :else (sanity-checked? (class obj)))
+                 cl-size (if sanity-checked-already?
+                           gpr-size
+                           (. (ClassLayout/parseClass (class obj))
+                              instanceSize))
+                 _ (if (and (not sanity-checked-already?)
+                            (not= gpr-size cl-size))
+                     (let [sorted-offsets (if ref-arr?
+                                            []
+                                            (vec (sort (map :vm-offset
+                                                            (:fields cd)))))
+                           max-offset (if ref-arr?
+                                        nil
+                                        (if (zero? (count sorted-offsets))
+                                          0
+                                          (peek sorted-offsets)))]
+                       (warn-size-mismatch! obj gpr gpr-size cl-size
+                                            sorted-offsets)))
+                 size-to-use (min gpr-size cl-size)]
              {:address addr
               :obj obj
-              :size (. gpr size)
+              :size size-to-use
               :path (. gpr path)
               ;; TBD: Consider calling both
               ;; array-elem-name-and-address _and_
               ;; field-name-and-address for array objects, just in
               ;; case any Java array objects actually do return
               ;; fields.
-              :fields (if ref-arr?
-                        (into {} (map #(array-elem-name-and-address % obj)
-                                      (range (count obj))))
-                        (into {} (map #(field-name-and-address % obj) flds)))}))
+              :fields refd-objs}))
          addresses)))
 
 
@@ -1345,6 +1390,7 @@ props1
 (def e1 *e)
 (use 'clojure.repl)
 (pst e1 100)
+(pprint (Throwable->map e1))
 
 
 (def o1 (mapv char "a\"b"))
