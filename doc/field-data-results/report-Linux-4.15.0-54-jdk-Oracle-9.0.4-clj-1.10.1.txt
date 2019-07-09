@@ -31,7 +31,7 @@ Wrote differences below after heading '# inst-size-diffs'.
   [io.github.classgraph.ClassInfo loadClass "ClassInfo.java" 2623]
   [jdk.internal.reflect.GeneratedMethodAccessor13 invoke nil -1]
   [jdk.internal.reflect.DelegatingMethodAccessorImpl invoke "DelegatingMethodAccessorImpl.java" 43]
-  [java.lang.reflect.Method invoke "Method.java" 567]
+  [java.lang.reflect.Method invoke "Method.java" 564]
   [clojure.lang.Reflector invokeMatchingMethod "Reflector.java" 167]
   [clojure.lang.Reflector invokeNoArgInstanceMember "Reflector.java" 438]
   [cljol.reflection_test_helpers$try_load_class invokeStatic "reflection_test_helpers.clj" 168]
