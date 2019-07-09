@@ -285,6 +285,7 @@
               :obj obj
               :size size-to-use
               :path (. gpr path)
+              :distance (. gpr depth)
               ;; TBD: Consider calling both
               ;; array-elem-name-and-address _and_
               ;; field-name-and-address for array objects, just in
@@ -941,9 +942,6 @@ thread."
               g)
             (do (println "skipping calculation of total size")
                 g))
-        {t :time-nsec g :ret} (my-time (add-shortest-path-distances g obj-coll))
-        _ (when (>= debug-level 1)
-            (println (/ t 1000000.0) "msec to calculate shortest paths"))
         {t :time-nsec g :ret} (my-time (add-viz-attributes g opts))
         _ (when (>= debug-level 1)
             (println (/ t 1000000.0) "msec to add graphviz attributes"))]

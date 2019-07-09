@@ -305,8 +305,22 @@ phantom.
 (d/view-graph g)
 (def g nil)
 
+(uber/pprint g)
+(defn inconsistent-distance-nodes [g]
+  (for [node (uber/nodes g)
+        :let [attrs (uber/attrs g node)
+	      sp-dist (:distance attrs)
+	      gpl-dist (:gpl-distance attrs)]]
+    {:node node :sp-dist sp-dist :gpl-dist gpl-dist}))
+(def i1 (inconsistent-distance-nodes g))
+(count i1)
+(uber/count-nodes g)
+(def i2 (group-by (fn [x] (= (:sp-dist x) (:gpl-dist x))) i1))
+(count (i2 true))
+(count (i2 false))
+
 (def g (d/sum [(vec (range 1e5))] opts))
-(def o1 (d/consistent-reachable-objmaps [#'v1]))
+(def o1 (d/consistent-reachable-objmaps [#'v1] opts))
 
 (def g (d/sum [#'v1] opts))
 (d/view-graph g {:save {:filename "clojure-var.dot" :format :dot}})
