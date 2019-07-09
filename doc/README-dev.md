@@ -382,6 +382,38 @@ d/inaccessible-field-val-sentinel
 ;; => 26168262656
 (-> e3 :obj type)
 ;; => java.lang.ref.SoftReference
+
+;; Try to isolate some cases where JOL 0.9 seems to return incorrect
+;; object sizes.
+
+(do
+(import '(org.openjdk.jol.info ClassLayout GraphLayout))
+(import '(org.openjdk.jol.vm VM))
+(defn foo [obj]
+  (let [cls (class obj)
+	parsed-inst (ClassLayout/parseInstance obj)
+        parsed-cls (ClassLayout/parseClass cls)
+	vm-size (. (VM/current) sizeOf obj)
+        inst-size (. parsed-inst instanceSize)
+        cl-size (. parsed-cls instanceSize)]
+    (println "toPrintable of parseInstance ret value:")
+    (print (.toPrintable parsed-inst))
+    (println)
+    (println "toPrintable of parseClass ret value:")
+    (print (.toPrintable parsed-cls))
+    (println)
+    (println "cls:" cls)
+    (println vm-size "(. (VM/current) sizeOf obj)")
+    (println inst-size "(. (ClassLayout/parseInstance obj) instanceSize)")
+    (println cl-size "(. (ClassLayout/parseClass cls) instanceSize)")
+    (if (= vm-size cl-size)
+      (println "same")
+      (println "DIFFERENT"))))
+)
+(foo 5)
+(foo "bar")
+(foo (class 5))
+
 ```
 
 The Clojure implementation mentions SoftReference in its
