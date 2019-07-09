@@ -4,9 +4,11 @@ of which 8770 we will attempt to load and compare, but
 Number of classes categorized by the phase in which an
 error occurred while loading and comparing (nil=no error):
 {nil 8769, :load-class 1}
-Wrote error info belwo after heading '# errors'.
+Wrote error info below after heading '# errors'.
 8769 classes with no difference in their field data.
 Wrote details about differences for 0 classes below after heading '# differences'.
+Found 0 classes with different per-instance field lists according to different APIs.
+Wrote differences below after heading '# pif-diffs'.
 
 ############################################################
 # errors
@@ -25,14 +27,14 @@ Wrote details about differences for 0 classes below after heading '# differences
  [[io.github.classgraph.ScanResult loadClass "ScanResult.java" 1171]
   [io.github.classgraph.ScanResultObject loadClass "ScanResultObject.java" 206]
   [io.github.classgraph.ClassInfo loadClass "ClassInfo.java" 2623]
-  [sun.reflect.GeneratedMethodAccessor17 invoke nil -1]
+  [sun.reflect.GeneratedMethodAccessor2 invoke nil -1]
   [sun.reflect.DelegatingMethodAccessorImpl invoke "DelegatingMethodAccessorImpl.java" 43]
   [java.lang.reflect.Method invoke "Method.java" 498]
   [clojure.lang.Reflector invokeMatchingMethod "Reflector.java" 167]
   [clojure.lang.Reflector invokeNoArgInstanceMember "Reflector.java" 438]
-  [cljol.reflection_test_helpers$try_load_class invokeStatic "reflection_test_helpers.clj" 120]
-  [cljol.reflection_test_helpers$try_load_class invoke "reflection_test_helpers.clj" 118]
-  [cljol.reflection_test_helpers$load_classes_and_compare_results$fn__6593 invoke "reflection_test_helpers.clj" 151]
+  [cljol.reflection_test_helpers$try_load_class invokeStatic "reflection_test_helpers.clj" 168]
+  [cljol.reflection_test_helpers$try_load_class invoke "reflection_test_helpers.clj" 166]
+  [cljol.reflection_test_helpers$load_classes_and_compare_results$fn__6609 invoke "reflection_test_helpers.clj" 199]
   [clojure.core$mapv$fn__8445 invoke "core.clj" 6912]
   [clojure.core.protocols$iter_reduce invokeStatic "protocols.clj" 49]
   [clojure.core.protocols$fn__8140 invokeStatic "protocols.clj" 75]
@@ -41,13 +43,15 @@ Wrote details about differences for 0 classes below after heading '# differences
   [clojure.core$reduce invokeStatic "core.clj" 6828]
   [clojure.core$mapv invokeStatic "core.clj" 6903]
   [clojure.core$mapv invoke "core.clj" 6903]
-  [cljol.reflection_test_helpers$load_classes_and_compare_results invokeStatic "reflection_test_helpers.clj" 150]
-  [cljol.reflection_test_helpers$load_classes_and_compare_results invoke "reflection_test_helpers.clj" 149]
-  [cljol.reflection_test_helpers$report invokeStatic "reflection_test_helpers.clj" 180]
-  [cljol.reflection_test_helpers$report invoke "reflection_test_helpers.clj" 169]
-  [user$eval6612 invokeStatic "NO_SOURCE_FILE" 1]
-  [user$eval6612 invoke "NO_SOURCE_FILE" 1]
-  [clojure.lang.Compiler eval "Compiler.java" 7177]
+  [cljol.reflection_test_helpers$load_classes_and_compare_results invokeStatic "reflection_test_helpers.clj" 198]
+  [cljol.reflection_test_helpers$load_classes_and_compare_results invoke "reflection_test_helpers.clj" 197]
+  [cljol.reflection_test_helpers$report invokeStatic "reflection_test_helpers.clj" 228]
+  [cljol.reflection_test_helpers$report invoke "reflection_test_helpers.clj" 217]
+  [clojure.lang.AFn applyToHelper "AFn.java" 152]
+  [clojure.lang.AFn applyTo "AFn.java" 144]
+  [clojure.lang.Compiler$InvokeExpr eval "Compiler.java" 3702]
+  [clojure.lang.Compiler$DefExpr eval "Compiler.java" 457]
+  [clojure.lang.Compiler eval "Compiler.java" 7182]
   [clojure.lang.Compiler eval "Compiler.java" 7132]
   [clojure.core$eval invokeStatic "core.clj" 3214]
   [clojure.core$eval invoke "core.clj" 3210]
@@ -67,4 +71,8 @@ Wrote details about differences for 0 classes below after heading '# differences
 
 ############################################################
 # differences
+############################################################
+
+############################################################
+# pif-diffs
 ############################################################

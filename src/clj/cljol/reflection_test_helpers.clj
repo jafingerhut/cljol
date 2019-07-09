@@ -30,6 +30,41 @@
 ;; fields, and we will ignore any information about methods.
 
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defn superclasses [cls]
+  (take-while identity (iterate (memfn ^Class getSuperclass) cls)))
+
+
+(defn all-fields
+  "Return all fields of the class 'cls', and its superclasses"
+  [cls]
+  (mapcat #(.getDeclaredFields ^Class %)
+          (superclasses cls)))
+
+
+(defn per-inst-ref-field? [^Field fld]
+  (and (not (. (. fld getType) isPrimitive))
+       (not (Modifier/isStatic (. fld getModifiers)))))
+
+
+(defn per-instance-reference-fields [cls]
+  (filter per-inst-ref-field? (all-fields cls)))
+
+
+(defn per-inst-field? [^Field fld]
+  (not (Modifier/isStatic (. fld getModifiers))))
+
+
+(defn per-instance-fields [cls]
+  (filter per-inst-field? (all-fields cls)))
+
+
+(defn per-instance-fields-common-data-via-custom-api [klass]
+  (->> (per-instance-fields klass)
+       (map #'clojure.reflect/field->map)))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
 (defn full-data-via-java-reflect-api [klass]
   (ref/type-reflect klass :ancestors true))
 
@@ -197,16 +232,29 @@
             _ (pp/pprint count-by-err-phase)
             diffs-by-err-phase (group-by :err-phase diffs)
             errs (dissoc diffs-by-err-phase nil)
-            _ (println "Wrote error info belwo after heading '# errors'.")
+            _ (println "Wrote error info below after heading '# errors'.")
             no-errs (get diffs-by-err-phase nil)
             by-diff-results (group-by #(= :same (:diffs %)) no-errs)
             no-differences (get by-diff-results true)
-            differences (get by-diff-results false)]
+            differences (get by-diff-results false)
+
+            pif-diffs (for [{:keys [klass]} diffs
+                            :when (not (nil? klass))
+                            :let [pif-custom (set (per-instance-fields-common-data-via-custom-api klass))
+                                  pif-jra (set (per-instance-fields-via-java-reflect-api klass))]
+                            :when (not= pif-custom pif-jra)]
+                        {:class-name (str klass)
+                         :pif-custom pif-custom
+                         :pif-jra pif-jra})]
         
         (println (count no-differences)
                  "classes with no difference in their field data.")
         (println "Wrote details about differences for" (count differences)
                  "classes below after heading '# differences'.")
+
+        (println "Found" (count pif-diffs) "classes with different"
+                 "per-instance field lists according to different APIs.")
+        (println "Wrote differences below after heading '# pif-diffs'.")
 
         (println)
         (println "############################################################")
@@ -220,7 +268,15 @@
         (println "# differences")
         (println "############################################################")
         (when (not= 0 (count differences))
-          (pp/pprint differences))))))
+          (pp/pprint differences))
+
+        (println)
+        (println "############################################################")
+        (println "# pif-diffs")
+        (println "############################################################")
+        (when (not= 0 (count pif-diffs))
+          (pp/pprint pif-diffs))
+        pif-diffs))))
 
 
 (comment
