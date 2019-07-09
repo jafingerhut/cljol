@@ -3,8 +3,10 @@
   (:import (org.openjdk.jol.info ClassLayout GraphLayout
                                  ClassData FieldData))
   (:import (org.openjdk.jol.vm VM))
+  (:import (io.github.classgraph ClassGraph ClassInfo))
   (:require [clojure.set :as set]
             [clojure.string :as str]
+            [clojure.java.io :as io]
             [clojure.pprint :as pp]
             [clojure.reflect :as ref]
             [clojure.data :as data]
@@ -81,7 +83,8 @@
        (map (fn [m]
               {:field-name (str (:name m))
                :type-str (convert-jra-type-name (str (:type m)))
-               :declaring-class-str (str (:declaring-class m))}))
+               :declaring-class-str (convert-jra-type-name
+                                     (str (:declaring-class m)))}))
        set))
 
 
@@ -95,8 +98,8 @@
        :fields
        (map (fn [m]
               {:field-name (:field-name m)
-               :type-str (:type-class m)
-               :declaring-class-str (:host-class m)}))
+               :type-str (convert-jra-type-name (:type-class m))
+               :declaring-class-str (convert-jra-type-name (:host-class m))}))
        set))
 
 
@@ -111,6 +114,92 @@
       d)))
 
 
+(defn try-load-class [class-info]
+  (try
+    {:err nil :klass (. class-info loadClass)}
+    (catch Exception e
+      {:err e})))
+
+
+(defn all-class-infos []
+  (let [scan-result (.. (ClassGraph.) enableAllInfo scan)]
+    (into {} (.getAllClassesAsMap scan-result))))
+
+
+;; For at least some of the classes with these names, I got exceptions
+;; while trying to include them in later analysis code.  I do not know
+;; why that later code did not catch the exceptions as I would have
+;; expected, given how it is written, but it did not.
+
+(defn problem-klass [klass-name-str]
+  (or (re-find #"^org\.apache\.xmlbeans\.XmlCursor$" klass-name-str)
+      (re-find #"^org\.apache\.xmlbeans" klass-name-str)
+      (re-find #"^org\.mozilla\.javascript\.xml\.impl\.xmlbeans" klass-name-str)
+      (re-find #"^com\.google\.javascript\.jscomp\.ant" klass-name-str)))
+
+
+(defn non-problem-class-infos [class-infos]
+  (into {}
+        (for [[class-name-str class-info] class-infos
+              :when (not (problem-klass class-name-str))]
+          [class-name-str class-info])))
+
+
+(defn load-classes-and-compare-results [class-infos]
+  (mapv (fn [[class-name-str class-info]]
+          (let [{:keys [err klass]} (try-load-class class-info)
+                
+                {:keys [err-phase err diffs]}
+                (if (nil? err)
+                  (try
+                    {:diffs (compare-fields-jra-vs-jol klass)}
+                    (catch Exception e
+                      {:err-phase :compare, :err e}))
+                  ;; else
+                  {:err-phase :load-class, :err err})]
+            {:class-name-str class-name-str
+             :klass (if (nil? err-phase) klass)
+             :err-phase err-phase
+             :err err
+             :diffs diffs}))
+        class-infos))
+
+
+(defn report []
+  (let [allklass (all-class-infos)
+        _ (println "Scan for classes found" (count allklass))
+        mostklass (non-problem-class-infos allklass)
+        _ (println "of which" (count mostklass)
+                   "we will attempt to load and compare, but")
+        _ (println (- (count allklass) (count mostklass))
+                   "we expect would cause problems in loading or comparison.")
+        diffs (load-classes-and-compare-results mostklass)
+        count-by-err-phase (frequencies (map :err-phase diffs))
+        _ (println "Number of classes categorized by the phase in which an")
+        _ (println "error occurred while loading and comparing (nil=no error):")
+        _ (pp/pprint count-by-err-phase)
+        diffs-by-err-phase (group-by :err-phase diffs)
+        errs (dissoc diffs-by-err-phase nil)
+        _ (with-open [wrtr (io/writer "errors.txt")]
+            (binding [*out* wrtr]
+              (when (not= 0 (count errs))
+                (pp/pprint errs))))
+        _ (println "Wrote error info to file 'errors.txt'")
+        no-errs (get diffs-by-err-phase nil)
+        by-diff-results (group-by #(= :same (:diffs %)) no-errs)
+        no-differences (get by-diff-results true)
+        differences (get by-diff-results false)]
+    
+    (println (count no-differences)
+             "classes withno difference in their field data.")
+    (with-open [wrtr (io/writer "differences.txt")]
+      (binding [*out* wrtr]
+        (when (not= 0 (count differences))
+          (pp/pprint differences))))
+    (println "Wrote details about differences for" (count differences)
+             "classes to file 'differences.txt'.")))
+
+
 (comment
 
 (do
@@ -119,94 +208,36 @@
 (use 'clojure.repl)
 (use 'clojure.pprint)
 )
-
+(report)
 
 (do
-
-(import '(java.lang.reflect Field Method Modifier))
-(import '(org.openjdk.jol.info ClassLayout GraphLayout
-                               ClassData FieldData))
-(import '(org.openjdk.jol.vm VM))
-(require '[cljol.dig9 :as d])
-(require '[cljol.reflection-test-helpers :as t])
-(require '[clojure.string :as str])
-(require '[clojure.reflect :as ref])
-(require '[clojure.data :as data])
-
+(def allklass (all-class-infos))
+(def mostklass allklass)
+(def mostklass (non-problem-class-infos allklass))
+(count allklass)
 )
 
+(count mostklass)
+(def diffs0 (load-classes-and-compare-results mostklass))
 
-(convert-jra-type-name "io.github.classgraph.ClassGraph$ScanResultProcessor")
-(do
-
-(import '(io.github.classgraph ClassGraph ClassInfo))
-;;(def scan-result (.. (ClassGraph.) verbose enableAllInfo scan))
-(def scan-result (.. (ClassGraph.) enableAllInfo scan))
-(type scan-result)
-(def allklass (into {} (.getAllClassesAsMap scan-result)))
-(type allklass)
-(count allklass)
-
-(def diffs0
-  (->> allklass
-       (mapv (fn [[class-name-str class-info]]
-               (let [klass (. class-info loadClass)]
-                 {:class-name-str class-name-str
-                  :klass klass
-                  :diffs (compare-fields-jra-vs-jol klass)})))))
-
-(def diffs1
-  (->> diffs0
-       (remove #(= :same (:diffs %)))))
-
-)
-
-(count allklass)
 (count diffs0)
-(count diffs1)
+(def e1 *e)
+(pprint (Throwable->map e1))
 
+(frequencies (map #(type (:err %)) diffs0))
+(def err1 (first (filter #(type (:err %)) diffs0)))
+(keys err1)
+(pprint (dissoc err1 :err))
+(pprint (Throwable->map (:err err1)))
+(map #(juxt (key %) (type (val %))) err1)
 
-;; Separate out differences that are only because JOL
-;; found "__methodImplCache" and java reflection API did not.  Note:
-;; Later I found out that the reason for those differences was that
-;; JOL returned all per-instance fields of a class, whereas
-;; clojure.reflect/type-reflect was only returning the fields declared
-;; directly in that class, ignoring any fields defined in
-;; superclasses.  When I added the `:ancestors true` options to the
-;; clojure.reflect/type-reflect call, they returned the same lists of
-;; per-instance fields (probably for all fields, but I only did
-;; careful checking on the per-instance fields).
+(def no-err (filter #(nil? (:err-phase %)) diffs0))
+(count no-err)
+(count (filter #(= :same (:diffs %)) no-err))
+(pprint (first no-err))
 
-(defn only-diff-is-method-impl-cache? [diff]
-  (and (vector? diff)
-       (= 3 (count diff))
-       (nil? (nth diff 0))
-       (nil? (nth diff 2))
-       (let [x (nth diff 1)]
-         (and (set? x)
-              (= 1 (count x))
-              (map? (first x))
-              (= "__methodImplCache" (:field-name (first x)))))))
+(frequencies (map (juxt :err-phase :err) diffs0))
 
-(pprint diffs1)
-(def d (nth diffs1 1))
-(pprint (:diffs d))
-(only-diff-is-method-impl-cache? (:diffs d))
-
-(def diffs2 (group-by #(only-diff-is-method-impl-cache? (:diffs %)) diffs1))
-
-(count diffs2)
-(keys diffs2)
-(count (get diffs2 false))
-;; 870
-(count (get diffs2 true))
-;; 2297
-(pprint (nth (get diffs2 false) 100))
-
-(def klass (Class/forName "clojure.lang.ExceptionInfo"))
-(pprint (per-instance-fields-common-data-via-java-reflect-api klass))
-(pprint (ref/type-reflect klass :ancestors true))
-(pprint (per-instance-fields-common-data-via-jol klass))
 
 (def klass (Class/forName "java.lang.RuntimeException"))
 (def klass (Class/forName "java.lang.Exception"))
@@ -242,24 +273,5 @@
 (def f2 (per-instance-fields-common-data-via-jol (class 1)))
 (def f2 (per-instance-fields-common-data-via-jol (class (class 1))))
 (pprint f2)
-
-(require '[clojure.reflect :as ref])
-(apropos "reflect")
-(def sr (ref/type-reflect (class "a")))
-(class sr)
-(pprint sr)
-(keys sr)
-(:bases sr)
-(:flags sr)
-(keys (first (:members sr)))
-(pprint (frequencies (map keys (:members sr))))
-(def maybe-flds (filter #(contains? % :type) (:members sr)))
-(count maybe-flds)
-(pprint maybe-flds)
-(def per-class-flds (filter #(contains? (:flags %) :static) maybe-flds))
-(count per-class-flds)
-(def per-instance-flds (remove #(contains? (:flags %) :static) maybe-flds))
-(count per-instance-flds)
-(pprint per-instance-flds)
 
 )
