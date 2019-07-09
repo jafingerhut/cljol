@@ -1,0 +1,119 @@
++ uname -a
+Linux p4dev 4.15.0-54-generic #58-Ubuntu SMP Mon Jun 24 10:55:24 UTC 2019 x86_64 x86_64 x86_64 GNU/Linux
++ java -version
+openjdk version "12.0.1" 2019-04-16
+OpenJDK Runtime Environment (build 12.0.1+12)
+OpenJDK 64-Bit Server VM (build 12.0.1+12, mixed mode, sharing)
++ M2=/home/jafinger/.m2/repository
++ JOL_CORE_0_9_JAR=/home/jafinger/.m2/repository/org/openjdk/jol/jol-core/0.9/jol-core-0.9.jar
++ javac -classpath /home/jafinger/.m2/repository/org/openjdk/jol/jol-core/0.9/jol-core-0.9.jar MaybeBug.java
+Note: MaybeBug.java uses or overrides a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
++ java -classpath /home/jafinger/clj/cljol/doc/maybe-jol-size-bug:/home/jafinger/.m2/repository/org/openjdk/jol/jol-core/0.9/jol-core-0.9.jar MaybeBug
+# WARNING: Unable to get Instrumentation. Dynamic Attach failed. You may add this JAR as -javaagent manually, or supply -Djdk.attach.allowAttachSelf
+# WARNING: Unable to attach Serviceability Agent. You can try again with escalated privileges. Two options: a) use -Djol.tryWithSudo=true to try with sudo; b) echo 0 | sudo tee /proc/sys/kernel/yama/ptrace_scope
+# Running 64-bit HotSpot VM.
+# Using compressed oop with 3-bit shift.
+# Using compressed klass with 3-bit shift.
+# WARNING | Compressed references base/shifts are guessed by the experiment!
+# WARNING | Therefore, computed addresses are just guesses, and ARE NOT RELIABLE.
+# WARNING | Make sure to attach Serviceability Agent to get the reliable addresses.
+# Objects are 8 bytes aligned.
+# Field sizes by type: 4, 1, 1, 2, 2, 4, 4, 8, 8 [bytes]
+# Array element sizes: 4, 1, 1, 2, 2, 4, 4, 8, 8 [bytes]
+
+
+------------------------------------------------------------
+obj= 5
+obj.getClass()= class java.lang.Long
+
+toPrintable of parseInstance ret value:
+WARNING: An illegal reflective access operation has occurred
+WARNING: Illegal reflective access by org.openjdk.jol.util.ObjectUtils (file:/home/jafinger/.m2/repository/org/openjdk/jol/jol-core/0.9/jol-core-0.9.jar) to field java.lang.Long.value
+WARNING: Please consider reporting this to the maintainers of org.openjdk.jol.util.ObjectUtils
+WARNING: Use --illegal-access=warn to enable warnings of further illegal reflective access operations
+WARNING: All illegal access operations will be denied in a future release
+java.lang.Long object internals:
+ OFFSET  SIZE   TYPE DESCRIPTION                               VALUE
+      0     4        (object header)                           05 00 00 00 (00000101 00000000 00000000 00000000) (5)
+      4     4        (object header)                           00 00 00 00 (00000000 00000000 00000000 00000000) (0)
+      8     4        (object header)                           66 17 00 00 (01100110 00010111 00000000 00000000) (5990)
+     12     4        (alignment/padding gap)                  
+     16     8   long Long.value                                5
+Instance size: 24 bytes
+Space losses: 4 bytes internal + 0 bytes external = 4 bytes total
+
+
+toPrintable of parseClass ret value:
+java.lang.Long object internals:
+ OFFSET  SIZE   TYPE DESCRIPTION                               VALUE
+      0    12        (object header)                           N/A
+     12     4        (alignment/padding gap)                  
+     16     8   long Long.value                                N/A
+Instance size: 24 bytes
+Space losses: 4 bytes internal + 0 bytes external = 4 bytes total
+
+obj= 5
+obj.getClass()= class java.lang.Long
+VM.current().sizeOf(obj)= 24
+parsedInst.instanceSize()= 24
+parsedCls.instanceSize()= 24
+
+------------------------------------------------------------
+obj= class java.lang.Class
+obj.getClass()= class java.lang.Class
+
+toPrintable of parseInstance ret value:
+java.lang.Class object internals:
+ OFFSET  SIZE                                              TYPE DESCRIPTION                               VALUE
+      0     4                                                   (object header)                           01 22 e9 52 (00000001 00100010 11101001 01010010) (1391010305)
+      4     4                                                   (object header)                           78 00 00 00 (01111000 00000000 00000000 00000000) (120)
+      8     4                                                   (object header)                           fb fb 06 00 (11111011 11111011 00000110 00000000) (457723)
+     12     4                     java.lang.reflect.Constructor Class.cachedConstructor                   null
+     16     4                                  java.lang.String Class.name                                (object)
+     20     4                                  java.lang.Module Class.module                              (object)
+     24     4                                                   (alignment/padding gap)                  
+     28     4                                  java.lang.String Class.packageName                         (object)
+     32     4                                   java.lang.Class Class.componentType                       null
+     36     4                       java.lang.ref.SoftReference Class.reflectionData                      (object)
+     40     4   sun.reflect.generics.repository.ClassRepository Class.genericInfo                         null
+     44     4                                java.lang.Object[] Class.enumConstants                       null
+     48     4                                     java.util.Map Class.enumConstantDirectory               null
+     52     4                    java.lang.Class.AnnotationData Class.annotationData                      (object)
+     56     4             sun.reflect.annotation.AnnotationType Class.annotationType                      null
+     60     4                java.lang.ClassValue.ClassValueMap Class.classValueMap                       null
+     64    24                                                   (alignment/padding gap)                  
+     88     4                                               int Class.classRedefinedCount                 0
+     92     4                                                   (loss due to the next object alignment)
+Instance size: 96 bytes
+Space losses: 28 bytes internal + 4 bytes external = 32 bytes total
+
+
+toPrintable of parseClass ret value:
+java.lang.Class object internals:
+ OFFSET  SIZE                                              TYPE DESCRIPTION                               VALUE
+      0    12                                                   (object header)                           N/A
+     12     4                     java.lang.reflect.Constructor Class.cachedConstructor                   N/A
+     16     4                                  java.lang.String Class.name                                N/A
+     20     4                                  java.lang.Module Class.module                              N/A
+     24     4                                                   (alignment/padding gap)                  
+     28     4                                  java.lang.String Class.packageName                         N/A
+     32     4                                   java.lang.Class Class.componentType                       N/A
+     36     4                       java.lang.ref.SoftReference Class.reflectionData                      N/A
+     40     4   sun.reflect.generics.repository.ClassRepository Class.genericInfo                         N/A
+     44     4                                java.lang.Object[] Class.enumConstants                       N/A
+     48     4                                     java.util.Map Class.enumConstantDirectory               N/A
+     52     4                    java.lang.Class.AnnotationData Class.annotationData                      N/A
+     56     4             sun.reflect.annotation.AnnotationType Class.annotationType                      N/A
+     60     4                java.lang.ClassValue.ClassValueMap Class.classValueMap                       N/A
+     64    24                                                   (alignment/padding gap)                  
+     88     4                                               int Class.classRedefinedCount                 N/A
+     92     4                                                   (loss due to the next object alignment)
+Instance size: 96 bytes
+Space losses: 28 bytes internal + 4 bytes external = 32 bytes total
+
+obj= class java.lang.Class
+obj.getClass()= class java.lang.Class
+VM.current().sizeOf(obj)= 96
+parsedInst.instanceSize()= 96
+parsedCls.instanceSize()= 96
