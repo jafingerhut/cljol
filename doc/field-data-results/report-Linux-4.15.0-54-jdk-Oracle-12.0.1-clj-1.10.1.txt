@@ -1,0 +1,70 @@
+Scan for classes found 8793
+of which 8770 we will attempt to load and compare, but
+23 we expect would cause problems in loading or comparison.
+Number of classes categorized by the phase in which an
+error occurred while loading and comparing (nil=no error):
+{nil 8769, :load-class 1}
+Wrote error info belwo after heading '# errors'.
+8769 classes with no difference in their field data.
+Wrote details about differences for 0 classes below after heading '# differences'.
+
+############################################################
+# errors
+############################################################
+{:load-class
+ [{:class-name-str "org.apache.tools.ant.Task",
+   :klass nil,
+   :err-phase :load-class,
+   :err #error {
+ :cause "Could not load class org.apache.tools.ant.Task : java.lang.ClassNotFoundException: Could not load classfile for class org.apache.tools.ant.Task"
+ :via
+ [{:type java.lang.IllegalArgumentException
+   :message "Could not load class org.apache.tools.ant.Task : java.lang.ClassNotFoundException: Could not load classfile for class org.apache.tools.ant.Task"
+   :at [io.github.classgraph.ScanResult loadClass "ScanResult.java" 1171]}]
+ :trace
+ [[io.github.classgraph.ScanResult loadClass "ScanResult.java" 1171]
+  [io.github.classgraph.ScanResultObject loadClass "ScanResultObject.java" 206]
+  [io.github.classgraph.ClassInfo loadClass "ClassInfo.java" 2623]
+  [jdk.internal.reflect.GeneratedMethodAccessor13 invoke nil -1]
+  [jdk.internal.reflect.DelegatingMethodAccessorImpl invoke "DelegatingMethodAccessorImpl.java" 43]
+  [java.lang.reflect.Method invoke "Method.java" 567]
+  [clojure.lang.Reflector invokeMatchingMethod "Reflector.java" 167]
+  [clojure.lang.Reflector invokeNoArgInstanceMember "Reflector.java" 438]
+  [cljol.reflection_test_helpers$try_load_class invokeStatic "reflection_test_helpers.clj" 120]
+  [cljol.reflection_test_helpers$try_load_class invoke "reflection_test_helpers.clj" 118]
+  [cljol.reflection_test_helpers$load_classes_and_compare_results$fn__6593 invoke "reflection_test_helpers.clj" 151]
+  [clojure.core$mapv$fn__8445 invoke "core.clj" 6912]
+  [clojure.core.protocols$iter_reduce invokeStatic "protocols.clj" 49]
+  [clojure.core.protocols$fn__8140 invokeStatic "protocols.clj" 75]
+  [clojure.core.protocols$fn__8140 invoke "protocols.clj" 75]
+  [clojure.core.protocols$fn__8088$G__8083__8101 invoke "protocols.clj" 13]
+  [clojure.core$reduce invokeStatic "core.clj" 6828]
+  [clojure.core$mapv invokeStatic "core.clj" 6903]
+  [clojure.core$mapv invoke "core.clj" 6903]
+  [cljol.reflection_test_helpers$load_classes_and_compare_results invokeStatic "reflection_test_helpers.clj" 150]
+  [cljol.reflection_test_helpers$load_classes_and_compare_results invoke "reflection_test_helpers.clj" 149]
+  [cljol.reflection_test_helpers$report invokeStatic "reflection_test_helpers.clj" 180]
+  [cljol.reflection_test_helpers$report invoke "reflection_test_helpers.clj" 169]
+  [user$eval6612 invokeStatic "NO_SOURCE_FILE" 1]
+  [user$eval6612 invoke "NO_SOURCE_FILE" 1]
+  [clojure.lang.Compiler eval "Compiler.java" 7177]
+  [clojure.lang.Compiler eval "Compiler.java" 7132]
+  [clojure.core$eval invokeStatic "core.clj" 3214]
+  [clojure.core$eval invoke "core.clj" 3210]
+  [clojure.main$repl$read_eval_print__9086$fn__9089 invoke "main.clj" 437]
+  [clojure.main$repl$read_eval_print__9086 invoke "main.clj" 437]
+  [clojure.main$repl$fn__9095 invoke "main.clj" 458]
+  [clojure.main$repl invokeStatic "main.clj" 458]
+  [clojure.main$repl_opt invokeStatic "main.clj" 522]
+  [clojure.main$main invokeStatic "main.clj" 667]
+  [clojure.main$main doInvoke "main.clj" 616]
+  [clojure.lang.RestFn invoke "RestFn.java" 397]
+  [clojure.lang.AFn applyToHelper "AFn.java" 152]
+  [clojure.lang.RestFn applyTo "RestFn.java" 132]
+  [clojure.lang.Var applyTo "Var.java" 705]
+  [clojure.main main "main.java" 40]]},
+   :diffs nil}]}
+
+############################################################
+# differences
+############################################################

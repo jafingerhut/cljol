@@ -10,6 +10,7 @@
             [clojure.pprint :as pp]
             [clojure.reflect :as ref]
             [clojure.data :as data]
+            [cljol.version-info :as ver]
             [cljol.dig9 :as d]))
 
 
@@ -166,38 +167,47 @@
 
 
 (defn report []
-  (let [allklass (all-class-infos)
-        _ (println "Scan for classes found" (count allklass))
-        mostklass (non-problem-class-infos allklass)
-        _ (println "of which" (count mostklass)
-                   "we will attempt to load and compare, but")
-        _ (println (- (count allklass) (count mostklass))
-                   "we expect would cause problems in loading or comparison.")
-        diffs (load-classes-and-compare-results mostklass)
-        count-by-err-phase (frequencies (map :err-phase diffs))
-        _ (println "Number of classes categorized by the phase in which an")
-        _ (println "error occurred while loading and comparing (nil=no error):")
-        _ (pp/pprint count-by-err-phase)
-        diffs-by-err-phase (group-by :err-phase diffs)
-        errs (dissoc diffs-by-err-phase nil)
-        _ (with-open [wrtr (io/writer "errors.txt")]
-            (binding [*out* wrtr]
-              (when (not= 0 (count errs))
-                (pp/pprint errs))))
-        _ (println "Wrote error info to file 'errors.txt'")
-        no-errs (get diffs-by-err-phase nil)
-        by-diff-results (group-by #(= :same (:diffs %)) no-errs)
-        no-differences (get by-diff-results true)
-        differences (get by-diff-results false)]
-    
-    (println (count no-differences)
-             "classes withno difference in their field data.")
-    (with-open [wrtr (io/writer "differences.txt")]
-      (binding [*out* wrtr]
+  (with-open [wrtr (io/writer (str "report-"
+                                   (get @ver/version-data :stack-desc) ".txt"))]
+    (binding [*out* wrtr]
+      (let [allklass (all-class-infos)
+            _ (println "Scan for classes found" (count allklass))
+            mostklass (non-problem-class-infos allklass)
+            _ (println "of which" (count mostklass)
+                       "we will attempt to load and compare, but")
+            _ (println (- (count allklass) (count mostklass))
+                       "we expect would cause problems in loading or comparison.")
+            diffs (load-classes-and-compare-results mostklass)
+            count-by-err-phase (frequencies (map :err-phase diffs))
+            _ (println "Number of classes categorized by the phase in which an")
+            _ (println "error occurred while loading and comparing (nil=no error):")
+            _ (pp/pprint count-by-err-phase)
+            diffs-by-err-phase (group-by :err-phase diffs)
+            errs (dissoc diffs-by-err-phase nil)
+            _ (println "Wrote error info belwo after heading '# errors'.")
+            no-errs (get diffs-by-err-phase nil)
+            by-diff-results (group-by #(= :same (:diffs %)) no-errs)
+            no-differences (get by-diff-results true)
+            differences (get by-diff-results false)]
+        
+        (println (count no-differences)
+                 "classes with no difference in their field data.")
+        (println "Wrote details about differences for" (count differences)
+                 "classes below after heading '# differences'.")
+
+        (println)
+        (println "############################################################")
+        (println "# errors")
+        (println "############################################################")
+        (when (not= 0 (count errs))
+          (pp/pprint errs))
+
+        (println)
+        (println "############################################################")
+        (println "# differences")
+        (println "############################################################")
         (when (not= 0 (count differences))
-          (pp/pprint differences))))
-    (println "Wrote details about differences for" (count differences)
-             "classes to file 'differences.txt'.")))
+          (pp/pprint differences))))))
 
 
 (comment

@@ -1,0 +1,72 @@
+Scan for classes found 8793
+of which 8770 we will attempt to load and compare, but
+23 we expect would cause problems in loading or comparison.
+Number of classes categorized by the phase in which an
+error occurred while loading and comparing (nil=no error):
+{nil 8769, :load-class 1}
+Wrote error info belwo after heading '# errors'.
+8769 classes with no difference in their field data.
+Wrote details about differences for 0 classes below after heading '# differences'.
+
+############################################################
+# errors
+############################################################
+{:load-class
+ [{:class-name-str "org.apache.tools.ant.Task",
+   :klass nil,
+   :err-phase :load-class,
+   :err #error {
+ :cause "Could not load class org.apache.tools.ant.Task : java.lang.ClassNotFoundException: Could not load classfile for class org.apache.tools.ant.Task"
+ :via
+ [{:type java.lang.IllegalArgumentException
+   :message "Could not load class org.apache.tools.ant.Task : java.lang.ClassNotFoundException: Could not load classfile for class org.apache.tools.ant.Task"
+   :at [io.github.classgraph.ScanResult loadClass "ScanResult.java" 1171]}]
+ :trace
+ [[io.github.classgraph.ScanResult loadClass "ScanResult.java" 1171]
+  [io.github.classgraph.ScanResultObject loadClass "ScanResultObject.java" 206]
+  [io.github.classgraph.ClassInfo loadClass "ClassInfo.java" 2623]
+  [jdk.internal.reflect.GeneratedMethodAccessor30 invoke nil -1]
+  [jdk.internal.reflect.DelegatingMethodAccessorImpl invoke "DelegatingMethodAccessorImpl.java" 43]
+  [java.lang.reflect.Method invoke "Method.java" 566]
+  [clojure.lang.Reflector invokeMatchingMethod "Reflector.java" 167]
+  [clojure.lang.Reflector invokeNoArgInstanceMember "Reflector.java" 438]
+  [cljol.reflection_test_helpers$try_load_class invokeStatic "reflection_test_helpers.clj" 120]
+  [cljol.reflection_test_helpers$try_load_class invoke "reflection_test_helpers.clj" 118]
+  [cljol.reflection_test_helpers$load_classes_and_compare_results$fn__6593 invoke "reflection_test_helpers.clj" 151]
+  [clojure.core$mapv$fn__8445 invoke "core.clj" 6912]
+  [clojure.core.protocols$iter_reduce invokeStatic "protocols.clj" 49]
+  [clojure.core.protocols$fn__8140 invokeStatic "protocols.clj" 75]
+  [clojure.core.protocols$fn__8140 invoke "protocols.clj" 75]
+  [clojure.core.protocols$fn__8088$G__8083__8101 invoke "protocols.clj" 13]
+  [clojure.core$reduce invokeStatic "core.clj" 6828]
+  [clojure.core$mapv invokeStatic "core.clj" 6903]
+  [clojure.core$mapv invoke "core.clj" 6903]
+  [cljol.reflection_test_helpers$load_classes_and_compare_results invokeStatic "reflection_test_helpers.clj" 150]
+  [cljol.reflection_test_helpers$load_classes_and_compare_results invoke "reflection_test_helpers.clj" 149]
+  [cljol.reflection_test_helpers$report invokeStatic "NO_SOURCE_FILE" 5]
+  [cljol.reflection_test_helpers$report invoke "NO_SOURCE_FILE" 5]
+  [cljol.reflection_test_helpers$eval6630 invokeStatic "NO_SOURCE_FILE" 6]
+  [cljol.reflection_test_helpers$eval6630 invoke "NO_SOURCE_FILE" 6]
+  [clojure.lang.Compiler eval "Compiler.java" 7177]
+  [clojure.lang.Compiler eval "Compiler.java" 7132]
+  [clojure.core$eval invokeStatic "core.clj" 3214]
+  [clojure.core$eval invoke "core.clj" 3210]
+  [clojure.main$repl$read_eval_print__9086$fn__9089 invoke "main.clj" 437]
+  [clojure.main$repl$read_eval_print__9086 invoke "main.clj" 437]
+  [clojure.main$repl$fn__9095 invoke "main.clj" 458]
+  [clojure.main$repl invokeStatic "main.clj" 458]
+  [clojure.core.server$repl invokeStatic "server.clj" 180]
+  [clojure.core.server$repl invoke "server.clj" 180]
+  [clojure.lang.AFn applyToHelper "AFn.java" 152]
+  [clojure.lang.AFn applyTo "AFn.java" 144]
+  [clojure.lang.Var applyTo "Var.java" 705]
+  [clojure.core$apply invokeStatic "core.clj" 665]
+  [clojure.core.server$accept_connection invokeStatic "server.clj" 73]
+  [clojure.core.server$start_server$fn__8879$fn__8880$fn__8882 invoke "server.clj" 117]
+  [clojure.lang.AFn run "AFn.java" 22]
+  [java.lang.Thread run "Thread.java" 834]]},
+   :diffs nil}]}
+
+############################################################
+# differences
+############################################################

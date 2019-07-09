@@ -2,29 +2,14 @@
   (:gen-class)
   (:import (java.io File))
   (:require [cljol.dig9 :as d]
+            [cljol.version-info :as ver]
             [clojure.string :as str]
             [clojure.data.int-map :as im]))
 
 
-(def props (into (sorted-map) (System/getProperties)))
-
-(defn clean-os-version [s]
-  (str/replace s #"-generic$" ""))
-
-(defn clean-vendor [s]
-  (str/replace s #" Corporation$" ""))
-
-(def os-desc (str (props "os.name")
-                  "-" (clean-os-version (props "os.version"))))
-(def jvm-desc (str "jdk-" (clean-vendor (props "java.vendor"))
-                   "-" (props "java.version")))
-(def clj-desc (str "clj-" (clojure-version)))
-(def stack-desc (str/replace (str os-desc "-" jvm-desc "-" clj-desc)
-                             " " "-"))
-
 (defn fname [s opts]
   (str (:output-dir opts) File/separator
-       s "-" stack-desc ".dot"))
+       s "-" (get @ver/version-data :stack-desc) ".dot"))
 
 
 ;; Copied from clojure.math.combinatorics namespace
