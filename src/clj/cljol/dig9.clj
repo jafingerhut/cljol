@@ -754,6 +754,55 @@ thread."
     s2))
 
 
+(defn non-realizing-value?
+  "Return true if calling 'str' on the object will cause no realizing
+  of lazy sequences, or any other kind of effect that modifies the
+  object or references between objects.  It is acceptable to return
+  true if calculated-once-then-cached values like hash codes are
+  modified.  Should definitely return false if calling 'str' would
+  cause realization.  This function may return false even if it is
+  'safe' to call 'str', to avoid having to detect all of the safe
+  cases precisely."
+  [x depth-remaining]
+  (if (zero? depth-remaining)
+    ;; To avoid a stack overflow error, give up after a certain depth,
+    ;; and assume the worst, that the overall value could cause
+    ;; realization of lazy objects to occur if it was str'ed.
+    false
+    (or (nil? x)
+        (number? x)
+        (string? x)
+        (keyword? x)
+        (symbol? x)
+        (boolean? x)
+        (bytes? x)
+        (inst? x)
+        (uri? x)
+        (uuid? x)
+        (class? x)
+        (and (array? x)
+             (or (. (array-element-type x) isPrimitive)
+                 (every? #(non-realizing-value? % (dec depth-remaining))
+                         (seq x))))
+        (and (or (map? x) (vector? x) (set? x))
+             (every? #(non-realizing-value? % (dec depth-remaining))
+                     (seq x)))
+        (and (list? x)
+             (non-realizing-value? (first x) (dec depth-remaining))
+             (non-realizing-value? (rest x) (dec depth-remaining))))))
+
+
+(defn non-realizing-javaobj->str
+  "Convert values to strings that should never cause any Clojure lazy
+  values to be realized."
+  [objmap opts]
+  (let [obj (:obj objmap)
+        max-depth 10]
+    (if (non-realizing-value? obj max-depth)
+      (javaobj->str objmap opts)
+      "val maybe realizes if str'ed")))
+
+
 (def all-builtin-node-labels
   [address-hex
    size-bytes
