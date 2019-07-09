@@ -16,13 +16,17 @@ public class MaybeBug {
 	long sizeFromInst = parsedInst.instanceSize();
 	long sizeFromCls = parsedCls.instanceSize();
 
-	out.println("toPrintable of parseInstance ret value:");
+	out.println("\n------------------------------------------------------------");
+	out.println("obj= " + obj);
+	out.println("obj.getClass()= " + c);
+	out.println("\ntoPrintable of parseInstance ret value:");
 	out.println(parsedInst.toPrintable());
 
 	out.println("\ntoPrintable of parseClass ret value:");
 	out.println(parsedCls.toPrintable());
 
-	out.println("\nclass: " + c);
+	out.println("obj= " + obj);
+	out.println("obj.getClass()= " + c);
 	out.println("VM.current().sizeOf(obj)= " + vmSizeOf);
 	out.println("parsedInst.instanceSize()= " + sizeFromInst);
 	out.println("parsedCls.instanceSize()= " + sizeFromCls);
