@@ -998,7 +998,14 @@ thread."
         ;; returns can in some cases contain duplicate nodes.  I do
         ;; not know why this happens.  For now, make sets out of them
         ;; to eliminate those.
-        weakly-connected-components (map set (ualg/connected-components g))
+        {wcc-nsec :time-nsec
+         weakly-connected-components :ret} (my-time
+                                            (map set
+                                                 (ualg/connected-components g)))
+        {scc-nsec :time-nsec scc-data :ret} (my-time (gr/scc-graph g))
+        {:keys [scc-graph node->scc-set]} scc-data
+        scc-components (set (vals node->scc-set))
+        scc-component-sizes-sorted (sort > (map count scc-components))
         nodes-by-distance (group-by #(uber/attr g % :distance)
                                     (uber/nodes g))
         node-stats-by-distance
@@ -1014,10 +1021,16 @@ thread."
     (println (if (ualg/dag? g)
                "no cycles"
                "has at least one cycle"))
-    (println (count weakly-connected-components) "weakly connected components")
+    (println (count weakly-connected-components) "weakly connected components"
+             "found in" (/ wcc-nsec 1000000.0) "msec")
     (println "number of nodes in all weakly connected components,")
     (println "from most to fewest nodes:")
     (println (sort > (map count weakly-connected-components)))
+    (println "The scc-graph has" (uber/count-nodes scc-graph) "nodes and"
+             (uber/count-edges scc-graph) "edges, taking"
+             (/ scc-nsec 1000000.0) "msec to calculate.")
+    (println "The largest size strongly connected components, at most 10:")
+    (pp/pprint (take 10 scc-component-sizes-sorted))
     (println "number of objects of each size in bytes:")
     (pp/pprint size-breakdown)
     (println "number and size of objects of each class:")
