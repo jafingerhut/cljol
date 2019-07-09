@@ -52,6 +52,80 @@ parsedInst.instanceSize()= 24
 parsedCls.instanceSize()= 24
 
 ------------------------------------------------------------
+obj= bar
+obj.getClass()= class java.lang.String
+
+toPrintable of parseInstance ret value:
+java.lang.String object internals:
+ OFFSET  SIZE     TYPE DESCRIPTION                               VALUE
+      0     4          (object header)                           01 00 00 00 (00000001 00000000 00000000 00000000) (1)
+      4     4          (object header)                           00 00 00 00 (00000000 00000000 00000000 00000000) (0)
+      8     4          (object header)                           da 02 00 f8 (11011010 00000010 00000000 11111000) (-134216998)
+     12     4   char[] String.value                              [b, a, r]
+     16     4      int String.hash                               0
+     20     4          (loss due to the next object alignment)
+Instance size: 24 bytes
+Space losses: 0 bytes internal + 4 bytes external = 4 bytes total
+
+
+toPrintable of parseClass ret value:
+java.lang.String object internals:
+ OFFSET  SIZE     TYPE DESCRIPTION                               VALUE
+      0    12          (object header)                           N/A
+     12     4   char[] String.value                              N/A
+     16     4      int String.hash                               N/A
+     20     4          (loss due to the next object alignment)
+Instance size: 24 bytes
+Space losses: 0 bytes internal + 4 bytes external = 4 bytes total
+
+obj= bar
+obj.getClass()= class java.lang.String
+VM.current().sizeOf(obj)= 24
+parsedInst.instanceSize()= 24
+parsedCls.instanceSize()= 24
+
+------------------------------------------------------------
+obj= {}
+obj.getClass()= class java.util.IdentityHashMap
+
+toPrintable of parseInstance ret value:
+java.util.IdentityHashMap object internals:
+ OFFSET  SIZE                   TYPE DESCRIPTION                               VALUE
+      0     4                        (object header)                           01 00 00 00 (00000001 00000000 00000000 00000000) (1)
+      4     4                        (object header)                           00 00 00 00 (00000000 00000000 00000000 00000000) (0)
+      8     4                        (object header)                           20 8d 00 f8 (00100000 10001101 00000000 11111000) (-134181600)
+     12     4          java.util.Set AbstractMap.keySet                        null
+     16     4   java.util.Collection AbstractMap.values                        null
+     20     4                    int IdentityHashMap.size                      0
+     24     4                    int IdentityHashMap.modCount                  0
+     28     4     java.lang.Object[] IdentityHashMap.table                     [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null]
+     32     4          java.util.Set IdentityHashMap.entrySet                  (object)
+     36     4                        (loss due to the next object alignment)
+Instance size: 40 bytes
+Space losses: 0 bytes internal + 4 bytes external = 4 bytes total
+
+
+toPrintable of parseClass ret value:
+java.util.IdentityHashMap object internals:
+ OFFSET  SIZE                   TYPE DESCRIPTION                               VALUE
+      0    12                        (object header)                           N/A
+     12     4          java.util.Set AbstractMap.keySet                        N/A
+     16     4   java.util.Collection AbstractMap.values                        N/A
+     20     4                    int IdentityHashMap.size                      N/A
+     24     4                    int IdentityHashMap.modCount                  N/A
+     28     4     java.lang.Object[] IdentityHashMap.table                     N/A
+     32     4          java.util.Set IdentityHashMap.entrySet                  N/A
+     36     4                        (loss due to the next object alignment)
+Instance size: 40 bytes
+Space losses: 0 bytes internal + 4 bytes external = 4 bytes total
+
+obj= {}
+obj.getClass()= class java.util.IdentityHashMap
+VM.current().sizeOf(obj)= 40
+parsedInst.instanceSize()= 40
+parsedCls.instanceSize()= 40
+
+------------------------------------------------------------
 obj= class java.lang.Class
 obj.getClass()= class java.lang.Class
 
@@ -105,3 +179,178 @@ obj.getClass()= class java.lang.Class
 VM.current().sizeOf(obj)= 648
 parsedInst.instanceSize()= 96
 parsedCls.instanceSize()= 96
+
+------------------------------------------------------------
+obj= class java.lang.Long
+obj.getClass()= class java.lang.Class
+
+toPrintable of parseInstance ret value:
+java.lang.Class object internals:
+ OFFSET  SIZE                                              TYPE DESCRIPTION                               VALUE
+      0     4                                                   (object header)                           01 0d b6 34 (00000001 00001101 10110110 00110100) (884346113)
+      4     4                                                   (object header)                           45 00 00 00 (01000101 00000000 00000000 00000000) (69)
+      8     4                                                   (object header)                           df 03 00 f8 (11011111 00000011 00000000 11111000) (-134216737)
+     12     4                     java.lang.reflect.Constructor Class.cachedConstructor                   null
+     16     4                                   java.lang.Class Class.newInstanceCallerCache              null
+     20     4                                  java.lang.String Class.name                                (object)
+     24     4                                                   (alignment/padding gap)                  
+     28     4                       java.lang.ref.SoftReference Class.reflectionData                      (object)
+     32     4   sun.reflect.generics.repository.ClassRepository Class.genericInfo                         null
+     36     4                                java.lang.Object[] Class.enumConstants                       null
+     40     4                                     java.util.Map Class.enumConstantDirectory               null
+     44     4                    java.lang.Class.AnnotationData Class.annotationData                      (object)
+     48     4             sun.reflect.annotation.AnnotationType Class.annotationType                      null
+     52     4                java.lang.ClassValue.ClassValueMap Class.classValueMap                       null
+     56    32                                                   (alignment/padding gap)                  
+     88     4                                               int Class.classRedefinedCount                 0
+     92   476                                                   (loss due to the next object alignment)
+Instance size: 568 bytes
+Space losses: 36 bytes internal + 476 bytes external = 512 bytes total
+
+
+toPrintable of parseClass ret value:
+java.lang.Class object internals:
+ OFFSET  SIZE                                              TYPE DESCRIPTION                               VALUE
+      0    12                                                   (object header)                           N/A
+     12     4                     java.lang.reflect.Constructor Class.cachedConstructor                   N/A
+     16     4                                   java.lang.Class Class.newInstanceCallerCache              N/A
+     20     4                                  java.lang.String Class.name                                N/A
+     24     4                                                   (alignment/padding gap)                  
+     28     4                       java.lang.ref.SoftReference Class.reflectionData                      N/A
+     32     4   sun.reflect.generics.repository.ClassRepository Class.genericInfo                         N/A
+     36     4                                java.lang.Object[] Class.enumConstants                       N/A
+     40     4                                     java.util.Map Class.enumConstantDirectory               N/A
+     44     4                    java.lang.Class.AnnotationData Class.annotationData                      N/A
+     48     4             sun.reflect.annotation.AnnotationType Class.annotationType                      N/A
+     52     4                java.lang.ClassValue.ClassValueMap Class.classValueMap                       N/A
+     56    32                                                   (alignment/padding gap)                  
+     88     4                                               int Class.classRedefinedCount                 N/A
+     92     4                                                   (loss due to the next object alignment)
+Instance size: 96 bytes
+Space losses: 36 bytes internal + 4 bytes external = 40 bytes total
+
+obj= class java.lang.Long
+obj.getClass()= class java.lang.Class
+VM.current().sizeOf(obj)= 568
+parsedInst.instanceSize()= 96
+parsedCls.instanceSize()= 96
+
+------------------------------------------------------------
+obj= class java.lang.String
+obj.getClass()= class java.lang.Class
+
+toPrintable of parseInstance ret value:
+java.lang.Class object internals:
+ OFFSET  SIZE                                              TYPE DESCRIPTION                               VALUE
+      0     4                                                   (object header)                           01 09 f5 8b (00000001 00001001 11110101 10001011) (-1946875647)
+      4     4                                                   (object header)                           37 00 00 00 (00110111 00000000 00000000 00000000) (55)
+      8     4                                                   (object header)                           df 03 00 f8 (11011111 00000011 00000000 11111000) (-134216737)
+     12     4                     java.lang.reflect.Constructor Class.cachedConstructor                   null
+     16     4                                   java.lang.Class Class.newInstanceCallerCache              null
+     20     4                                  java.lang.String Class.name                                (object)
+     24     4                                                   (alignment/padding gap)                  
+     28     4                       java.lang.ref.SoftReference Class.reflectionData                      (object)
+     32     4   sun.reflect.generics.repository.ClassRepository Class.genericInfo                         null
+     36     4                                java.lang.Object[] Class.enumConstants                       null
+     40     4                                     java.util.Map Class.enumConstantDirectory               null
+     44     4                    java.lang.Class.AnnotationData Class.annotationData                      (object)
+     48     4             sun.reflect.annotation.AnnotationType Class.annotationType                      null
+     52     4                java.lang.ClassValue.ClassValueMap Class.classValueMap                       null
+     56    32                                                   (alignment/padding gap)                  
+     88     4                                               int Class.classRedefinedCount                 0
+     92   532                                                   (loss due to the next object alignment)
+Instance size: 624 bytes
+Space losses: 36 bytes internal + 532 bytes external = 568 bytes total
+
+
+toPrintable of parseClass ret value:
+java.lang.Class object internals:
+ OFFSET  SIZE                                              TYPE DESCRIPTION                               VALUE
+      0    12                                                   (object header)                           N/A
+     12     4                     java.lang.reflect.Constructor Class.cachedConstructor                   N/A
+     16     4                                   java.lang.Class Class.newInstanceCallerCache              N/A
+     20     4                                  java.lang.String Class.name                                N/A
+     24     4                                                   (alignment/padding gap)                  
+     28     4                       java.lang.ref.SoftReference Class.reflectionData                      N/A
+     32     4   sun.reflect.generics.repository.ClassRepository Class.genericInfo                         N/A
+     36     4                                java.lang.Object[] Class.enumConstants                       N/A
+     40     4                                     java.util.Map Class.enumConstantDirectory               N/A
+     44     4                    java.lang.Class.AnnotationData Class.annotationData                      N/A
+     48     4             sun.reflect.annotation.AnnotationType Class.annotationType                      N/A
+     52     4                java.lang.ClassValue.ClassValueMap Class.classValueMap                       N/A
+     56    32                                                   (alignment/padding gap)                  
+     88     4                                               int Class.classRedefinedCount                 N/A
+     92     4                                                   (loss due to the next object alignment)
+Instance size: 96 bytes
+Space losses: 36 bytes internal + 4 bytes external = 40 bytes total
+
+obj= class java.lang.String
+obj.getClass()= class java.lang.Class
+VM.current().sizeOf(obj)= 624
+parsedInst.instanceSize()= 96
+parsedCls.instanceSize()= 96
+
+------------------------------------------------------------
+obj= class java.util.IdentityHashMap
+obj.getClass()= class java.lang.Class
+
+toPrintable of parseInstance ret value:
+java.lang.Class object internals:
+ OFFSET  SIZE                                              TYPE DESCRIPTION                               VALUE
+      0     4                                                   (object header)                           01 c2 43 cd (00000001 11000010 01000011 11001101) (-851197439)
+      4     4                                                   (object header)                           5c 00 00 00 (01011100 00000000 00000000 00000000) (92)
+      8     4                                                   (object header)                           df 03 00 f8 (11011111 00000011 00000000 11111000) (-134216737)
+     12     4                     java.lang.reflect.Constructor Class.cachedConstructor                   null
+     16     4                                   java.lang.Class Class.newInstanceCallerCache              null
+     20     4                                  java.lang.String Class.name                                (object)
+     24     4                                                   (alignment/padding gap)                  
+     28     4                       java.lang.ref.SoftReference Class.reflectionData                      (object)
+     32     4   sun.reflect.generics.repository.ClassRepository Class.genericInfo                         null
+     36     4                                java.lang.Object[] Class.enumConstants                       null
+     40     4                                     java.util.Map Class.enumConstantDirectory               null
+     44     4                    java.lang.Class.AnnotationData Class.annotationData                      (object)
+     48     4             sun.reflect.annotation.AnnotationType Class.annotationType                      null
+     52     4                java.lang.ClassValue.ClassValueMap Class.classValueMap                       null
+     56    32                                                   (alignment/padding gap)                  
+     88     4                                               int Class.classRedefinedCount                 0
+     92   884                                                   (loss due to the next object alignment)
+Instance size: 976 bytes
+Space losses: 36 bytes internal + 884 bytes external = 920 bytes total
+
+
+toPrintable of parseClass ret value:
+java.lang.Class object internals:
+ OFFSET  SIZE                                              TYPE DESCRIPTION                               VALUE
+      0    12                                                   (object header)                           N/A
+     12     4                     java.lang.reflect.Constructor Class.cachedConstructor                   N/A
+     16     4                                   java.lang.Class Class.newInstanceCallerCache              N/A
+     20     4                                  java.lang.String Class.name                                N/A
+     24     4                                                   (alignment/padding gap)                  
+     28     4                       java.lang.ref.SoftReference Class.reflectionData                      N/A
+     32     4   sun.reflect.generics.repository.ClassRepository Class.genericInfo                         N/A
+     36     4                                java.lang.Object[] Class.enumConstants                       N/A
+     40     4                                     java.util.Map Class.enumConstantDirectory               N/A
+     44     4                    java.lang.Class.AnnotationData Class.annotationData                      N/A
+     48     4             sun.reflect.annotation.AnnotationType Class.annotationType                      N/A
+     52     4                java.lang.ClassValue.ClassValueMap Class.classValueMap                       N/A
+     56    32                                                   (alignment/padding gap)                  
+     88     4                                               int Class.classRedefinedCount                 N/A
+     92     4                                                   (loss due to the next object alignment)
+Instance size: 96 bytes
+Space losses: 36 bytes internal + 4 bytes external = 40 bytes total
+
+obj= class java.util.IdentityHashMap
+obj.getClass()= class java.lang.Class
+VM.current().sizeOf(obj)= 976
+parsedInst.instanceSize()= 96
+parsedCls.instanceSize()= 96
+
+------------------------------------------------------------
+
+ok  class java.lang.Long obj=5
+ok  class java.lang.String obj=bar
+ok  class java.util.IdentityHashMap obj={}
+bad class java.lang.Class obj=class java.lang.Class
+bad class java.lang.Class obj=class java.lang.Long
+bad class java.lang.Class obj=class java.lang.String
+bad class java.lang.Class obj=class java.util.IdentityHashMap
