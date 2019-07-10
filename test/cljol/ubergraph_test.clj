@@ -1,4 +1,5 @@
 (ns cljol.ubergraph-test
+  (:import (java.io File))
   (:require [clojure.test :refer :all]
             [clojure.java.shell :as sh]
             [ubergraph.core :as uber]))
@@ -10,26 +11,32 @@
     (println "out" out)
     (println "err" err)))
 
-(defn gen [g basename]
-  (println "Writing file" (str basename ".dot") "...")
+
+(defn base-fname [basename opts]
+  (str (:output-dir opts) File/separator basename))
+
+
+(defn gen [g basename opts]
+  (println "Writing file" (str (base-fname basename opts) ".dot") "...")
   (uber/viz-graph g {:auto-label false
-                     :save {:filename (str basename ".dot")
+                     :save {:filename (str (base-fname basename opts) ".dot")
                             :format :dot}})
-  (println "Gen file" (str basename ".pdf") "...")
-  (sh-out "dot" "-Tpdf" (str basename ".dot")
-          "-o" (str basename ".pdf"))
-  (println "Writing file" (str basename "-auto.dot") "...")
+  (println "Gen file" (str (base-fname basename opts) ".pdf") "...")
+  (sh-out "dot" "-Tpdf" (str (base-fname basename opts) ".dot")
+          "-o" (str (base-fname basename opts) ".pdf"))
+  (println "Writing file" (str (base-fname basename opts) "-auto.dot") "...")
   (uber/viz-graph g {:auto-label true
-                     :save {:filename (str basename "-auto.dot")
+                     :save {:filename (str (base-fname basename opts) "-auto.dot")
                             :format :dot}})
-  (println "Gen file" (str basename "-auto.pdf") "...")
-  (sh-out "dot" "-Tpdf" (str basename "-auto.dot")
-          "-o" (str basename "-auto.pdf"))
+  (println "Gen file" (str (base-fname basename opts) "-auto.pdf") "...")
+  (sh-out "dot" "-Tpdf" (str (base-fname basename opts) "-auto.dot")
+          "-o" (str (base-fname basename opts) "-auto.pdf"))
   )
 
 
 (deftest graphs-with-labels-bad-for-graphviz-dot
-  (let [strings [(str (char 0))
+  (let [opts {:output-dir "doc/tryout-images"}
+        strings [(str (char 0))
                  (str (char 1))
                  "\\"
                  (str (char 65533))
@@ -40,4 +47,4 @@
             g (uber/multidigraph [1 {:label s}]
                                  [2 {:label (str (seq s))}]
                                  [1 2 {:label "foo"}])]
-        (gen g (str "g" idx))))))
+        (gen g (str "g" idx) opts)))))
