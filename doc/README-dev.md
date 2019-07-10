@@ -467,6 +467,13 @@ references.  Clojure itself contains a few uses of `SoftReference` in
 the `clojure.lang.DynamicClassLoader` and `clojure.lang.Keyword`
 classes, and one use of a `WeakReference` in `clojure.lang.Keyword`.
 
+For `cljol`, it seems like it would be handy if JOL had an option to
+the `GraphLayout/parseInstance` method (or another method that behaved
+slightly differently), that did not follow any references out of an
+object `x` such that `(instance? java.lang.ref.Reference x)` was true.
+I believe that all Java non-strong references are contained only
+within such objects.
+
 Some articles that attempt to describe the differences between them.
 
 * [Weak, Soft, and Phantom references: Impact on GC](https://plumbr.io/blog/garbage-collection/weak-soft-and-phantom-references-impact-on-gc)
