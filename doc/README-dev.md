@@ -413,6 +413,18 @@ d/inaccessible-field-val-sentinel
 (foo 5)
 (foo "bar")
 (foo (class 5))
+(foo (object-array 0))
+(foo (object-array 1))
+(foo (object-array 5))
+(foo (object-array 6))
+(foo (object-array 7))
+(foo (object-array 8))
+(foo (object-array 9))
+(foo (object-array 50))
+
+(foo (char-array 0))
+(foo (char-array 1))
+(foo (char-array 50))
 
 ```
 

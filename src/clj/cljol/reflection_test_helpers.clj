@@ -216,11 +216,25 @@
 
 (defn size-difference-info [obj]
   (let [cls (class obj)
+        arr? (d/array? obj)
 	parsed-inst (ClassLayout/parseInstance obj)
         parsed-cls (ClassLayout/parseClass cls)
 	vm-size (. (VM/current) sizeOf obj)
         inst-size (. parsed-inst instanceSize)
-        cl-size (. parsed-cls instanceSize)]
+        cl-size (. parsed-cls instanceSize)
+        ;; From testing at a REPL, I have seen that
+        ;; ClassLayout/parseClass returns the size of a length 0 array
+        ;; object, which makes sense because it only gets the class,
+        ;; not a particular instance of an array.
+        ;; ClassLayout/parseInstance returns the size of the
+        ;; particular array object it is given, which includes the
+        ;; base size returned by ClassLayout/parseClass, but also the
+        ;; size of all array elements.
+        array-mismatch? (= vm-size inst-size)
+        ;; For non-array objects, all three of these sizes should
+        ;; match each other.
+        non-array-mismatch? (= vm-size cl-size inst-size)
+        size-mismatch? (if arr? array-mismatch? non-array-mismatch?)]
     ;;(println "toPrintable of parseInstance ret value:")
     ;;(print (.toPrintable parsed-inst))
     ;;(println)
@@ -231,9 +245,10 @@
     ;;(println vm-size "(. (VM/current) sizeOf obj)")
     ;;(println inst-size "(. (ClassLayout/parseInstance obj) instanceSize)")
     ;;(println cl-size "(. (ClassLayout/parseClass cls) instanceSize)")
-    (if (= vm-size cl-size inst-size)
+    (if size-mismatch?
       {:difference false :obj obj :class (class obj) :vm-size vm-size}
       {:difference true :obj obj :class (class obj)
+       :array? arr?
        :vm-size vm-size
        :classlayout-parseclass-size cl-size
        :classlayout-pareinstance-size inst-size})))
@@ -271,7 +286,18 @@
                         {:class-name (str klass)
                          :pif-custom pif-custom
                          :pif-jra pif-jra})
-            inst-size-diffs (for [{:keys [klass]} loaded-klass-infos
+            test-array-objs (for [klass [(object-array 5)
+                                         (boolean-array 100)
+                                         (char-array 50)
+                                         (byte-array 50)
+                                         (short-array 50)
+                                         (int-array 50)
+                                         (long-array 50)
+                                         (float-array 50)
+                                         (double-array 50)]]
+                              {:klass klass})
+            inst-size-diffs (for [{:keys [klass]} (concat loaded-klass-infos
+                                                          test-array-objs)
                                   :let [results (size-difference-info klass)]
                                   :when (:difference results)]
                               results)]
