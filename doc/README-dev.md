@@ -230,7 +230,7 @@ followed by `(view [#'o1])`.
 
 One, I was having a hard time getting a set of objects returned that
 would not find errors when checked using
-`cljol.dig9/object-graph-errors.  I do not know if I did something
+`cljol.dig9/object-graph-errors`.  I do not know if I did something
 that got past that issue in particular, although I did start using the
 alias `:priv` in `deps.edn`, which adds these JVM command line options
 suggested by some warning messages that appear when using JOL without
