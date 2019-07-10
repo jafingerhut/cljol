@@ -213,6 +213,13 @@ several later graphs, too.
 ```
 ![images/chunked-seq-realized1-no-longs](images/chunked-seq-realized1-no-longs.png)
 
+Note that the node label strings, including the number and bytes of
+objects reachable from a node, are calculated on the full graph by the
+`d/sum` function, and the code above does nothing to recalculate the
+labels after other nodes are removed.  As long as you understand this
+is happening, that may be exactly what you want -- a smaller graph
+with some summary information about what is not included.
+
 Next we print the first 20 elements of the sequence.  No more
 `println` calls execute, because the first 32 elements were already
 realized above.  We show a drawing that is the same as the previous
@@ -322,7 +329,7 @@ it is dependent upon the developer of the JVM, e.g. Hotspot can be
 different than Azul Zing, which can be different than yet another
 vendor.  It can depend upon whether compressed pointers are enabled or
 disabled, and perhaps other factors.  I will say that sizes I have
-commonly seen are 8, 12, or 16 bytes.
+commonly seen are 12 or 16 bytes.
 
 The example output below was obtained running this version of the JVM
 on an Ubuntu 18.04 Linux system, on x86_64 processor architecture.

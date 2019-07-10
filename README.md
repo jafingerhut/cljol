@@ -39,7 +39,7 @@ can clone the repository yourself and create a JAR if you like, or use
 the `clj` / `clojure` commands provided by the Clojure installer.
 
 ```bash
-$ clj -Sdeps '{:deps {cljol {:git/url "https://github.com/jafingerhut/cljol" :sha "c22a5acefeeafdb70a149bd5513e26717e0a4984"}}}'
+$ clj -Sdeps '{:deps {cljol {:git/url "https://github.com/jafingerhut/cljol" :sha "dbdfd6f475747486dca3ace5465ae93045151f69"}}}'
 ```
 
 In the REPL:
@@ -150,10 +150,13 @@ user=> (def g (d/sum [v1]))
 1097 references between them
 29480 bytes total in all objects
 no cycles
-1 weakly connected components
+1 weakly connected components found in 21.342081 msec
 number of nodes in all weakly connected components,
 from most to fewest nodes:
 (1067)
+The scc-graph has 1067 nodes and 1097 edges, taking 123.034738 msec to calculate.
+The largest size strongly connected components, at most 10:
+(1 1 1 1 1 1 1 1 1 1)
 number of objects of each size in bytes:
 ({:size-bytes 16, :num-objects 1, :total-size 16}
  {:size-bytes 24, :num-objects 1032, :total-size 24768}
