@@ -201,6 +201,64 @@
             [node {:total-size sum
                    :num-reachable-nodes (count reachable-node-set)}]))))
 
+
+(defn find-first-or-last
+  "Find and return the first item of coll such that (pred item) returns
+  logical true.  If there is no such item, but there is at least one
+  item in coll, return the last item.  If coll is empty, return the
+  not-found value."
+  [pred coll not-found]
+  (letfn [(step [s]
+            (let [f (first s)]
+              (if (pred f)
+                f
+                (if-let [n (next s)]
+                  (recur n)
+                  f))))]
+    (if-let [s (seq coll)]
+      (step s)
+      not-found)))
+
+(comment
+(= 6 (find-first-or-last #(>= % 5) [2 4 6 8] :not-found))
+(= 8 (find-first-or-last #(>= % 10) [2 4 6 8] :not-found))
+(= :not-found (find-first-or-last #(>= % 10) [] :not-found))
+)
+
+
+(defn bounded-reachable-node-stats
+  "Do a depth-first search of graph g starting at node n, stopping at
+  the first one of these conditions to become true:
+
+  (a) There are no more nodes in the depth-first traversal, or
+
+  (b) Among nodes traversed so far, the total number is greater than
+  node-count-min-limit and the total size is greater than
+  total-size-min-limit, where the size of one node is determined by
+  the function (node-size-fn g node).
+
+  Return a map with two keys: :num-reachable-nodes :total-size
+
+  If condition (b) is not true of the values returned, then they
+  represent the total among all nodes reachable from node n in the
+  graph."
+  [g n node-size-fn node-count-min-limit total-size-min-limit]
+  (let [init {:num-reachable-nodes 0
+              :total-size 0}]
+    (find-first-or-last
+     (fn [{:keys [num-reachable-nodes total-size]}]
+       (and (> num-reachable-nodes node-count-min-limit)
+            (> total-size total-size-min-limit)))
+     (reductions (fn add-one-node [acc n]
+                   ;;(println "add-one-node n=" n)
+                   (let [{:keys [num-reachable-nodes total-size]} acc]
+                     {:num-reachable-nodes (inc num-reachable-nodes)
+                      :total-size (+ total-size (node-size-fn g n))}))
+                 init
+                 (ualg/pre-traverse g n))
+     init)))
+
+
 (comment
 
 ;; Does an ubergraph keep the attributes of a node after it has been

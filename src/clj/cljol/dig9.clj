@@ -665,17 +665,32 @@ thread."
   (format "%d bytes" (:size objmap)))
 
 
+(def default-node-count-min-limit 50)
+(def default-total-size-min-limit (* 50 24))
+
+
 (defn total-size-bytes
   "Return a string describing the number of reachable objects from
   this object, and the total size in bytes of those objects.  Shows ?
   instead of the values if they have not been calculated for this
   node."
   [objmap opts]
-  (let [num (:num-reachable-nodes objmap)
+  (let [calc-tot-size (get opts :calculate-total-size-node-attribute :bounded)
+        node-count-min-limit (get opts :node-count-min-limit
+                                  default-node-count-min-limit)
+        total-size-min-limit (get opts :total-size-min-limit
+                                  default-total-size-min-limit)
+        num (:num-reachable-nodes objmap)
         num-known? (number? num)
         total (:total-size objmap)
-        total-known? (number? total)]
-    (format "%s object%s, %s bytes reachable"
+        total-known? (number? total)
+        over-bounded-limits? (and num-known?
+                                  total-known?
+                                  (= :bounded calc-tot-size)
+                                  (> num node-count-min-limit)
+                                  (> total total-size-min-limit))]
+    (format "%s%s object%s, %s bytes reachable"
+            (if over-bounded-limits? "at least " "")
             (if num-known? (str num) "?")
             (if num-known?
               (if (> (:num-reachable-nodes objmap) 1) "s" "")
@@ -977,7 +992,7 @@ thread."
   (uber/attr graph node :size))
 
 
-(defn add-total-size-bytes-node-attr
+(defn add-complete-total-size-bytes-node-attr
   "Adds attributes :total-size (in bytes, derived from the
   existing :size attribute on the nodes) and :num-reachable-nodes to
   all nodes of g."
@@ -985,6 +1000,25 @@ thread."
   (let [trnw (gr/total-reachable-node-size g object-size-bytes)]
     (reduce (fn [g n]
               (uber/add-attrs g n (trnw n)))
+            g (uber/nodes g))))
+
+
+(defn add-bounded-total-size-bytes-node-attr
+  "Adds attributes :total-size (in bytes, derived from the
+  existing :size attribute on the nodes) and :num-reachable-nodes to
+  all nodes of g.  Do this in a way with bounded searching through the
+  graph, which may report smaller than the actual total values of
+  reachable nodes, but always reports nodes and total size that do
+  exist."
+  [g opts]
+  (let [node-count-min-limit (get opts :node-count-min-limit
+                                  default-node-count-min-limit)
+        total-size-min-limit (get opts :total-size-min-limit
+                                  default-total-size-min-limit)]
+    (reduce (fn [g n]
+              (uber/add-attrs g n (gr/bounded-reachable-node-stats
+                                   g n object-size-bytes node-count-min-limit
+                                   total-size-min-limit)))
             g (uber/nodes g))))
 
 
@@ -1009,18 +1043,22 @@ thread."
 
 (defn graph-of-reachable-objects [obj-coll opts]
   (let [debug-level (get opts :graph-of-reachable-objects-debuglevel 0)
-        calc-tot-size? (get opts :calculate-total-size-node-attribute true)
+        calc-tot-size (get opts :calculate-total-size-node-attribute :bounded)
         objmaps (consistent-reachable-objmaps obj-coll opts)
         {t :time-nsec g :ret} (my-time (object-graph->ubergraph objmaps opts))
         _ (when (>= debug-level 1)
             (println (/ t 1000000.0) "msec to convert" (count objmaps)
                      "objmaps into ubergraph with" (uber/count-edges g)
                      "edges"))
-        g (if calc-tot-size?
-            (let [{t :time-nsec g :ret} (my-time
-                                         (add-total-size-bytes-node-attr g))]
+        g (if (contains? #{:complete :bounded} calc-tot-size)
+            (let [{t :time-nsec g :ret}
+                  (my-time
+                   (case calc-tot-size
+                     :complete (add-complete-total-size-bytes-node-attr g)
+                     :bounded (add-bounded-total-size-bytes-node-attr g opts)))]
               (when (>= debug-level 1)
-                (println (/ t 1000000.0) "msec to calculate total sizes"))
+                (println (/ t 1000000.0) "msec to calculate" calc-tot-size
+                         "total sizes"))
               g)
             (do (println "skipping calculation of total size")
                 g))

@@ -288,29 +288,31 @@ phantom.
 (do
 (require '[cljol.dig9 :as d]
          '[cljol.graph :as gr]
-	 '[ubergraph.core :as uber])
+	 '[ubergraph.core :as uber]
+	 '[ubergraph.alg :as ualg])
 (def opts
   {:node-label-functions
-   [d/size-bytes
+   [;;d/address-decimal
+    d/size-bytes
     d/total-size-bytes
     d/class-description
     d/field-values
     d/non-realizing-javaobj->str]
    :consistent-reachable-objects-debuglevel 1
    :graph-of-reachable-objects-debuglevel 1
-   :calculate-total-size-node-attribute false
-;;   :calculate-total-size-node-attribute true
+;;   :calculate-total-size-node-attribute :complete
+   :calculate-total-size-node-attribute :bounded
    :slow-instance-size-checking? true
    })
 (def v1 (vector 2))
 )
 (def v1 (class 5))
-(def v1 (vec (range 20)))
+(def v1 (vec (range 4)))
+(def g nil)
 (System/gc)
 (def g (d/sum [v1] opts))
 (def g (d/sum [#'v1] opts))
 (d/view-graph g)
-(def g nil)
 
 (def g3 (gr/induced-subgraph g (filter #(<= (uber/attr g % :distance) 4)
                                         (uber/nodes g))))
@@ -329,6 +331,45 @@ phantom.
 (def i2 (group-by (fn [x] (= (:sp-dist x) (:gpl-dist x))) i1))
 (count (i2 true))
 (count (i2 false))
+
+;; lazy pre-order depth-first search order traversal of nodes
+(def root (first (filter #(= v1 (uber/attr g % :obj)) (uber/nodes g))))
+root
+(def pre (ualg/pre-traverse g root))
+(take 5 pre)
+pre
+(= (set pre) (set (uber/nodes g)))
+
+;; If I do a 'take-while' on a lazy sequence of nodes, with the
+;; condition to keep going being:
+
+;; (number of nodes <= N) and (total size of nodes <= S)
+
+;; then if it stops because of the condition failing, that is:
+
+;; (number of nodes > N) or (total size of nodes > S)
+
+;; If I want the stopping condition to be:
+
+;; (number of nodes > N) and (total size of nodes > S)
+
+;; then the continuing condition should be the opposite of that, or
+;; the first condition above with 'and' replaced by 'or'.
+
+(def node-count-min-limit 0)
+(def total-size-min-limit 0)
+
+(def node-count-min-limit 4)
+(def total-size-min-limit 100)
+(def node-size-fn d/object-size-bytes)
+
+(require '[cljol.graph :as gr])
+
+root
+(gr/bounded-reachable-node-stats
+    g root node-size-fn node-count-min-limit total-size-min-limit)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (def g (d/sum [(vec (range 1e5))] opts))
 (def o1 (d/consistent-reachable-objmaps [#'v1] opts))
