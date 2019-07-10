@@ -42,7 +42,7 @@ public class MaybeBug {
 
         out.println(VM.current().details());
 
-	final Long i = new Long(5);
+	final Long i = Long.valueOf(5);
 	good = showSizes(i);
 	s.append("\n" + (good ? "ok " : "bad") + " " + i.getClass() + " obj=" + i);
 
