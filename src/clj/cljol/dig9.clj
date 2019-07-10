@@ -1,6 +1,6 @@
 (ns cljol.dig9
   (:import (java.lang.reflect Field Method Modifier))
-  (:import (org.openjdk.jol.info ClassLayout GraphLayout
+  (:import (org.openjdk.jol.info ClassLayout GraphLayout GraphPathRecord
                                  ClassData FieldData))
   (:import (org.openjdk.jol.vm VM))
   (:require [clojure.set :as set]
@@ -181,30 +181,93 @@
 (def size-mismatch-warnings (atom {}))
 
 
-(defn warn-size-mismatch! [obj gpr gpr-size cl-size sorted-offsets]
+(defn warn-size-mismatch! [obj gpr fast-size slow-size]
   (let [cls (class obj)
         earlier-report-for-cls? (contains? @size-mismatch-warnings cls)]
     (when-not earlier-report-for-cls?
-      (println "WARNING:" cls "has GraphPathRecord size" gpr-size
-               "but ClassLayout size" cl-size "sorted-offsets" sorted-offsets)
-      (swap! size-mismatch-warnings assoc cls
-             {:cls cls :gpr gpr :gpr-size gpr-size :cl-size cl-size}))))
-
-
-(def classes-already-sanity-checked (atom #{}))
-
-
-(defn sanity-checked? [cls]
-  (if (contains? @classes-already-sanity-checked cls)
-    true
-    (do
-      (swap! classes-already-sanity-checked conj cls)
-      false)))
+      (let [arr? (array? obj)
+            ref-arr? (and arr? (not (. (array-element-type obj) isPrimitive)))
+            cd (ClassData/parseClass (class obj))
+            sorted-offsets (if ref-arr?
+                             []
+                             (vec (sort (map :vm-offset (:fields cd)))))
+            max-offset (if ref-arr?
+                         nil
+                         (if (zero? (count sorted-offsets))
+                           0
+                           (peek sorted-offsets)))]
+        (println "WARNING:" cls "has GraphPathRecord size" fast-size
+                 "but ClassLayout size" slow-size
+                 "sorted-offsets" sorted-offsets)
+        (swap! size-mismatch-warnings assoc cls
+               {:cls cls :gpr gpr :fast-size fast-size
+                :slow-size slow-size
+                :sorted-offsets sorted-offsets})))))
 
 
 (defn clear-atoms! []
-  (swap! size-mismatch-warnings (constantly {}))
-  (swap! classes-already-sanity-checked (constantly #{})))
+  (swap! size-mismatch-warnings (constantly {})))
+
+
+;; Note 1:
+
+;; I have seen issues before with objects 'obj' such that (=
+;; java.lang.Class (class obj)) is true, e.g. for obj=(class
+;; 5)=java.lang.Long, where the size in bytes determined by (. gpr
+;; size) was significantly larger, e.g. 632 bytes, than the size
+;; reported using ClassLayout/parseClass followed by the instanceSize
+;; method, e.g. 96 bytes.
+
+;; This can cause later sanity checks of objects that overlap in
+;; memory to fail (see function any-objects-overlap?), when they
+;; should succeed.
+
+;; From some more testing on macOS and Ubuntu Linux, and JDK versions
+;; ranging over 8, 9, 11, and 12, I have only seen this issue with JDK
+;; 8, on all operating systems, but so far never with JDK 9, 11, nor
+;; 12 (only tested on Linux so far).  So far I have never seen it
+;; happen for any objects 'obj' where (class obj) is anything _except_
+;; java.lang.Class.
+
+;; I do not know if this is a bug in JOL 0.9, or the JDK, but since it
+;; seems to be corrected in later JDK versions, I will not worry too
+;; much about it now, other than to try to avoid the problem here.
+
+;; From some testing with a graph of objects containing over 100,000
+;; nodes, I did not notice it taking much longer using the 'slow' way,
+;; so it is probably a good idea to simply consistently use that way
+;; all of the time.
+
+;; Using ClassLayout/parseInstance returns accurate sizes for array
+;; objects, whereas ClassLayout/parseClass only returns the size of a
+;; 0 length array of the same type, because it has no information
+;; about the particular array object to get the number of array
+;; elements from.
+
+(defn slow-object-size-bytes [obj]
+  ;;(. (ClassLayout/parseClass (class obj)) instanceSize)
+  (. (ClassLayout/parseInstance obj) instanceSize))
+
+
+(defn fast-but-has-bugs-object-size-bytes [^GraphPathRecord gpr]
+  (. gpr size))
+
+
+(defn workaround-object-size-bytes [obj gpr opts]
+  (let [slow-checking? (get opts :slow-instance-size-checking? false)]
+    (if slow-checking?
+      (let [fast-size (fast-but-has-bugs-object-size-bytes gpr)
+            slow-size (slow-object-size-bytes obj)]
+        (when (not= fast-size slow-size)
+          (warn-size-mismatch! obj gpr fast-size slow-size))
+        slow-size)
+
+;;      ;; else use the workaround that in my testing avoids the bug
+;;      (if (= java.lang.Class (class obj))
+;;        (slow-object-size-bytes obj)
+;;        (fast-but-has-bugs-object-size-bytes gpr))
+
+      (slow-object-size-bytes obj))))
 
 
 (defn reachable-objmaps
@@ -230,7 +293,7 @@
   See also consistent-reachable-objmaps, which you may prefer to use
   over this one for the assistance it provides in trying to return a
   consistent set of addresses across all objects."
-  [obj-coll]
+  [obj-coll opts]
   (let [parsed-inst (GraphLayout/parseInstance (object-array obj-coll))
         addresses (.addresses parsed-inst)]
     (map (fn [addr]
@@ -242,55 +305,22 @@
                  cd (ClassData/parseClass (class obj))
                  flds (->> cd ClassData->map :fields (remove :is-primitive?)
                            (map :ref-field))
+                 ;; TBD: Consider calling both
+                 ;; array-elem-name-and-address _and_
+                 ;; field-name-and-address for array objects, just in
+                 ;; case any Java array objects actually do return
+                 ;; fields.
                  refd-objs (if ref-arr?
                              (into {} (map #(array-elem-name-and-address % obj)
                                            (range (count obj))))
                              (into {} (map #(field-name-and-address % obj)
                                            flds)))
-                 gpr-size (. gpr size)
-                 ;; I have seen issues before with objects of class
-                 ;; java.lang.Class where the size in bytes determined
-                 ;; by (. gpr size) was significantly larger, e.g. 632
-                 ;; bytes, than the size reported using
-                 ;; ClassLayout/parseClass followed by the
-                 ;; instanceSize method, e.g. 96 bytes.  This can
-                 ;; cause later sanity checks of objects that overlap
-                 ;; in memory to fail, when they should succeed.  This
-                 ;; is likely a bug in JOL 0.9.  Warn about such
-                 ;; things in order to help collect a little more data
-                 ;; about the issue.
-                 sanity-checked-already? (cond
-                                           arr? true
-                                           (= java.lang.Class (class obj)) false
-                                           :else (sanity-checked? (class obj)))
-                 cl-size (if sanity-checked-already?
-                           gpr-size
-                           (. (ClassLayout/parseClass (class obj))
-                              instanceSize))
-                 _ (if (and (not sanity-checked-already?)
-                            (not= gpr-size cl-size))
-                     (let [sorted-offsets (if ref-arr?
-                                            []
-                                            (vec (sort (map :vm-offset
-                                                            (:fields cd)))))
-                           max-offset (if ref-arr?
-                                        nil
-                                        (if (zero? (count sorted-offsets))
-                                          0
-                                          (peek sorted-offsets)))]
-                       (warn-size-mismatch! obj gpr gpr-size cl-size
-                                            sorted-offsets)))
-                 size-to-use (min gpr-size cl-size)]
+                 size-to-use (workaround-object-size-bytes obj gpr opts)]
              {:address addr
               :obj obj
               :size size-to-use
               :path (. gpr path)
               :distance (. gpr depth)
-              ;; TBD: Consider calling both
-              ;; array-elem-name-and-address _and_
-              ;; field-name-and-address for array objects, just in
-              ;; case any Java array objects actually do return
-              ;; fields.
               :fields refd-objs}))
          addresses)))
 
@@ -780,6 +810,8 @@ thread."
         (uri? x)
         (uuid? x)
         (class? x)
+        ;; Namespaces .toString is just retrieving its name string
+        (instance? clojure.lang.Namespace x)
         (and (array? x)
              (or (. (array-element-type x) isPrimitive)
                  (every? #(non-realizing-value? % (dec depth-remaining))
@@ -911,7 +943,7 @@ thread."
     (when (>= debug-level 1)
       (println "Calling reachable-objmaps try 1"))
     (loop [{time-nsec :time-nsec obj-graph :ret} (my-time (reachable-objmaps
-                                                           obj-coll))
+                                                           obj-coll opts))
            num-tries 1]
       (when (>= debug-level 1)
         (println (/ time-nsec 1000000.0) "msec to find" (count obj-graph)
@@ -930,7 +962,8 @@ thread."
               (let [{time-nsec :time-nsec} (my-time (System/gc))]
                 (when (>= debug-level 1)
                   (println (/ time-nsec 1000000.0) "msec to run GC")))
-              (recur (my-time (reachable-objmaps obj-coll)) (inc num-tries)))
+              (recur (my-time (reachable-objmaps obj-coll opts))
+                     (inc num-tries)))
             (throw
              (ex-info
               (format "reachable-objmaps returned erroneous obj-graphs on all of %d tries"

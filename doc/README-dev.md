@@ -294,16 +294,27 @@ phantom.
    [d/size-bytes
     d/total-size-bytes
     d/class-description
-    d/field-values]
+    d/field-values
+    d/non-realizing-javaobj->str]
    :consistent-reachable-objects-debuglevel 1
    :graph-of-reachable-objects-debuglevel 1
-   :calculate-total-size-node-attribute false})
+   :calculate-total-size-node-attribute false
+;;   :calculate-total-size-node-attribute true
+   :slow-instance-size-checking? true
+   })
 (def v1 (vector 2))
 )
+(def v1 (class 5))
+(def v1 (vec (range 20)))
 (System/gc)
 (def g (d/sum [v1] opts))
+(def g (d/sum [#'v1] opts))
 (d/view-graph g)
 (def g nil)
+
+(def g3 (gr/induced-subgraph g (filter #(<= (uber/attr g % :distance) 4)
+                                        (uber/nodes g))))
+(d/view-graph g3)
 
 (uber/pprint g)
 (defn inconsistent-distance-nodes [g]
