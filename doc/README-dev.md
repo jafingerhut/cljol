@@ -452,3 +452,25 @@ Perhaps I should instead consider using a Java IdentityHashMap object
 to create and store a map from object identities to UUIDs, and then
 use those UUIDs as the values in the ubergraph values that cljol
 creates, instead of addresses.
+
+
+
+# Information about different types of references in the JVM
+
+Modern JVMs have 4 types of references: strong, soft, weak, and
+phantom.
+
+In a Clojure application, unless you go out of your way to create a
+specific kind of reference, all of them will be strong references.  If
+you use Java libraries, they may internally create other kinds of
+references.  Clojure itself contains a few uses of `SoftReference` in
+the `clojure.lang.DynamicClassLoader` and `clojure.lang.Keyword`
+classes, and one use of a `WeakReference` in `clojure.lang.Keyword`.
+
+Some articles that attempt to describe the differences between them.
+
+* [Weak, Soft, and Phantom references: Impact on GC](https://plumbr.io/blog/garbage-collection/weak-soft-and-phantom-references-impact-on-gc)
+* [Types of References in Java](https://www.geeksforgeeks.org/types-references-java)
+* [What's the difference between SoftReference and WeakReference in Java?](https://stackoverflow.com/questions/299659/whats-the-difference-between-softreference-and-weakreference-in-java)
+* [Weak, Soft, and Phantom References in Java (and Why They Matter)](https://dzone.com/articles/weak-soft-and-phantom-references-in-java-and-why-they-matter)
+* [Understanding JVM soft references for great good (and building a cache)](https://blog.shiftleft.io/understanding-jvm-soft-references-for-great-good-and-building-a-cache-244a4f7bb85d)
