@@ -1,0 +1,323 @@
+diff -r 9a5fff552b23 jol-core/src/main/java/org/openjdk/jol/info/GraphLayout.java
+--- a/jol-core/src/main/java/org/openjdk/jol/info/GraphLayout.java	Fri Sep 22 17:29:07 2017 +0200
++++ b/jol-core/src/main/java/org/openjdk/jol/info/GraphLayout.java	Thu Jul 11 10:21:55 2019 -0700
+@@ -37,6 +37,7 @@
+ import java.io.PrintWriter;
+ import java.io.StringWriter;
+ import java.util.*;
++import java.util.function.BiConsumer;
+ 
+ /**
+  * Holds the object graph layout info.
+@@ -44,7 +45,19 @@
+ public class GraphLayout {
+ 
+     /**
+-     * Parse the object graph starting from the given instance.
++     * Parse the object graph starting from the given instances.
++     *
++     * During this method's execution, if objects parsed are being
++     * modified in the references that exist between them by other
++     * threads, there is not much that can be guaranteed about the set
++     * of parsed objects that are returned, except that it will
++     * include the objects in the roots parameter.
++     *
++     * Even if no objects being parsed are modified while parsing, it
++     * is possible for the set of objects returned to be incomplete.
++     * This can occur if multiple objects happen to have the same
++     * address at different times during the call, because of garbage
++     * collection moving them around in memory.
+      *
+      * @param roots root instances to start from
+      * @return object graph
+@@ -65,6 +78,98 @@
+         return data;
+     }
+ 
++    /**
++     * Parse the object graph starting from the given instances.
++     *
++     * See parseInstance() documentation for notes on the few
++     * guarantees that can be made by this method if other threads are
++     * modifying references between parsed objects.
++     *
++     * This method puts the collection of objects found as keys into
++     * an IdentityHashMap.  The value in the map corresponding to each
++     * object is a GraphPathRecord describing the object.  You can get
++     * that IdentityHashMap using the objectsFound() method.
++     *
++     * If no parsed objects are modified, at least not in the
++     * references that exist between them, during this method's
++     * execution, the set of objects that are the keys of the
++     * IdentityHashMap created should always be correct.
++     *
++     * The address map returned by the addresses() method should be
++     * correct if no garbage collection occurred during this method's
++     * execution, but there is nothing returned to indicate whether
++     * they are complete or not.  This is similar to what can happen
++     * in the parseInstance() method, but for this method at least the
++     * IdentityHashMap should have the correct set of objects as keys,
++     * and you may try calling the addressSnapshot() method on this
++     * GraphLayout instance to have a better chance of getting a
++     * correct address map.
++     *
++     * The addressSnapshot() method allocates much less memory than
++     * this method does, and is thus less likely to trigger a garbage
++     * collection run.
++     *
++     * @param stopAtReferences false means if instances of java.lang.ref.Reference, such as a SoftReference or WeakReference, are found, then walking the set of reachable objects should follow references from those instances as well.  true means that no references out of such instances should be followed.  Such references can include ReferenceQueues, containing lists of objects pending garbage collection, including objects with little or no relation to the objects you started creating a graph for, except that they are included in the same ReferenceQueue of to-be-GC'ed objects, and creates a strong reference to them that prevents their finalization and memory reclamation, until those strong references are removed.
++     * @param roots root instances to start from
++     * @return object graph
++     */
++    public static GraphLayout parseInstanceIds(boolean stopAtReferences,
++                                               Object... roots) {
++        if (roots == null) {
++            throw new IllegalArgumentException("Roots are null");
++        }
++        for (Object root : roots) {
++            if (root == null) {
++                throw new IllegalArgumentException("Some root is null");
++            }
++        }
++        GraphLayout data = new GraphLayout(roots);
++        GraphWalker walker = new GraphWalker(roots);
++        walker.addVisitor(data.visitorById());
++        walker.walk(stopAtReferences);
++        if (data.createAddressSnapshot(1)) {
++            data.createAddressMap();
++        }
++        return data;
++    }
++
++    /**
++     * Try to create a consistent snapshot of object addresses.  Very
++     * little memory -- a constant amount, regardless of the size of
++     * the object graph -- should be allocated by this method, to
++     * minimize its chances of triggering a garbage collection while
++     * it executes, and maximize the likelihood that the set of
++     * addresses returned represent a consistent set.  No other
++     * attempt is made to prevent GC from occurring while this method
++     * executes, so even though it does do one pass over the objects
++     * to record all of their current addresses, and then another pass
++     * to see if any of them have moved, retrying that pair of steps
++     * up to maxAttempts times if anything has moved, it is still
++     * possible (though it seems unlikely) that this method could
++     * return true (indicating success) even though the addresses do
++     * not represent a consistent snapshot.
++     *
++     * @param maxAttempts Maximum number of times to attempt creating a snapshot before returning false.
++     * @return true for success, false for failure
++     */
++    public boolean createAddressSnapshot(int maxAttempts) {
++        boolean attemptSucceeded = false;
++        int attempts = 0;
++        do {
++            ++attempts;
++            recordAddresses();
++            Exception e = validateAddresses();
++            if (e == null) {
++                attemptSucceeded = true;
++                break;
++            }
++        } while (attempts <= maxAttempts);
++        if (attemptSucceeded) {
++            createAddressMap();
++        }
++        return attemptSucceeded;
++    }
++
+     private static final Comparator<Class<?>> CLASS_COMPARATOR = new Comparator<Class<?>>() {
+         @Override
+         public int compare(Class<?> o1, Class<?> o2) {
+@@ -75,6 +180,7 @@
+     private final Set<Class<?>> classes = new TreeSet<Class<?>>(CLASS_COMPARATOR);
+     private final Multiset<Class<?>> classSizes = new Multiset<Class<?>>();
+     private final Multiset<Class<?>> classCounts = new Multiset<Class<?>>();
++    private final IdentityHashMap<Object, GraphPathRecord> objectsFound = new IdentityHashMap<Object, GraphPathRecord>();
+     private final SortedMap<Long, GraphPathRecord> addresses = new TreeMap<Long, GraphPathRecord>();
+ 
+     private final String description;
+@@ -121,6 +227,89 @@
+         }
+     }
+ 
++    private GraphVisitor visitorById() {
++        return new GraphVisitor() {
++            @Override
++            public void visit(GraphPathRecord gpr) {
++                addRecordById(gpr);
++            }
++        };
++    }
++
++    private void addRecordById(GraphPathRecord gpr) {
++        objectsFound.put(gpr.obj(), gpr);
++
++        Class<?> klass = gpr.klass();
++        classes.add(klass);
++        classCounts.add(klass);
++        totalCount++;
++        try {
++            long size = gpr.size();
++            totalSize += size;
++            classSizes.add(klass, size);
++        } catch (Exception e) {
++            classSizes.add(klass, 0);
++        }
++    }
++
++    public void recordAddresses() {
++        /* Iterate through objectsFound, recording the address of each
++         * object once.  This method should allocate only a small
++         * constant amount of memory, to maximize the chances that it
++         * does not trigger a GC while it executes, and thus the
++         * addresses recorded represent a consistent 'snapshot' across
++         * all objects at one point in time. */
++        BiConsumer<Object, GraphPathRecord> recordOneAddress =
++            new BiConsumer() {
++                @Override
++                public void accept(Object o, Object gprArg) {
++                    GraphPathRecord gpr = (GraphPathRecord) gprArg;
++                    gpr.recordAddress();
++                }
++            };
++        objectsFound.forEach(recordOneAddress);
++    }
++
++    public Exception validateAddresses() {
++        /* Same comments apply here as for method
++         * recordAddresses(). */
++        BiConsumer<Object, GraphPathRecord> validateOneAddress =
++            new BiConsumer() {
++                @Override
++                public void accept(Object o, Object gprArg) {
++                    GraphPathRecord gpr = (GraphPathRecord) gprArg;
++                    if (o != gpr.obj()) {
++                        String msg = "Found GraphPathRecord with key object " + o.getClass() + " different than the object " + gpr.obj().getClass() + " in the GraphPathRecord";
++                        throw new IllegalArgumentException(msg);
++                    }
++                    long curAddress = VM.current().addressOf(o);
++                    if (curAddress != gpr.address()) {
++                        String msg = "Found GraphPathRecord with current address " + curAddress + " different than recorded address " + gpr.address() + " object " + gpr.obj().getClass();
++                        throw new IllegalArgumentException(msg);
++                    }
++                }
++            };
++        try {
++            objectsFound.forEach(validateOneAddress);
++        } catch (Exception e) {
++            return e;
++        }
++        return null;
++    }
++
++    public void createAddressMap() {
++        BiConsumer<Object, GraphPathRecord> addOneAddress =
++            new BiConsumer() {
++                @Override
++                public void accept(Object o, Object gprArg) {
++                    GraphPathRecord gpr = (GraphPathRecord) gprArg;
++                    addresses.put(gpr.address(), gpr);
++                }
++            };
++        addresses.clear();
++        objectsFound.forEach(addOneAddress);
++    }
++
+     /**
+      * Subtract another layout data from the current one.
+      * This method does not change the current data object, but produces another one.
+@@ -238,6 +427,17 @@
+     }
+ 
+     /**
++     * Answer the IdentityHashMap of object references to their
++     * associated GraphPathRecord.
++     *
++     * @return sorted set of addresses
++     * @see #record(long)
++     */
++    public IdentityHashMap<Object, GraphPathRecord> objectsFound() {
++        return objectsFound;
++    }
++
++    /**
+      * Answer the set of addresses for the discovered objects
+      *
+      * @return sorted set of addresses
+diff -r 9a5fff552b23 jol-core/src/main/java/org/openjdk/jol/info/GraphPathRecord.java
+--- a/jol-core/src/main/java/org/openjdk/jol/info/GraphPathRecord.java	Fri Sep 22 17:29:07 2017 +0200
++++ b/jol-core/src/main/java/org/openjdk/jol/info/GraphPathRecord.java	Thu Jul 11 10:21:55 2019 -0700
+@@ -38,7 +38,9 @@
+     private final int depth;
+     private final Object obj;
+     private final long size;
+-    private final long address;
++    /* TBD: Does making field 'address' volatile be better for
++     * thread-safety of this class? */
++    private volatile long address;
+     private String toString;
+ 
+     GraphPathRecord(GraphPathRecord parent, String path, int depth, Object obj) {
+@@ -74,6 +76,11 @@
+         return address;
+     }
+ 
++    public long recordAddress() {
++        this.address = VM.current().addressOf(obj);
++        return address;
++    }
++
+     public String objToString() {
+         String v = toString;
+         if (v == null) {
+diff -r 9a5fff552b23 jol-core/src/main/java/org/openjdk/jol/info/GraphWalker.java
+--- a/jol-core/src/main/java/org/openjdk/jol/info/GraphWalker.java	Fri Sep 22 17:29:07 2017 +0200
++++ b/jol-core/src/main/java/org/openjdk/jol/info/GraphWalker.java	Thu Jul 11 10:21:55 2019 -0700
+@@ -57,6 +57,10 @@
+     }
+ 
+     public void walk() {
++        walk(false);
++    }
++
++    public void walk(boolean stopAtReferences) {
+         List<GraphPathRecord> curLayer = new ArrayList<GraphPathRecord>();
+         List<GraphPathRecord> newLayer = new ArrayList<GraphPathRecord>();
+ 
+@@ -74,7 +78,8 @@
+         while (!curLayer.isEmpty()) {
+             newLayer.clear();
+             for (GraphPathRecord next : curLayer) {
+-                for (GraphPathRecord ref : peelReferences(next)) {
++                for (GraphPathRecord ref :
++                         peelReferences(next, stopAtReferences)) {
+                     if (visited.add(ref.obj())) {
+                         visitObject(ref);
+                         newLayer.add(ref);
+@@ -92,7 +97,8 @@
+         }
+     }
+ 
+-    private List<GraphPathRecord> peelReferences(GraphPathRecord r) {
++    private List<GraphPathRecord> peelReferences(GraphPathRecord r,
++                                                 boolean stopAtReferences) {
+         Object o = r.obj();
+ 
+         if (o == null) {
+@@ -105,6 +111,15 @@
+             return Collections.emptyList();
+         }
+ 
++        if (stopAtReferences && (o instanceof java.lang.ref.Reference)) {
++            // Don't walk through soft, weak, or phantom references
++            // for now.  Might want to modify to go through to the
++            // reference, but not through the 'queue' field, which
++            // seems to reference other objects fairly unrelated to
++            // this one.
++            return Collections.emptyList();
++        }
++
+         List<GraphPathRecord> result = new ArrayList<GraphPathRecord>();
+ 
+         if (o.getClass().isArray()) {

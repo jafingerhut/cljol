@@ -305,9 +305,11 @@ phantom.
    :calculate-total-size-node-attribute :bounded
 ;;   :calculate-total-size-node-attribute nil
    :slow-instance-size-checking? true
+;;   :stop-walk-at-references false  ;; default true
    })
 (def v1 (vector 2))
 )
+
 (def v1 (class 5))
 (def v1 (vec (range 4)))
 (def g nil)
@@ -316,7 +318,19 @@ phantom.
 (def g (d/sum [#'v1] opts))
 (d/view-graph g)
 
-(def g3 (gr/induced-subgraph g (filter #(<= (uber/attr g % :distance) 4)
+(def wcc (map set (ualg/connected-components g)))
+(sort > (map count wcc))
+(def wcc2 (rest (sort-by count > wcc)))
+(sort > (map count wcc2))
+(def straggler-nodes (apply clojure.set/union wcc2))
+(count straggler-nodes)
+(def g2 (gr/induced-subgraph g straggler-nodes))
+(d/view-graph g2)
+(d/graph-summary g2)
+(def g2 nil)
+
+
+(def g3 (gr/induced-subgraph g (filter #(<= (uber/attr g % :distance) 6)
                                         (uber/nodes g))))
 (d/view-graph g3)
 (d/view-graph g3 {:save {:filename "g3.pdf" :format :pdf}})
