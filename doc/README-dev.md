@@ -319,6 +319,7 @@ phantom.
 (def g3 (gr/induced-subgraph g (filter #(<= (uber/attr g % :distance) 4)
                                         (uber/nodes g))))
 (d/view-graph g3)
+(d/view-graph g3 {:save {:filename "g3.pdf" :format :pdf}})
 
 (uber/pprint g)
 (defn inconsistent-distance-nodes [g]

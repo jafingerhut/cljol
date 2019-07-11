@@ -14,6 +14,13 @@
 (set! *warn-on-reflection* true)
 
 
+(defmacro my-time [expr]
+  `(let [start# (. System (nanoTime))
+         ret# ~expr]
+     {:time-nsec (- (. System (nanoTime)) start#)
+      :ret ret#}))
+
+
 ;; bounded-count, starts-with? copied from Clojure's implementation,
 ;; to enable this code to be used with slightly older versions of
 ;; Clojure than 1.9.0.
@@ -68,6 +75,11 @@
     (.toPrintable parsed-cls obj)))
 
 
+(defn instance-layout->str [obj]
+  (let [parsed-inst (ClassLayout/parseInstance obj)]
+    (.toPrintable parsed-inst)))
+
+
 (defn FieldData->map [^FieldData fd]
   (let [^Field ref-field (.refField fd)]
     {:field-name (.name fd)
@@ -120,6 +132,16 @@
 
 
 (def inaccessible-field-val-sentinel (Object.))
+
+(comment
+;; sometimes useful for debugging sentinel values in REPL
+(pprint
+  [["inaccessible" d/inaccessible-field-val-sentinel]])
+)
+
+
+(defn cljol-sentinel-value? [obj]
+  (identical? obj inaccessible-field-val-sentinel))
 
 
 ;; Conditionally require one of cljol.jdk8-and-earlier or
@@ -397,8 +419,8 @@
          :data m}
         
         (not (every? #(or (nil? %)
-                          (and (integer? %) (>= % 0))
-                          (identical? % inaccessible-field-val-sentinel))
+                          (cljol-sentinel-value? %)
+                          (and (integer? %) (>= % 0)))
                      (vals (:fields m))))
         {:err :fields-has-val-neither-nil-nor-natural-integer
          :data m}
@@ -427,9 +449,7 @@
 (defn field-addresses [g]
   (->> g
        (mapcat #(vals (:fields %)))
-       (remove #(or
-                 (nil? %)
-                 (identical? % inaccessible-field-val-sentinel)))
+       (remove #(or (nil? %) (cljol-sentinel-value? %)))
        set))
 
 
@@ -923,17 +943,12 @@ thread."
       (uber/add-edges*
        (for [from-objmap g
              [from-obj-field-name-str to-addr] (:fields from-objmap)
-             ;; Do not create edges for null references
-             :when (not (nil? to-addr))]
+             ;; Do not create edges for null references or to sentinel
+             ;; values
+             :when (not (or (nil? to-addr)
+                            (cljol-sentinel-value? to-addr)))]
          [(:address from-objmap) to-addr
           {:field-name from-obj-field-name-str}]))))
-
-
-(defmacro my-time [expr]
-  `(let [start# (. System (nanoTime))
-         ret# ~expr]
-     {:time-nsec (- (. System (nanoTime)) start#)
-      :ret ret#}))
 
 
 (defn consistent-reachable-objmaps
