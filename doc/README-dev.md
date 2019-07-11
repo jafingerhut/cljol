@@ -292,16 +292,18 @@ phantom.
 	 '[ubergraph.alg :as ualg])
 (def opts
   {:node-label-functions
-   [;;d/address-decimal
-    d/size-bytes
-    d/total-size-bytes
-    d/class-description
-    d/field-values
-    d/non-realizing-javaobj->str]
+   [#'d/address-decimal
+    #'d/size-bytes
+    #'d/total-size-bytes
+    #'d/class-description
+    #'d/field-values
+    #'d/non-realizing-javaobj->str]
+   :reachable-objmaps-debuglevel 1
    :consistent-reachable-objects-debuglevel 1
    :graph-of-reachable-objects-debuglevel 1
 ;;   :calculate-total-size-node-attribute :complete
    :calculate-total-size-node-attribute :bounded
+;;   :calculate-total-size-node-attribute nil
    :slow-instance-size-checking? true
    })
 (def v1 (vector 2))
@@ -386,16 +388,28 @@ root
 
 (type o1)
 (def e1 *e)
+(class e1)
+(class (-> e1 ex-data))
+(keys (-> e1 ex-data))
 (pprint (Throwable->map e1))
 (def r1 (clojure.repl/root-cause e1))
+(class (ex-data r1))
+(keys (ex-data r1))
+(.getMessage r1)
 (def e2 (-> (ex-data r1) :errors))
 (-> e2 :err)
 (keys e2)
+(class (-> e2 :data))
+(bounded-count 10 (-> e2 :data))
+(type (first (-> e2 :data)))
 (keys (-> e2 :data))
 (pprint (:fields (-> e2 :data)))
 d/inaccessible-field-val-sentinel
 (identical? d/inaccessible-field-val-sentinel (get (-> e2 :data :fields) "handler"))
 (def e3 (-> e2 :err-data))
+(type e3)
+(map type e3)
+(first e3)
 
 ;; Trying the following starts printing a large amount of Clojure data
 ;; as the ex-data of the exception, I believe.  Don't do that.  For
