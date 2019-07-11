@@ -3,6 +3,7 @@
   (:import (org.openjdk.jol.info ClassLayout GraphLayout GraphPathRecord
                                  ClassData FieldData))
   (:import (org.openjdk.jol.vm VM))
+  (:import (java.lang.management ManagementFactory GarbageCollectorMXBean))
   (:require [clojure.set :as set]
             [clojure.string :as str]
             [clojure.pprint :as pp]
@@ -14,11 +15,34 @@
 (set! *warn-on-reflection* true)
 
 
+(defn gc-collection-stats []
+  (let [mxbeans (ManagementFactory/getGarbageCollectorMXBeans)]
+    (apply merge-with +
+      (for [^GarbageCollectorMXBean gc mxbeans]
+        {:gc-collection-count (max 0 (. gc getCollectionCount))
+         :gc-collection-time-msec (max 0 (. gc getCollectionTime))}))))
+
+
+(defn gc-collection-stats-delta [start-stats end-stats]
+  (merge-with - end-stats start-stats))
+
+
 (defmacro my-time [expr]
-  `(let [start# (. System (nanoTime))
+  `(let [start-nsec# (. System (nanoTime))
+         start-gc-stats# (gc-collection-stats)
          ret# ~expr]
-     {:time-nsec (- (. System (nanoTime)) start#)
+     {:time-nsec (- (. System (nanoTime)) start-nsec#)
+      :gc-stats (gc-collection-stats-delta start-gc-stats#
+                                           (gc-collection-stats))
       :ret ret#}))
+
+
+(defn print-perf-stats [perf-stats]
+  (let [{:keys [time-nsec gc-stats]} perf-stats
+        {:keys [gc-collection-count gc-collection-time-msec]} gc-stats]
+    (println (/ time-nsec 1000000.0) "msec,"
+             gc-collection-count "gc-count,"
+             gc-collection-time-msec "gc-time-msec")))
 
 
 ;; bounded-count, starts-with? copied from Clojure's implementation,
@@ -604,9 +628,9 @@ thread."
   object-graph-errors would not be able to detect that."
   [g]
   (or 
+   (validate-obj-graph g)
    (if-let [x (any-object-moved? g)]
      {:err :object-moved :err-data x :data g})
-   (validate-obj-graph g)
    (if-let [x (any-objects-overlap? g)]
      {:err :two-objects-overlap :err-data x :data g})))
 
@@ -656,13 +680,10 @@ thread."
 ;; clojure.core/= to each other as the same node, even if they were
 ;; different javaobjs in memory.
 
-;; TBD: Right now any null references stored in one javaobj will not
-;; be represented in the graph created.  It might be nice some time to
-;; have an option for that.  In that case, it would probably make the
-;; graph easier to read if each nil/null reference had its own
-;; separate arrow to its own separate node for each such null
-;; reference, otherwise there could be many of them throughout the
-;; graph all pointing to a common null node.
+;; Null references stored in one javaobj will not be represented in
+;; the graph created.  They will show up with the name of the fields
+;; and the value "nil" if you use the field-values function to label
+;; the nodes in any drawn graphs.
 
 ;; One reason I chose ubergraph over the rhizome library is that
 ;; ubergraph supports multiple parallel directed edges from a node A
@@ -971,27 +992,29 @@ thread."
   (let [max-tries (get opts :max-reachable-objects-tries 4)
         debug-level (get opts :consistent-reachable-objects-debuglevel 0)]
     (when (>= debug-level 1)
-      (println "Calling reachable-objmaps try 1"))
-    (loop [{time-nsec :time-nsec obj-graph :ret} (my-time (reachable-objmaps
-                                                           obj-coll opts))
+      (println "reachable-objmaps try 1")
+      (pp/pprint (gc-collection-stats))
+      (println))
+    (loop [{obj-graph :ret :as p} (my-time (reachable-objmaps obj-coll opts))
            num-tries 1]
       (when (>= debug-level 1)
-        (println (/ time-nsec 1000000.0) "msec to find" (count obj-graph)
-                 "objects on try" num-tries "calling reachable-objmaps"))
-      (let [{time-nsec :time-nsec errs :ret} (my-time (object-graph-errors
-                                                       obj-graph))]
+        (print "found" (count obj-graph) "objects on try" num-tries
+               "of reachable-objmaps: ")
+        (print-perf-stats p))
+      (let [{errs :ret :as p} (my-time (object-graph-errors obj-graph))]
         (when (>= debug-level 1)
-          (println (/ time-nsec 1000000.0) "msec to check for errors on try"
-                   num-tries)
+          (print "checked for errors on try" num-tries ":")
+          (print-perf-stats p)
           (if errs
             (println "Found error of type" (:err errs))
             (println "No errors found.")))
         (if errs
           (if (< num-tries max-tries)
             (do
-              (let [{time-nsec :time-nsec} (my-time (System/gc))]
+              (let [p (my-time (System/gc))]
                 (when (>= debug-level 1)
-                  (println (/ time-nsec 1000000.0) "msec to run GC")))
+                  (print "ran GC: ")
+                  (print-perf-stats p)))
               (recur (my-time (reachable-objmaps obj-coll opts))
                      (inc num-tries)))
             (throw
@@ -1060,26 +1083,27 @@ thread."
   (let [debug-level (get opts :graph-of-reachable-objects-debuglevel 0)
         calc-tot-size (get opts :calculate-total-size-node-attribute :bounded)
         objmaps (consistent-reachable-objmaps obj-coll opts)
-        {t :time-nsec g :ret} (my-time (object-graph->ubergraph objmaps opts))
+        {g :ret :as p} (my-time (object-graph->ubergraph objmaps opts))
         _ (when (>= debug-level 1)
-            (println (/ t 1000000.0) "msec to convert" (count objmaps)
-                     "objmaps into ubergraph with" (uber/count-edges g)
-                     "edges"))
+            (print "converted" (count objmaps) "objmaps into ubergraph with"
+                   (uber/count-edges g) "edges: ")
+            (print-perf-stats p))
         g (if (contains? #{:complete :bounded} calc-tot-size)
-            (let [{t :time-nsec g :ret}
+            (let [{g :ret :as p}
                   (my-time
                    (case calc-tot-size
                      :complete (add-complete-total-size-bytes-node-attr g)
                      :bounded (add-bounded-total-size-bytes-node-attr g opts)))]
               (when (>= debug-level 1)
-                (println (/ t 1000000.0) "msec to calculate" calc-tot-size
-                         "total sizes"))
+                (print "calculated" calc-tot-size "total sizes: ")
+                (print-perf-stats p))
               g)
             (do (println "skipping calculation of total size")
                 g))
-        {t :time-nsec g :ret} (my-time (add-viz-attributes g opts))
+        {g :ret :as p} (my-time (add-viz-attributes g opts))
         _ (when (>= debug-level 1)
-            (println (/ t 1000000.0) "msec to add graphviz attributes"))]
+            (print "added graphviz attributes: ")
+            (print-perf-stats p))]
     g))
 
 
@@ -1133,11 +1157,9 @@ thread."
         ;; returns can in some cases contain duplicate nodes.  I do
         ;; not know why this happens.  For now, make sets out of them
         ;; to eliminate those.
-        {wcc-nsec :time-nsec
-         weakly-connected-components :ret} (my-time
-                                            (map set
-                                                 (ualg/connected-components g)))
-        {scc-nsec :time-nsec scc-data :ret} (my-time (gr/scc-graph g))
+        {weakly-connected-components :ret
+         :as wcc-perf} (my-time (map set (ualg/connected-components g)))
+        {scc-data :ret :as scc-perf} (my-time (gr/scc-graph g))
         {:keys [scc-graph node->scc-set]} scc-data
         scc-components (set (vals node->scc-set))
         scc-component-sizes-sorted (sort > (map count scc-components))
@@ -1156,14 +1178,15 @@ thread."
     (println (if (ualg/dag? g)
                "no cycles"
                "has at least one cycle"))
-    (println (count weakly-connected-components) "weakly connected components"
-             "found in" (/ wcc-nsec 1000000.0) "msec")
+    (print (count weakly-connected-components) "weakly connected components"
+           "found in: ")
+    (print-perf-stats wcc-perf)
     (println "number of nodes in all weakly connected components,")
     (println "from most to fewest nodes:")
     (println (sort > (map count weakly-connected-components)))
-    (println "The scc-graph has" (uber/count-nodes scc-graph) "nodes and"
-             (uber/count-edges scc-graph) "edges, taking"
-             (/ scc-nsec 1000000.0) "msec to calculate.")
+    (print "The scc-graph has" (uber/count-nodes scc-graph) "nodes and"
+           (uber/count-edges scc-graph) "edges, took: ")
+    (print-perf-stats scc-perf)
     (println "The largest size strongly connected components, at most 10:")
     (pp/pprint (take 10 scc-component-sizes-sorted))
     (println "number of objects of each size in bytes:")
@@ -1773,9 +1796,6 @@ s1
 (view (doall lazy-seq1) opts)
 (write-dot-file (doall lazy-seq1) "lazy-seq1-realized.dot" opts)
 (write-dot-file (doall (map inc (range 100))) "lazy-seq2-realized.dot" opts)
-
-;; TBD: Find examples that show difference between chunked and
-;; unchunked sequences.
 
 ;; These functions have optimizations that handle chunked sequences
 ;; given to them specially, and preserve the chunked-ness in their
