@@ -26,13 +26,33 @@
 )
 
 
+(def v1 (list 2))
 (def v1 (class 5))
 (def v1 (vec (range 4)))
 (def g nil)
 (System/gc)
 (def g (d/sum [v1] opts))
+(def g2 (d/sum [(gr/remove-all-attrs g)] opts))
 (def g (d/sum [#'v1] opts))
 (d/view-graph g)
+(d/view-graph g2)
+(d/view-graph g2 {:save {:filename "g2.pdf" :format :pdf}})
+
+
+(def n1 (first (uber/nodes g)))
+n1
+(keys (uber/attrs g n1))
+
+(def vars (->> (uber/nodes g)
+               (map #(uber/attr g % :obj))
+               (filter #(instance? clojure.lang.Var %))))
+(count vars)
+(pprint (sort-by symbol vars))
+(def nss (->> (uber/nodes g)
+              (map #(uber/attr g % :obj))
+              (filter #(instance? clojure.lang.Namespace %))))
+(count nss)
+(pprint (sort-by str nss))
 
 (def wcc (map set (ualg/connected-components g)))
 (sort > (map count wcc))

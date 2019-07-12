@@ -17,6 +17,12 @@
   (filter #(leaf-node? g %) (uber/nodes g)))
 
 
+(defn remove-all-attrs
+  [g]
+  (reduce (fn [g n] (uber/set-attrs g n {}))
+          g (concat (uber/nodes g) (uber/edges g))))
+
+
 (defn induced-subgraph
   "Given a graph g, and a collection of nodes in that graph, return
   another graph containing only those nodes, and the edges of g that

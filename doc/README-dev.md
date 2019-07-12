@@ -307,6 +307,77 @@ sometimes weakly connected components in the graph returned by d/sum.
 java.lang.Class on-demand data creation seems to be the answer, as
 described above.
 
+One thing to note is that when doing a walk of all objects reachable
+from a var like `#'user/v1` when running in a REPL from the `user`
+namespace, is that it reaches the `user` namespace, and from there all
+vars you have `def`'ed at the REPL in the `user` namespace.  Also
+namespace objects have chains of references that reach to all other
+namespaces that contain vars referenced from that namespace, or for
+which an alias is created, e.g. via `alias` or `(:require
+[name.space.name :as my-alias])` inside of an `ns` form.  So, from a
+single Var you can reach in the Java object graph often many
+namespaces, and many Vars, usually including all of hundreds of Vars
+`clojure.core`.
+
+```
+(require '[cljol.dig9 :as d]
+	 '[ubergraph.core :as uber])
+
+(def opts {:node-label-functions
+           [#'d/address-decimal
+            #'d/size-bytes
+            #'d/total-size-bytes
+            #'d/class-description
+            #'d/field-values
+            #'d/non-realizing-javaobj->str]
+           })
+
+(def v1 (vector 2))
+;; The following step took about 1 minute on my 2015 MacBook Pro, with
+;; the JVM `java` process going up to almost 2 GBytes.
+(def g (d/sum [#'v1] opts))
+
+(def nss (->> (uber/nodes g)
+              (map #(uber/attr g % :obj))
+              (filter #(instance? clojure.lang.Namespace %))))
+(count nss)
+;; => 40
+(pprint (sort-by str nss))
+
+(def vars (->> (uber/nodes g)
+               (map #(uber/attr g % :obj))
+               (filter #(instance? clojure.lang.Var %))))
+(count vars)
+;; => 2050
+(pprint (sort-by symbol vars))
+;; => note that the output includes #'user/g
+```
+
+Because the object graph references `#'user/g`, which references the
+entire Ubergraph data structure, if you right now in the REPL do:
+
+```
+(def g (d/sum [#'v1] opts))
+```
+
+the object graph will be _much_ bigger, because it includes all of the
+objects in that Ubergraph.  I have seen over 1 million in some
+attempts, which I never left longer than a few minutes before aborting
+those attempts.  That scale of number of objects probably takes many
+GBytes of memory and I do not know how much processing time to
+complete.  Also I am not sure I would be very interested in looking
+through the results, anyway.
+
+You can avoid that issue by first assigning all big data structures
+the value of `nil` that you do not want to walk.
+
+```
+(def g nil)
+;; now no more big Ubergraph reachable from g
+
+(def g (d/sum [#'v1] opts))
+```
+
 
 # Information about different types of references in the JVM
 
