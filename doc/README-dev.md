@@ -1,3 +1,33 @@
+# Testing code included in this repository, and how to run it
+
+The set of tests run using the `lein test` command is in two namespaces:
+
+* `cljol.dig-test` is currently very small, and does not provide a
+  high level of coverage for this code. It does exist and tests a few
+  very basic things.
+* `cljol.ubergraph-test` is also quite small.  It exercises the
+  creation of graphs with several unusual characters in its labels,
+  that have in the past caused problems when the Graphviz `dot`
+  program parses the dot file.  The files are written to the
+  `./doc/tryout-images` directory.  Several of the dot files written
+  intentionally exercise known limitations in Graphviz dot, such that
+  at least with versions of Graphviz current as of July 2019, it gives
+  error messages when trying to process them.
+
+Running the command `./doc/generate-images.sh` from the root directory
+of this repository, on a macOS or Linux machine, runs code in the
+`gen.generate` namespace.  It creates many dot files in the
+`doc/tryout-images` directory, and the shell script then runs `dot` on
+every file whose name ends with the `.dot` suffix in that directory to
+attempt to create a PDF file from it, whether it was created by the
+`./doc/generate-images.sh` script or not.
+
+The `gen.generate` namespace is not normally present on the Java
+classpath.  It is if you use the `:generate` alias to the `clj`
+program, which is defined in the `deps.edn` file.
+
+
+
 # Pretty printing of large values
 
 I have tried several Clojure pretty-printing libraries, including
