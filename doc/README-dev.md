@@ -26,6 +26,10 @@ The `gen.generate` namespace is not normally present on the Java
 classpath.  It is if you use the `:generate` alias to the `clj`
 program, which is defined in the `deps.edn` file.
 
+The file `./doc/scratch1.clj` contains many expressions that I have
+used while doing REPL development and testing of cljol, as well as a
+`(comment ..`) block at the end of the namespace `cljol.dig9`.  Some
+fraction of that is likely obsolete by now.
 
 
 # Pretty printing of large values
