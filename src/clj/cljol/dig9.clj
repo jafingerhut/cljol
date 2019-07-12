@@ -1003,7 +1003,7 @@ thread."
         (print-perf-stats p))
       (let [{errs :ret :as p} (my-time (object-graph-errors obj-graph))]
         (when (>= debug-level 1)
-          (print "checked for errors on try" num-tries ":")
+          (print "checked for errors on try" num-tries ": ")
           (print-perf-stats p)
           (if errs
             (println "Found error of type" (:err errs))
