@@ -363,15 +363,23 @@
       (slow-object-size-bytes obj))))
 
 
+(def stop? (proxy [java.util.function.Predicate] []
+             (test [obj]
+               (when (instance? java.lang.ref.Reference obj)
+                 (println "called proxy obj with arg having" (class obj)))
+               (instance? java.lang.ref.Reference obj))))
+
+
 (defn reachable-objmaps-helper
   [obj-coll opts]
   (let [debug-level (get opts :reachable-objmaps-debuglevel 0)
         max-attempts (get opts :max-address-snapshot-attempts 3)
         stop-at-references (get opts :stop-walk-at-references true)
+        stop-walk-predicate (if stop-at-references stop? nil)
         _ (when (>= debug-level 1)
             (println "reachable-objmaps-helper calling"
                      "graphLayout/parseInstanceIds"))
-        parsed-inst (GraphLayout/parseInstanceIds stop-at-references
+        parsed-inst (GraphLayout/parseInstanceIds stop-walk-predicate
                                                   (object-array obj-coll))
         num-objects-found (. parsed-inst totalCount)
         _ (when (>= debug-level 1)
@@ -1100,7 +1108,7 @@ thread."
         (print-perf-stats p))
       (let [{errs :ret :as p} (my-time (object-graph-errors obj-graph))]
         (when (>= debug-level 1)
-          (print "checked for errors on try" num-tries ":")
+          (print "checked for errors on try" num-tries ": ")
           (print-perf-stats p)
           (if errs
             (println "Found error of type" (:err errs))

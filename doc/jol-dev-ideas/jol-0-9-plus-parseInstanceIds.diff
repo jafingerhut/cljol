@@ -1,15 +1,16 @@
 diff -r 9a5fff552b23 jol-core/src/main/java/org/openjdk/jol/info/GraphLayout.java
 --- a/jol-core/src/main/java/org/openjdk/jol/info/GraphLayout.java	Fri Sep 22 17:29:07 2017 +0200
-+++ b/jol-core/src/main/java/org/openjdk/jol/info/GraphLayout.java	Thu Jul 11 10:21:55 2019 -0700
-@@ -37,6 +37,7 @@
++++ b/jol-core/src/main/java/org/openjdk/jol/info/GraphLayout.java	Fri Jul 12 00:55:21 2019 -0700
+@@ -37,6 +37,8 @@
  import java.io.PrintWriter;
  import java.io.StringWriter;
  import java.util.*;
 +import java.util.function.BiConsumer;
++import java.util.function.Predicate;
  
  /**
   * Holds the object graph layout info.
-@@ -44,7 +45,19 @@
+@@ -44,7 +46,19 @@
  public class GraphLayout {
  
      /**
@@ -30,7 +31,7 @@ diff -r 9a5fff552b23 jol-core/src/main/java/org/openjdk/jol/info/GraphLayout.jav
       *
       * @param roots root instances to start from
       * @return object graph
-@@ -65,6 +78,98 @@
+@@ -65,6 +79,98 @@
          return data;
      }
  
@@ -65,11 +66,11 @@ diff -r 9a5fff552b23 jol-core/src/main/java/org/openjdk/jol/info/GraphLayout.jav
 +     * this method does, and is thus less likely to trigger a garbage
 +     * collection run.
 +     *
-+     * @param stopAtReferences false means if instances of java.lang.ref.Reference, such as a SoftReference or WeakReference, are found, then walking the set of reachable objects should follow references from those instances as well.  true means that no references out of such instances should be followed.  Such references can include ReferenceQueues, containing lists of objects pending garbage collection, including objects with little or no relation to the objects you started creating a graph for, except that they are included in the same ReferenceQueue of to-be-GC'ed objects, and creates a strong reference to them that prevents their finalization and memory reclamation, until those strong references are removed.
++     * @param stop null gives the default behavior of walking all references of all objects.  By supplying a Predicate, every time the walk reaches an object o, it will call the stop.test(o) predicate, and avoid following any references out of o to other objects.
 +     * @param roots root instances to start from
 +     * @return object graph
 +     */
-+    public static GraphLayout parseInstanceIds(boolean stopAtReferences,
++    public static GraphLayout parseInstanceIds(Predicate<Object> stop,
 +                                               Object... roots) {
 +        if (roots == null) {
 +            throw new IllegalArgumentException("Roots are null");
@@ -82,7 +83,7 @@ diff -r 9a5fff552b23 jol-core/src/main/java/org/openjdk/jol/info/GraphLayout.jav
 +        GraphLayout data = new GraphLayout(roots);
 +        GraphWalker walker = new GraphWalker(roots);
 +        walker.addVisitor(data.visitorById());
-+        walker.walk(stopAtReferences);
++        walker.walk(stop);
 +        if (data.createAddressSnapshot(1)) {
 +            data.createAddressMap();
 +        }
@@ -129,7 +130,7 @@ diff -r 9a5fff552b23 jol-core/src/main/java/org/openjdk/jol/info/GraphLayout.jav
      private static final Comparator<Class<?>> CLASS_COMPARATOR = new Comparator<Class<?>>() {
          @Override
          public int compare(Class<?> o1, Class<?> o2) {
-@@ -75,6 +180,7 @@
+@@ -75,6 +181,7 @@
      private final Set<Class<?>> classes = new TreeSet<Class<?>>(CLASS_COMPARATOR);
      private final Multiset<Class<?>> classSizes = new Multiset<Class<?>>();
      private final Multiset<Class<?>> classCounts = new Multiset<Class<?>>();
@@ -137,7 +138,7 @@ diff -r 9a5fff552b23 jol-core/src/main/java/org/openjdk/jol/info/GraphLayout.jav
      private final SortedMap<Long, GraphPathRecord> addresses = new TreeMap<Long, GraphPathRecord>();
  
      private final String description;
-@@ -121,6 +227,89 @@
+@@ -121,6 +228,89 @@
          }
      }
  
@@ -227,7 +228,7 @@ diff -r 9a5fff552b23 jol-core/src/main/java/org/openjdk/jol/info/GraphLayout.jav
      /**
       * Subtract another layout data from the current one.
       * This method does not change the current data object, but produces another one.
-@@ -238,6 +427,17 @@
+@@ -238,6 +428,17 @@
      }
  
      /**
@@ -247,7 +248,7 @@ diff -r 9a5fff552b23 jol-core/src/main/java/org/openjdk/jol/info/GraphLayout.jav
       * @return sorted set of addresses
 diff -r 9a5fff552b23 jol-core/src/main/java/org/openjdk/jol/info/GraphPathRecord.java
 --- a/jol-core/src/main/java/org/openjdk/jol/info/GraphPathRecord.java	Fri Sep 22 17:29:07 2017 +0200
-+++ b/jol-core/src/main/java/org/openjdk/jol/info/GraphPathRecord.java	Thu Jul 11 10:21:55 2019 -0700
++++ b/jol-core/src/main/java/org/openjdk/jol/info/GraphPathRecord.java	Fri Jul 12 00:55:21 2019 -0700
 @@ -38,7 +38,9 @@
      private final int depth;
      private final Object obj;
@@ -273,25 +274,32 @@ diff -r 9a5fff552b23 jol-core/src/main/java/org/openjdk/jol/info/GraphPathRecord
          if (v == null) {
 diff -r 9a5fff552b23 jol-core/src/main/java/org/openjdk/jol/info/GraphWalker.java
 --- a/jol-core/src/main/java/org/openjdk/jol/info/GraphWalker.java	Fri Sep 22 17:29:07 2017 +0200
-+++ b/jol-core/src/main/java/org/openjdk/jol/info/GraphWalker.java	Thu Jul 11 10:21:55 2019 -0700
-@@ -57,6 +57,10 @@
++++ b/jol-core/src/main/java/org/openjdk/jol/info/GraphWalker.java	Fri Jul 12 00:55:21 2019 -0700
+@@ -34,6 +34,7 @@
+ import java.util.IdentityHashMap;
+ import java.util.List;
+ import java.util.Set;
++import java.util.function.Predicate;
+ 
+ /**
+  * Basic class to walk object graphs.
+@@ -57,6 +58,10 @@
      }
  
      public void walk() {
-+        walk(false);
++        walk(null);
 +    }
 +
-+    public void walk(boolean stopAtReferences) {
++    public void walk(Predicate<Object> stop) {
          List<GraphPathRecord> curLayer = new ArrayList<GraphPathRecord>();
          List<GraphPathRecord> newLayer = new ArrayList<GraphPathRecord>();
  
-@@ -74,7 +78,8 @@
+@@ -74,7 +79,7 @@
          while (!curLayer.isEmpty()) {
              newLayer.clear();
              for (GraphPathRecord next : curLayer) {
 -                for (GraphPathRecord ref : peelReferences(next)) {
-+                for (GraphPathRecord ref :
-+                         peelReferences(next, stopAtReferences)) {
++                for (GraphPathRecord ref : peelReferences(next, stop)) {
                      if (visited.add(ref.obj())) {
                          visitObject(ref);
                          newLayer.add(ref);
@@ -301,20 +309,17 @@ diff -r 9a5fff552b23 jol-core/src/main/java/org/openjdk/jol/info/GraphWalker.jav
  
 -    private List<GraphPathRecord> peelReferences(GraphPathRecord r) {
 +    private List<GraphPathRecord> peelReferences(GraphPathRecord r,
-+                                                 boolean stopAtReferences) {
++                                                 Predicate<Object> stop) {
          Object o = r.obj();
  
          if (o == null) {
-@@ -105,6 +111,15 @@
+@@ -105,6 +111,12 @@
              return Collections.emptyList();
          }
  
-+        if (stopAtReferences && (o instanceof java.lang.ref.Reference)) {
-+            // Don't walk through soft, weak, or phantom references
-+            // for now.  Might want to modify to go through to the
-+            // reference, but not through the 'queue' field, which
-+            // seems to reference other objects fairly unrelated to
-+            // this one.
++        if (stop != null && stop.test(o)) {
++            // The caller does not want any references from this
++            // object walked.
 +            return Collections.emptyList();
 +        }
 +
