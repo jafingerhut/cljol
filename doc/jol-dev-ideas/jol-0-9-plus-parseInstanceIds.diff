@@ -58,7 +58,7 @@ diff -r 9a5fff552b23 jol-core/src/main/java/org/openjdk/jol/info/GraphLayout.jav
 +     * they are complete or not.  This is similar to what can happen
 +     * in the parseInstance() method, but for this method at least the
 +     * IdentityHashMap should have the correct set of objects as keys,
-+     * and you may try calling the addressSnapshot() method on this
++     * and you may try calling the createAddressSnapshot() method on this
 +     * GraphLayout instance to have a better chance of getting a
 +     * correct address map.
 +     *
