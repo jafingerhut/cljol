@@ -279,250 +279,33 @@ gets a set of objects that have no errors in them.
 Strangely, `sum` shows that there are typically many weakly connected
 components, which seems to indicate that some changes in inter-object
 references are occurring somewhere during the computation of the
-graph.  I don't know why this happens, but it might have something to
-do with references that are not strong, but either weak, soft, or
-phantom.
+graph.
 
+I believe that at least some of the reason, and perhaps most or all of
+it, is that JVM objects with class java.lang.Class have several
+references in them that point at data that is only allocated and
+initialized when certain kinds of calls are made to determine
+information about the class, e.g. when the fields of the class are
+examined use Java reflection APIs, which is exactly what parts of JOL
+and cljol do in order to determine the fields of an object.  Thus if
+objects of type java.lang.Class are included in the graph of objects
+walked, some of those references can change due to JOL and/or cljol
+code between the time the java.lang.Class was walked by JOL, and the
+time the Ubergraph is constructed and had attributes added by cljol.
 
-```
-(do
-(require '[cljol.dig9 :as d]
-         '[cljol.graph :as gr]
-	 '[ubergraph.core :as uber]
-	 '[ubergraph.alg :as ualg])
-(def opts
-  {:node-label-functions
-   [#'d/address-decimal
-    #'d/size-bytes
-    #'d/total-size-bytes
-    #'d/class-description
-    #'d/field-values
-    #'d/non-realizing-javaobj->str]
-   :reachable-objmaps-debuglevel 1
-   :consistent-reachable-objects-debuglevel 1
-   :graph-of-reachable-objects-debuglevel 1
-;;   :calculate-total-size-node-attribute :complete
-   :calculate-total-size-node-attribute :bounded
-;;   :calculate-total-size-node-attribute nil
-   :slow-instance-size-checking? true
-;;   :stop-walk-at-references false  ;; default true
-   })
-(def v1 (vector 2))
-)
+This effect seems a little bit more common on the first attempt to
+create an object graph for a Var after starting the JVM, then 'the
+cache gets warm' for such data, and those objects become a bit more
+stable in memory.
 
-(def v1 (class 5))
-(def v1 (vec (range 4)))
-(def g nil)
-(System/gc)
-(def g (d/sum [v1] opts))
-(def g (d/sum [#'v1] opts))
-(d/view-graph g)
-
-(def wcc (map set (ualg/connected-components g)))
-(sort > (map count wcc))
-(def wcc2 (rest (sort-by count > wcc)))
-(sort > (map count wcc2))
-(def straggler-nodes (apply clojure.set/union wcc2))
-(count straggler-nodes)
-(def g2 (gr/induced-subgraph g straggler-nodes))
-(d/view-graph g2)
-(d/graph-summary g2)
-(def g2 nil)
-
-
-(def g3 (gr/induced-subgraph g (filter #(<= (uber/attr g % :distance) 6)
-                                        (uber/nodes g))))
-(d/view-graph g3)
-(d/view-graph g3 {:save {:filename "g3.pdf" :format :pdf}})
-
-(uber/pprint g)
-(defn inconsistent-distance-nodes [g]
-  (for [node (uber/nodes g)
-        :let [attrs (uber/attrs g node)
-	      sp-dist (:distance attrs)
-	      gpl-dist (:gpl-distance attrs)]]
-    {:node node :sp-dist sp-dist :gpl-dist gpl-dist}))
-(def i1 (inconsistent-distance-nodes g))
-(count i1)
-(uber/count-nodes g)
-(def i2 (group-by (fn [x] (= (:sp-dist x) (:gpl-dist x))) i1))
-(count (i2 true))
-(count (i2 false))
-
-;; lazy pre-order depth-first search order traversal of nodes
-(def root (first (filter #(= v1 (uber/attr g % :obj)) (uber/nodes g))))
-root
-(def pre (ualg/pre-traverse g root))
-(take 5 pre)
-pre
-(= (set pre) (set (uber/nodes g)))
-
-;; If I do a 'take-while' on a lazy sequence of nodes, with the
-;; condition to keep going being:
-
-;; (number of nodes <= N) and (total size of nodes <= S)
-
-;; then if it stops because of the condition failing, that is:
-
-;; (number of nodes > N) or (total size of nodes > S)
-
-;; If I want the stopping condition to be:
-
-;; (number of nodes > N) and (total size of nodes > S)
-
-;; then the continuing condition should be the opposite of that, or
-;; the first condition above with 'and' replaced by 'or'.
-
-(def node-count-min-limit 0)
-(def total-size-min-limit 0)
-
-(def node-count-min-limit 4)
-(def total-size-min-limit 100)
-(def node-size-fn d/object-size-bytes)
-
-(require '[cljol.graph :as gr])
-
-root
-(gr/bounded-reachable-node-stats
-    g root node-size-fn node-count-min-limit total-size-min-limit)
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(def g (d/sum [(vec (range 1e5))] opts))
-(def o1 (d/consistent-reachable-objmaps [#'v1] opts))
-
-(def g (d/sum [#'v1] opts))
-(d/view-graph g {:save {:filename "clojure-var.dot" :format :dot}})
-(type g)
-(doseq [dist [3 4 5 6 7 8]]
-  (let [g2 (gr/induced-subgraph g (filter #(let [d (uber/attr g % :distance)]
-                                             (and (number? d) (<= d dist)))
-                                          (uber/nodes g)))
-        fname (str "clojure-var-dist-" dist ".dot")]
-    (d/view-graph g2 {:save {:filename fname :format :dot}})))
-
-(type o1)
-(def e1 *e)
-(class e1)
-(class (-> e1 ex-data))
-(keys (-> e1 ex-data))
-(pprint (Throwable->map e1))
-(def r1 (clojure.repl/root-cause e1))
-(class (ex-data r1))
-(keys (ex-data r1))
-(.getMessage r1)
-(def e2 (-> (ex-data r1) :errors))
-(-> e2 :err)
-(keys e2)
-(class (-> e2 :data))
-(bounded-count 10 (-> e2 :data))
-(type (first (-> e2 :data)))
-(keys (-> e2 :data))
-(pprint (:fields (-> e2 :data)))
-d/inaccessible-field-val-sentinel
-(identical? d/inaccessible-field-val-sentinel (get (-> e2 :data :fields) "handler"))
-(def e3 (-> e2 :err-data))
-(type e3)
-(map type e3)
-(first e3)
-
-;; Trying the following starts printing a large amount of Clojure data
-;; as the ex-data of the exception, I believe.  Don't do that.  For
-;; all I know, it might even experience an infinite loop in its
-;; attempt to print cyclic structures.
-(pst e1 100)
-
-(type e1)
-(type (ex-data e1))
-;; This is small data
-(keys (ex-data e1))
-
-;; Maybe big data is in root-casue of exception?
-(def r1 (clojure.repl/root-cause e1))
-
-(type r1)
-(type (ex-data r1))
-(keys (ex-data r1))
-
-(-> (ex-data r1) :errors type)
-;; => clojure.lang.PersistentArrayMap
-(-> (ex-data r1) :obj-coll type)
-;; => clojure.lang.PersistentVector
-
-(def e2 (-> (ex-data r1) :errors))
-(-> e2 :err)
-;; => :object-moved
-(-> e2 :err-data type)
-(-> e2 :err-data keys)
-;; => (:address :obj :size :path :fields :cur-address)
-(def e3 (-> e2 :err-data))
-
-(:address e3)
-;; => 27006116544
-(d/address-of (:obj e3))
-;; => 26168262656
-(-> e3 :obj type)
-;; => java.lang.ref.SoftReference
-
-;; Try to isolate some cases where JOL 0.9 seems to return incorrect
-;; object sizes.
-
-(do
-(import '(org.openjdk.jol.info ClassLayout GraphLayout))
-(import '(org.openjdk.jol.vm VM))
-(defn foo [obj]
-  (let [cls (class obj)
-	parsed-inst (ClassLayout/parseInstance obj)
-        parsed-cls (ClassLayout/parseClass cls)
-	vm-size (. (VM/current) sizeOf obj)
-        inst-size (. parsed-inst instanceSize)
-        cl-size (. parsed-cls instanceSize)]
-    (println "toPrintable of parseInstance ret value:")
-    (print (.toPrintable parsed-inst))
-    (println)
-    (println "toPrintable of parseClass ret value:")
-    (print (.toPrintable parsed-cls))
-    (println)
-    (println "cls:" cls)
-    (println vm-size "(. (VM/current) sizeOf obj)")
-    (println inst-size "(. (ClassLayout/parseInstance obj) instanceSize)")
-    (println cl-size "(. (ClassLayout/parseClass cls) instanceSize)")
-    (if (= vm-size cl-size)
-      (println "same")
-      (println "DIFFERENT"))))
-)
-(foo 5)
-(foo "bar")
-(foo (class 5))
-(foo (object-array 0))
-(foo (object-array 1))
-(foo (object-array 5))
-(foo (object-array 6))
-(foo (object-array 7))
-(foo (object-array 8))
-(foo (object-array 9))
-(foo (object-array 50))
-
-(foo (char-array 0))
-(foo (char-array 1))
-(foo (char-array 50))
-
-```
-
-The Clojure implementation mentions SoftReference in its
-clojure.lang.DynamicClassLoader class, and clojure.lang.Keyword.
-
-This makes me think that perhaps SoftReference objects might move
-around frequently enough in memory that my current approach of
-calculating an address for every object on one pass, then on a later
-pass checking whether they are still at the same address, is too
-fragile for this kind of object graph?
-
-Perhaps I should instead consider using a Java IdentityHashMap object
-to create and store a map from object identities to UUIDs, and then
-use those UUIDs as the values in the ubergraph values that cljol
-creates, instead of addresses.
-
+I originally thought that it might be due to SoftReference objects in
+the graph walked, and that may have been part of it, but it cannot be
+the entire cause, because of later tests where I changed a local copy
+of JOL to never walk references out of SoftReference objects, so they
+would never be included in the graph returned by JOL.  There are still
+sometimes weakly connected components in the graph returned by d/sum.
+java.lang.Class on-demand data creation seems to be the answer, as
+described above.
 
 
 # Information about different types of references in the JVM
@@ -551,3 +334,16 @@ Some articles that attempt to describe the differences between them.
 * [What's the difference between SoftReference and WeakReference in Java?](https://stackoverflow.com/questions/299659/whats-the-difference-between-softreference-and-weakreference-in-java)
 * [Weak, Soft, and Phantom References in Java (and Why They Matter)](https://dzone.com/articles/weak-soft-and-phantom-references-in-java-and-why-they-matter)
 * [Understanding JVM soft references for great good (and building a cache)](https://blog.shiftleft.io/understanding-jvm-soft-references-for-great-good-and-building-a-cache-244a4f7bb85d)
+
+
+java.lang.ref.SoftReference objects can contain references to
+java.lang.ref.ReferenceQueue objects.  According to JDK documentation
+I have read, and mentions of the ReferenceQueue class in stats
+produced by `d/sum`, ReferenceQueue objects can contain lists of
+objects pending garbage collection, including objects with little or
+no relation to the objects you started creating a graph for, other
+than happening to become eligible for GC near the same time.
+
+By using JOL to walk such an object graph, it creates a strong
+reference to them that prevents those objects from being freed, until
+those strong references are removed.
