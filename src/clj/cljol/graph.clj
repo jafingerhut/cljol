@@ -4,6 +4,8 @@
             [ubergraph.alg :as ualg]))
 
 
+(set! *warn-on-reflection* true)
+
 ;; Code here is intended to be generic to anyone that uses ubergraph
 ;; and/or perhaps also loom for representing and manipulating graph
 ;; data structures.
@@ -71,6 +73,303 @@
       ;; that are not in 'nodes'.
       (let [nodes-to-remove (remove #(contains? nodes %) (uber/nodes g))]
         (uber/remove-nodes* g nodes-to-remove)))))
+
+
+(defn dense-integer-node-labels
+  "Return a map with keys :node->int and :int->node
+
+  The value associated with key :node->int is a map with the nodes of g
+  as keys, and distinct integers in the range [0, n-1] where n is the
+  number of nodes.
+
+  The value associated with key :int->node is a Java object array
+  indexed from [0, n-1], and is the reverse mapping of the :node->int
+  map."
+  [g]
+  (let [int->node (object-array (uber/count-nodes g))]
+    (loop [i 0
+           remaining-nodes (uber/nodes g)
+           node->int (transient {})]
+      (if-let [s (seq remaining-nodes)]
+        (let [n (first s)]
+          (aset int->node i n)
+          (recur (inc i) (rest remaining-nodes)
+                 (assoc! node->int n i)))
+        ;; else
+        {:node->int (persistent! node->int)
+         :int->node int->node}))))
+
+
+(defn edge-vectors
+  "Given an ubergraph g, return a map with three keys:
+
+  :node->int :int->node - These are the same as described as returned
+  from the function dense-integer-node-labels.  See its documentation.
+
+  :edges - edges is a vector of vectors of integers.  Using the
+  integer node labels assigned in the :node->int map, suppose node n
+  in the graph g has the integer label n-int in the map.  Then (edge
+  n-int) is a vector, one per successor node of node n in g.  The
+  vector contains all of the integer labels of those successor nodes
+  of n.  There are no duplicates in this vector, even if g has
+  multiple parallel edges between two nodes in the graph."
+  [g]
+  (let [n (uber/count-nodes g)
+        {:keys [node->int int->node] :as m} (dense-integer-node-labels g)]
+    (assoc m :edges
+           (mapv (fn [node-int]
+                   (mapv #(node->int %)
+                         (uber/successors g (aget ^objects int->node node-int))))
+                 (range n)))))
+
+
+(definterface DoubleStack
+  (^boolean isEmptyFront [])
+  (^int topFront [])
+  (^int popFront [])
+  (^void pushFront [^int item])
+
+  (^boolean isEmptyBack [])
+  (^int topBack [])
+  (^int popBack [])
+  (^void pushBack [^int item]))
+
+
+(deftype DoubleStackImpl [^ints items ^long n
+                          ^:unsynchronized-mutable fp  ;; front stack pointer
+                          ^:unsynchronized-mutable bp  ;; back stack pointer
+                          ]
+  DoubleStack
+  (isEmptyFront [this]
+    (zero? fp))
+  (topFront [this]
+    (aget items (dec fp)))
+  (popFront [this]
+    (set! fp (dec fp))
+    (aget items fp))
+  (pushFront [this item]
+    (aset items fp item)
+    (set! fp (inc fp)))
+
+  (isEmptyBack [this]
+    (== bp n))
+  (topBack [this]
+    (aget items bp))
+  (popBack [this]
+    (let [p bp]
+      (set! bp (inc bp))
+      (aget items p)))
+  (pushBack [this item]
+    (set! bp (dec bp))
+    (aset items bp item)))
+
+
+(defn double-stack [n]
+  (DoubleStackImpl. (int-array n) n 0 n))
+
+
+(comment
+(def ds (double-stack 5))
+(.isEmptyBack ds)
+(.isEmptyFront ds)
+)
+
+
+(defn scc-tarjan
+  "Calculate the strongly connected components of a graph using
+  Pearce's algorithm, which is a variant of Tarjan's algorithm that
+  uses a little bit less extra memory.  Both run in linear time in the
+  size of the graph, meaning the sum of the number of nodes plus
+  number of edges.
+
+  This implementation is almost certainly limited to Intger/MAX_VALUE
+  nodes in the greph, because part of its implementation uses signed
+  Java int's to label the nodes, and signed comparisons to compare
+  node numbers to each other.  This limit could easily be increased by
+  replacing int with long in those parts of the implementation.
+
+  This function returns a map with all of the keys that the function
+  edge-vectors returns, plus the following:
+
+  :components - the associated value is a vector of sets of nodes from the graph g.  Each set represents all of the nodes in one strongly connected component of g.
+
+  TBD: I believe that the order of these sets represents either a
+  topological order of these components in the scc-graph, or a reverse
+  topological order.  Test and document which it is, if either.
+
+  :rindex - A Java array of ints, used as part of the implementation.
+  I believe that the contents of this array can be used to solve other
+  graph problems efficiently, e.g. perhaps biconnected components and
+  a few other applications for depth-first search mentioned here:
+
+  https://en.wikipedia.org/wiki/Depth-first_search#Applications
+
+  TBD: It would be nice to implement several of these other graph
+  algorithms listed at that reference.
+
+  References for this implementation:
+
+  https://en.wikipedia.org/wiki/Tarjan%27s_strongly_connected_components_algorithm
+
+  This code is patterned after the variant of the algorithm by David
+  J. Pearce with Java reference source code published in this
+  repository:
+  https://github.com/DavePearce/StronglyConnectedComponents
+
+   That repository also has links to a research paper and blog article
+  describing the algorithm.  That repository contains implementations
+  of 4 variants of the algorithm:
+
+  PeaFindScc1.Recursive
+  PeaFindScc1.Imperative
+  PeaFindScc2.Recursive
+  PeaFindScc2.Imperative
+
+  The two with Recursive in their names can cause the call stack to
+  grow up to the number of nodes in the graph, which is not a good fit
+  for large graphs and default maximum JVM stack sizes.
+
+  The two with Imperative in their names use iteration, and no
+  recursion, maintaining an explicit stack data structure on the heap.
+  Thus they are a better fit for large graphs and deafult maximum JVM
+  stack sizes.
+
+  The PeaFindScc1 versions allocate a bit more additional memory over
+  and above the graph data structure than the PeaFindScc2 versions.  I
+  believe the PeaFindScc1 versions were written as a reference in
+  order to compare the results of the PeaFindScc2 implementations
+  against them.
+
+  This implementation is a translation of the PeaFindScc2.Imperative
+  code into Clojure, maintaining the property that it is not
+  recursive, and attempting to use only as much additional memory as
+  the Java implementation would allocate."
+  [g]
+  (let [n (uber/count-nodes g)
+        _ (assert (< n Integer/MAX_VALUE))
+        {:keys [node->int ^objects int->node edges] :as m} (edge-vectors g)]
+    (with-local-vars [;; from constructor Base()
+                      index 1
+                      c (dec n)]
+      (let [;; from constructor Base()
+            ^ints rindex (int-array n)
+
+            ;; from constructor Imperative()
+            ^DoubleStack vS (double-stack n)
+            ^DoubleStack iS (double-stack n)
+            root (boolean-array n)
+
+            ;; method Imperative.beginVisiting(int v)
+            beginVisiting (fn [v]
+                            ;; First time this node encountered
+                            (.pushFront vS v)
+                            (.pushFront iS 0)
+                            (aset root v true)
+                            (aset rindex v (int @index))
+                            (var-set index (inc @index)))
+
+            ;; method Imperative.finishVisiting(int v)
+            finishVisiting (fn [v]
+                             ;; Take this vertex off the call stack
+                             (.popFront vS)
+                             (.popFront iS)
+                             ;; Update component information
+                             (if (aget root v)
+                               (do
+                                 (var-set index (dec @index))
+                                 (while (and (not (.isEmptyBack vS))
+                                             (<= (aget rindex v)
+                                                 (aget rindex (.topBack vS))))
+                                   (let [w (.popBack vS)]
+                                     (aset rindex w (int @c))
+                                     (var-set index (dec @index))))
+                                 (aset rindex v (int @c))
+                                 (var-set c (dec @c)))
+                               ;; else
+                               (.pushBack vS v)))
+
+            ;; method Imperative.beginEdge(int v, int k)
+            beginEdge (fn [v k]
+                        (let [g-edges (edges v)
+                              w (g-edges k)]
+                          (if (zero? (aget rindex w))
+                            (do
+                              (.popFront iS)
+                              (.pushFront iS (inc k))
+                              (beginVisiting w)
+                              true)
+                            ;; else
+                            false)))
+
+            ;; method Imperative.finishEdge(int v, int k)
+            finishEdge (fn [v k]
+                        (let [g-edges (edges v)
+                              w (g-edges k)]
+                          (if (< (aget rindex w) (aget rindex v))
+                            (do
+                              (aset rindex v (aget rindex w))
+                              (aset root v false)))))
+
+            ;; method Imperative.visitLoop()
+            visitLoop (fn []
+                        (let [v (.topFront vS)
+                              i (atom (.topFront iS))
+                              g-edges (edges v)
+                              num-edges (count g-edges)]
+                          ;; Continue traversing out-edges until none left.
+                          (let [return-early
+                                (loop []
+                                  (if (<= @i num-edges)
+                                    (do
+                                      ;; Continuation
+                                      (if (> @i 0)
+                                        ;; Update status for previously
+                                        ;; traversed out-edge
+                                        (finishEdge v (dec @i)))
+                                      (if (and (< @i num-edges)
+                                               (beginEdge v @i))
+                                        true  ;; return early
+                                        (do
+                                          (swap! i inc)
+                                          (recur))))
+                                    ;; else
+                                    false))]  ;; no early return occurred
+                            (if (not return-early)
+                              ;; Finished traversing out edges, update
+                              ;; component info
+                              (finishVisiting v)))))
+
+            ;; method Imperative.visit(int v)
+            visit (fn [v]
+                    (beginVisiting v)
+                    (while (not (.isEmptyFront vS))
+                      (visitLoop)))
+
+            ;; from Imperative.visit() method
+            topvisit
+            (fn []
+              (doseq [i (range n)]
+                (if (zero? (aget rindex i))
+                  (visit i)))
+              ;; now, post process to produce component sets
+              (let [num-components (- n 1 @c)
+                    comps (let [x (object-array num-components)]
+                            (dotimes [i num-components]
+                              (aset x i (transient #{})))
+                            x)
+                    components (loop [i 0]
+                                 (if (< i n)
+                                   (let [cindex (- n 1 (aget rindex i))]
+                                     (aset comps cindex
+                                           (conj! (aget comps cindex)
+                                                  (aget int->node i)))
+                                     (recur (inc i)))
+                                   ;; else
+                                   (mapv persistent! comps)))]
+                (assoc m
+                       :components components
+                       :rindex rindex)))]
+        (topvisit)))))
 
 
 (defn scc-graph
@@ -256,7 +555,6 @@
        (and (> num-reachable-nodes node-count-min-limit)
             (> total-size total-size-min-limit)))
      (reductions (fn add-one-node [acc n]
-                   ;;(println "add-one-node n=" n)
                    (let [{:keys [num-reachable-nodes total-size]} acc]
                      {:num-reachable-nodes (inc num-reachable-nodes)
                       :total-size (+ total-size (node-size-fn g n))}))

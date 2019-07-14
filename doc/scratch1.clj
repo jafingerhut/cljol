@@ -242,3 +242,138 @@ d/inaccessible-field-val-sentinel
 (foo (char-array 0))
 (foo (char-array 1))
 (foo (char-array 50))
+
+
+;; Based on some Java code recommended here for getting the path to a
+;; file name defining a class in a StackTraceElement
+
+;; The method (.getClassName x) called on a StackTraceElement object
+;; within a stack trace returns a string representing the class name,
+;; if one was available when creating the StackTraceElement.  That
+;; string can be passed to the function below to try to get more
+;; information about the class named by that string.
+
+(require '[clojure.string :as str])
+
+;; https://stackoverflow.com/questions/26674037/possible-to-get-the-file-path-of-the-class-that-called-a-method-in-java
+(defn class-info [classname-str]
+  (let [klass (Class/forName classname-str)
+        loader (.getClassLoader klass)
+        resource-name (str (clojure.string/replace classname-str "." "/")
+                           ".class")
+        rsrc (.getResource loader resource-name)]
+    {:klass klass :loader loader :resource-name resource-name
+     :resource rsrc}))
+
+(def classname-str "cljol.graph$scc_graph")
+(Class/forName classname-str)
+(type (Class/forName classname-str))
+(def f (Class/forName classname-str))
+;; Weird, why does (Class/forName ...) throw no exception, but (def f ...) does?
+f
+klass
+(def loader (.getClassLoader (Class/forName classname-str)))
+loader
+(def n1 (str (clojure.string/replace classname-str "." "/") ".class"))
+(def n1 (str (clojure.string/replace classname-str "." "/") ".clj"))
+(def n1 "cljol/graph.clj")
+n1
+(.getResource (.getClassLoader (Class/forName classname-str)) n1)
+(str rsrc)
+
+
+
+(def ci (class-info "clojure.lang.Compiler$InvokeExpr"))
+(pprint ci)
+(str (:resource ci))
+
+(def e1 *e)
+(def e2 (Throwable->map e1))
+(pprint e2)
+(keys e2)
+(type (first (:trace e2)))
+(-> e2 :trace first first str)
+;; => PersistentVector
+(def e3 (assoc e2 :trace
+               (map (fn [elem]
+                      (let [classname-str (str (first elem))
+                            resource-str (str (:resource (class-info classname-str)))]
+                        (conj elem resource-str)))
+                    (:trace e2))))
+(pprint e3)
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; try out ubergraph features
+
+(require '[ubergraph.core :as uber]
+         '[ubergraph.alg :as ualg])
+
+;; For cljol, I want only directed edges, which represent references
+;; from one object to another.
+
+;; I want to explicitly allow multiple parallel edges from node A to
+;; B, which represents the situation when the Java object A has
+;; multiple references in multiple per-class fields that all refer to
+;; Java object B.  I want each of those edges to have independent
+;; attributes from each other, e.g. a :field-name attribute, and I
+;; want it to be possible to have 0 or more edges from A to B, and
+;; independently 0 or more edges from B to A.
+
+
+(def g1 (uber/multidigraph))
+g1
+(type g1)
+(uber/pprint g1)
+
+(def g2 (-> g1
+            (uber/add-nodes-with-attrs [57 {:name "a" :label "size 24 bytes\nlabel a" :shape :rect}]
+                                       [32 {:name "b" :label "label b"}]
+                                       [42 {:label "the answer"}])
+            (uber/add-edges [57 32 {:field-name "x" :label "fld_x"}]
+                            [57 32 {:field-name "y" :label "_y"}]
+                            [57 32 {:field-name "y" :label "_y"}]
+                            [32 57 {:field-name "parent"}]
+                            [32 42 {:label "got here"}]
+                            )))
+(uber/pprint g2)
+(uber/viz-graph g2 {:rankdir :LR})
+
+(defn write-dot-file [g fname opts]
+  (uber/viz-graph g (merge opts {:save {:filename fname :format :dot}})))
+(defn write-pdf-file [g fname opts]
+  (do (uber/viz-graph g (merge opts {:save {:filename fname :format :pdf}}))
+      ;; Avoid returning the dot file as a string, as viz-graph does,
+      ;; just so I don't see it in my REPL.
+      nil))
+(write-pdf-file g2 "g2.pdf" {:rankdir :LR})
+
+
+(require '[cljol.dig9 :as d])
+(d/view g2)
+
+
+;; ubergraph's implementation of successors calls distinct, so
+;; even if there are parallel edges from node u to v, successors
+;; will include v in the returned list only once.
+
+(def g1 (uber/multidigraph [1 1 {:color :red}]
+                           [1 1 {:color :blue}]))
+(def g1 (gr/remove-all-attrs g))
+;(def g1 g)
+(uber/pprint g1)
+(uber/successors g1 1)
+(gr/dense-integer-node-labels g1)
+(gr/edge-vectors g1)
+
+;; Using this to reload modified code from this file will I hope
+;; preserve line numbers from the file in stack traces.  I know that
+;; doing the inf-clojure method of eval'ing a modified function does
+;; not.
+(load-file "src/clj/cljol/graph.clj")
+
+(def scc (gr/scc-tarjan g1))
+(pprint scc)
+
+(def e1 *e)
+(pprint (Throwable->map e1))
