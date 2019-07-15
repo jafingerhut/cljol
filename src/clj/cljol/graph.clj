@@ -100,6 +100,12 @@
          :int->node int->node}))))
 
 
+;; Note 2:
+
+;; uber/successors returns each successor node at most once, by using
+;; clojure.core/distinct in its implementation.  That is what I want
+;; here, so since it does this, no need to repreat it here.
+
 (defn edge-vectors
   "Given an ubergraph g, return a map with three keys:
 
@@ -119,7 +125,9 @@
     (assoc m :edges
            (mapv (fn [node-int]
                    (mapv #(node->int %)
-                         (uber/successors g (aget ^objects int->node node-int))))
+                         ;; Note 2
+                         (uber/successors g (aget ^objects int->node
+                                                  node-int))))
                  (range n)))))
 
 
