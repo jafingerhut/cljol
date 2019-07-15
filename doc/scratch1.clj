@@ -25,7 +25,6 @@
 (def v1 (vector 2))
 )
 
-
 (def v1 (list 2))
 (def v1 (class 5))
 (def v1 (vec (range 4)))
@@ -37,6 +36,62 @@
 (d/view-graph g)
 (d/view-graph g2)
 (d/view-graph g2 {:save {:filename "g2.pdf" :format :pdf}})
+
+(def scct (gr/scc-tarjan g))
+(pprint scct)
+(uber/pprint g)
+
+(check-scc-tarjan-topological-order g)
+
+(defn check-scc-tarjan-topological-order [g]
+  (let [scct (gr/scc-tarjan g)
+        {:keys [components rindex vS iS root node->int int->node edges]} scct
+        node->rank (into {}
+                         (for [[idx nodes] (map-indexed (fn [idx nodes]
+                                                          [idx nodes])
+                                                        components)
+                               node nodes]
+                           [node idx]))
+        edges-violating-partial-order
+        (filter (fn [e]
+                  (let [src-rank (node->rank (uber/src e))
+                        dest-rank (node->rank (uber/dest e))]
+                    (> src-rank dest-rank)))
+                (uber/edges g))]
+    {:ok (zero? (count edges-violating-partial-order))
+     :violating-edges edges-violating-partial-order}))
+
+
+(defn gsize [g]
+  (println (uber/count-nodes g) "nodes" (uber/count-edges g) "edges"))
+
+(gsize g)
+(def sccg (:scc-graph (gr/scc-graph g)))
+(def sccg nil)
+(gsize sccg)
+(uber/pprint sccg)
+(def sccg2 (gr/reduce-dag-experiment1 sccg))
+(def sccg2 nil)
+(gsize sccg2)
+(uber/pprint sccg2)
+
+(count (filter #(and (= 1 (count (uber/successors sccg2 %)))
+                     (= 1 (count (uber/predecessors sccg2 %))))
+               (uber/nodes sccg2)))
+(def f (frequencies
+        (map (fn [v]
+               [(count (uber/predecessors sccg2 v))
+                (count (uber/successors sccg2 v))])
+             (uber/nodes sccg2))))
+(count f)
+(defn compare-pairs [[p1a p1b] [p2a p2b]]
+  (let [sum1 (+ p1a p1b)
+        sum2 (+ p2a p2b)
+        cmp1 (compare sum1 sum2)]
+    (if (not= 0 cmp1)
+      cmp1
+      (compare [p1a p1b] [p2a p2b]))))
+(pprint (into (sorted-map-by compare-pairs) f))
 
 
 (def n1 (first (uber/nodes g)))
@@ -377,3 +432,58 @@ g1
 
 (def e1 *e)
 (pprint (Throwable->map e1))
+(require 'clojure.main)
+(clojure.main/report-error e1)
+
+
+(defn reduce-dag-experiment1
+  "Experimental code to see how much smaller it makes DAGs that are
+  returned by scc-graph.  If it gives significant enough reductions,
+  it could enable linear time calculation of reachable-node-stats for
+  a larger class of object graphs.
+
+  Assumes that the input graph g contains no cycles."
+  [g]
+  (let [in-0-out-1 (filter #(and (= 0 (count (uber/predecessors g %)))
+                                  (= 1 (count (uber/successors g %))))
+                            (uber/nodes g))
+         in-1-out-0 (filter #(and (= 1 (count (uber/predecessors g %)))
+                                  (= 0 (count (uber/successors g %))))
+                            (uber/nodes g))]
+    (loop [in-0-out-1 in-0-out-1
+           in-1-out-0 in-1-out-0
+           g2 g]
+;;      (println "in-0-out-1" in-0-out-1)
+;;      (println "in-1-out-0" in-1-out-0)
+      (cond
+        (next in-0-out-1)  ;; true if at least 1 node in this list
+        (let [v (first in-0-out-1)
+              _ (assert (= 1 (count (uber/successors g2 v))))
+              _ (assert (= 0 (count (uber/predecessors g2 v))))
+              w (first (uber/successors g2 v))
+              _ (assert (>= (count (uber/predecessors g2 w)) 1))
+              new-node? (and (= 1 (count (uber/predecessors g2 w)))
+                             (= 1 (count (uber/successors g2 w))))]
+;;          (println "remove" v "new-node?" new-node? "neighbor" w)
+          (recur (if new-node?
+                   (cons w (rest in-0-out-1))
+                   (rest in-0-out-1))
+                 in-1-out-0
+                 (uber/remove-nodes g2 v)))
+        
+        (next in-1-out-0)  ;; true if at least 1 node in this list
+        (let [w (first in-1-out-0)
+              _ (assert (= 0 (count (uber/successors g2 w))))
+              _ (assert (= 1 (count (uber/predecessors g2 w))))
+              v (first (uber/predecessors g2 w))
+              _ (assert (>= (count (uber/successors g2 v)) 1))
+              new-node? (and (= 1 (count (uber/predecessors g2 v)))
+                             (= 1 (count (uber/successors g2 v))))]
+;;          (println "remove" w "new-node?" new-node? "neighbor" v)
+          (recur in-0-out-1
+                 (if new-node?
+                   (cons v (rest in-1-out-0))
+                   (rest in-1-out-0))
+                 (uber/remove-nodes g2 w)))
+        
+        :else g2))))

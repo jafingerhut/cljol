@@ -353,13 +353,15 @@
                   (visit i)))
               ;; now, post process to produce component sets
               (let [num-components (- n 1 @c)
+                    delta (inc @c)
                     comps (let [x (object-array num-components)]
                             (dotimes [i num-components]
                               (aset x i (transient #{})))
                             x)
                     components (loop [i 0]
                                  (if (< i n)
-                                   (let [cindex (- n 1 (aget rindex i))]
+                                   ;; See Note 1
+                                   (let [cindex (- (aget rindex i) delta)]
                                      (aset comps cindex
                                            (conj! (aget comps cindex)
                                                   (aget int->node i)))
@@ -368,8 +370,27 @@
                                    (mapv persistent! comps)))]
                 (assoc m
                        :components components
-                       :rindex rindex)))]
+                       :rindex rindex
+                       :vS vS
+                       :iS iS
+                       :root root)))]
         (topvisit)))))
+
+;; Note 1:
+
+;; The original Java implementation used (- n 1 (aget rindex i)) as
+;; the value of cindex here.  That caused the components to be stored
+;; in reverse topological order in the scc-graph, from index 0 on up
+;; in the components array.
+
+;; To cause them to be created in topological order, not reversed, we
+;; can instead use cindex2 equal to (- num-components 1 cindex), which
+;; with a llittle bit of algebra, written in infix notation, is:
+
+;;   cindex2
+;; = num-components - 1 - cindex
+;; = (n - 1 - @c) - 1 - (n - 1 - (aget rindex i))
+;; = (aget rindex i) - (@c + 1)
 
 
 (defn scc-graph
@@ -395,7 +416,8 @@
   strongly connected component with n.  This set always contains at
   least node n, and may contain others."
   [g]
-  (let [sc-components (map set (ualg/scc g))
+  (let [m (scc-tarjan g)
+        sc-components (:components m)
         g-node->scc-node (into {}
                                (for [scc-node sc-components
                                      g-node scc-node]
@@ -416,8 +438,9 @@
                            sccg
                            (uber/add-edges sccg [sccg-src sccg-dest]))))
                      sccg (uber/edges g))]
-    {:scc-graph sccg
-     :node->scc-set g-node->scc-node}))
+    (assoc m
+           :scc-graph sccg
+           :node->scc-set g-node->scc-node)))
 
 
 (defn dag-reachable-nodes

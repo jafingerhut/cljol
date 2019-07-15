@@ -1160,7 +1160,6 @@ thread."
         {weakly-connected-components :ret
          :as wcc-perf} (my-time (map set (ualg/connected-components g)))
         {scc-data :ret :as scc-perf} (my-time (gr/scc-graph g))
-        {scc-data2 :ret :as scc-perf2} (my-time (gr/scc-tarjan g))
         {:keys [scc-graph node->scc-set]} scc-data
         scc-components (set (vals node->scc-set))
         scc-component-sizes-sorted (sort > (map count scc-components))
@@ -1188,19 +1187,6 @@ thread."
     (print "The scc-graph has" (uber/count-nodes scc-graph) "nodes and"
            (uber/count-edges scc-graph) "edges, took: ")
     (print-perf-stats scc-perf)
-    (print "Found" (count (:components scc-data2))
-           "SCCs via Tarjan's algorithm in:")
-    (print-perf-stats scc-perf2)
-    (let [sccs1 (set (uber/nodes (:scc-graph scc-data)))
-          sccs2 (set (:components scc-data2))]
-      (if (= sccs1 sccs2)
-        (println "SCCs same between two algorithms")
-        (do
-          (println "SCCs DIFFER between two algorithms:")
-          (println "SCCs 1:")
-          (pp/pprint sccs1)
-          (println "SCCs 2:")
-          (pp/pprint sccs2))))
     (println "The largest size strongly connected components, at most 10:")
     (pp/pprint (take 10 scc-component-sizes-sorted))
     (println "number of objects of each size in bytes:")
