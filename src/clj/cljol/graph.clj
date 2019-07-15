@@ -422,22 +422,15 @@
                                (for [scc-node sc-components
                                      g-node scc-node]
                                  [g-node scc-node]))
+        sccg-edges (->> (uber/edges g)
+                        (map (fn [g-edge]
+                               [(g-node->scc-node (uber/src g-edge))
+                                (g-node->scc-node (uber/dest g-edge))]))
+                        distinct
+                        (remove (fn [[src dest]] (= src dest))))
         sccg (-> (uber/multidigraph)
-                 (uber/add-nodes* sc-components))
-        sccg (reduce (fn maybe-add-sccg-edge [sccg g-edge]
-                       (let [g-src (uber/src g-edge)
-                             g-dest (uber/dest g-edge)
-                             sccg-src (g-node->scc-node g-src)
-                             sccg-dest (g-node->scc-node g-dest)]
-                         (if (or (= sccg-src sccg-dest)
-                                 (uber/has-edge? sccg sccg-src sccg-dest))
-                           ;; Then do not bother adding a self loop,
-                           ;; nor a parallel edge.  For the purposes
-                           ;; of this program, that would be a
-                           ;; redundant edge.
-                           sccg
-                           (uber/add-edges sccg [sccg-src sccg-dest]))))
-                     sccg (uber/edges g))]
+                 (uber/add-nodes* sc-components)
+                 (uber/add-edges* sccg-edges))]
     (assoc m
            :scc-graph sccg
            :node->scc-set g-node->scc-node)))
