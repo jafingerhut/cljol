@@ -103,8 +103,10 @@
 ;; Note 2:
 
 ;; uber/successors returns each successor node at most once, by using
-;; clojure.core/distinct in its implementation.  That is what I want
-;; here, so since it does this, no need to repreat it here.
+;; clojure.core/distinct in its implementation.  This code could call
+;; distinct, too, in case that changes in the future, but it is more
+;; efficient not to call distinct here and rely upon uber/successors
+;; doing so.
 
 (defn edge-vectors
   "Given an ubergraph g, return a map with three keys:
@@ -114,11 +116,11 @@
 
   :edges - edges is a vector of vectors of integers.  Using the
   integer node labels assigned in the :node->int map, suppose node n
-  in the graph g has the integer label n-int in the map.  Then (edge
-  n-int) is a vector, one per successor node of node n in g.  The
-  vector contains all of the integer labels of those successor nodes
-  of n.  There are no duplicates in this vector, even if g has
-  multiple parallel edges between two nodes in the graph."
+  in the graph g has the integer label A in the map.  Then (edge A) is
+  a vector, one per successor node of node n in g.  The vector
+  contains all of the integer labels of those successor nodes of n.
+  There are no duplicates in this vector, even if g has multiple
+  parallel edges between two nodes in the graph."
   [g]
   (let [n (uber/count-nodes g)
         {:keys [node->int int->node] :as m} (dense-integer-node-labels g)]
@@ -190,8 +192,8 @@
   size of the graph, meaning the sum of the number of nodes plus
   number of edges.
 
-  This implementation is almost certainly limited to Intger/MAX_VALUE
-  nodes in the greph, because part of its implementation uses signed
+  This implementation is limited to Integer/MAX_VALUE = (2^31 - 1)
+  nodes in the graph, because part of its implementation uses signed
   Java int's to label the nodes, and signed comparisons to compare
   node numbers to each other.  This limit could easily be increased by
   replacing int with long in those parts of the implementation.
@@ -199,11 +201,12 @@
   This function returns a map with all of the keys that the function
   edge-vectors returns, plus the following:
 
-  :components - the associated value is a vector of sets of nodes from the graph g.  Each set represents all of the nodes in one strongly connected component of g.
-
-  TBD: I believe that the order of these sets represents either a
-  topological order of these components in the scc-graph, or a reverse
-  topological order.  Test and document which it is, if either.
+  :components - the associated value is a vector, where each vector
+  element is a set of nodes of the graph g.  Each set represents all
+  of the nodes in one strongly connected component of g.  The vector
+  is ordered such that they are in a topological ordering of the
+  components, i.e. there might be edges from set i to set j if i < j,
+  but there are guaranteed to be no edges from set j to set i.
 
   :rindex - A Java array of ints, used as part of the implementation.
   I believe that the contents of this array can be used to solve other
@@ -215,6 +218,10 @@
   TBD: It would be nice to implement several of these other graph
   algorithms listed at that reference.
 
+  :root - A Java array of booleans, used as part of the
+  implementation.  Like :rindex, it may be useful for calculating
+  other information about the graph.
+
   References for this implementation:
 
   https://en.wikipedia.org/wiki/Tarjan%27s_strongly_connected_components_algorithm
@@ -224,9 +231,9 @@
   repository:
   https://github.com/DavePearce/StronglyConnectedComponents
 
-   That repository also has links to a research paper and blog article
-  describing the algorithm.  That repository contains implementations
-  of 4 variants of the algorithm:
+  That repository has links to a research paper and blog article
+  describing the algorithm, and contains implementations of 4 variants
+  of the algorithm with the following class names:
 
   PeaFindScc1.Recursive
   PeaFindScc1.Imperative
@@ -376,11 +383,14 @@
                                      (recur (inc i)))
                                    ;; else
                                    (mapv persistent! comps)))]
+                ;; While we could also return vS and iS, I believe
+                ;; they always have empty front and back stacks when
+                ;; the algorithm is complete, so there is no
+                ;; information to be gained by the caller if we did
+                ;; return them.
                 (assoc m
                        :components components
                        :rindex rindex
-                       :vS vS
-                       :iS iS
                        :root root)))]
         (topvisit)))))
 
@@ -402,10 +412,16 @@
 
 
 (defn scc-graph
-  "Given a graph g, return a map containing two values.
+  "Given a graph g, return a map containing several keys, one of which
+  represents the strongly connected components of the graph, and the
+  others calculated while determining the strongly connected
+  components.
 
-  Calculate the sets of strongly connected components in g.  Those
-  sets of g nodes become the values of nodes in the scc-graph.  The
+  The returned map contains all keys and associated values as returned
+  by the function scc-tarjan.  See its documentation for details.
+
+  For each strongly connected component in g, the set of nodes in that
+  component become one node in a graph we call the scc-graph.  The
   scc-graph has an edge from node A (which is a set of nodes in g) to
   another node B (which is another, disjoint, set of nodes in g), if
   there is an edge in g from any node in set A to any node in set B.
@@ -424,10 +440,9 @@
   strongly connected component with n.  This set always contains at
   least node n, and may contain others."
   [g]
-  (let [m (scc-tarjan g)
-        sc-components (:components m)
+  (let [{:keys [components] :as m} (scc-tarjan g)
         g-node->scc-node (into {}
-                               (for [scc-node sc-components
+                               (for [scc-node components
                                      g-node scc-node]
                                  [g-node scc-node]))
         sccg-edges (->> (uber/edges g)
@@ -437,7 +452,7 @@
                         distinct
                         (remove (fn [[src dest]] (= src dest))))
         sccg (-> (uber/multidigraph)
-                 (uber/add-nodes* sc-components)
+                 (uber/add-nodes* components)
                  (uber/add-edges* sccg-edges))]
     (assoc m
            :scc-graph sccg

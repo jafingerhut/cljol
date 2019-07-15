@@ -38,6 +38,20 @@
 (d/view-graph g2 {:save {:filename "g2.pdf" :format :pdf}})
 
 (def scct (gr/scc-tarjan g))
+;; :components components
+;; :rindex rindex
+;; :vS vS - Testing showed both front and back stacks as empty when
+;; scc-tarjan returned, for vS and iS.  I would guess that the
+;; scc-tarjan algorithm guarantees these will all be empty when the
+;; function completes.  If so, no good reason to return them.
+;; :iS iS
+;; :root root
+(keys scct)
+(pprint (map (juxt key #(type (val %))) scct))
+(gr/isEmptyFront (:vS scct))
+(gr/isEmptyBack (:vS scct))
+(gr/isEmptyFront (:iS scct))
+(gr/isEmptyBack (:iS scct))
 (pprint scct)
 (uber/pprint g)
 
