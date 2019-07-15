@@ -131,23 +131,23 @@
                  (range n)))))
 
 
-(definterface DoubleStack
-  (^boolean isEmptyFront [])
-  (^int topFront [])
-  (^int popFront [])
-  (^void pushFront [^int item])
+(defprotocol DoubleStack
+  (^boolean isEmptyFront [this])
+  (^int topFront [this])
+  (^int popFront [this])
+  (^void pushFront [this item])
 
-  (^boolean isEmptyBack [])
-  (^int topBack [])
-  (^int popBack [])
-  (^void pushBack [^int item]))
+  (^boolean isEmptyBack [this])
+  (^int topBack [this])
+  (^int popBack [this])
+  (^void pushBack [this item]))
 
 
 (deftype DoubleStackImpl [^ints items ^long n
                           ^:unsynchronized-mutable fp  ;; front stack pointer
                           ^:unsynchronized-mutable bp  ;; back stack pointer
                           ]
-  DoubleStack
+  cljol.graph.DoubleStack
   (isEmptyFront [this]
     (zero? fp))
   (topFront [this]
@@ -156,7 +156,7 @@
     (set! fp (dec fp))
     (aget items fp))
   (pushFront [this item]
-    (aset items fp item)
+    (aset items fp (int item))
     (set! fp (inc fp)))
 
   (isEmptyBack [this]
@@ -169,7 +169,7 @@
       (aget items p)))
   (pushBack [this item]
     (set! bp (dec bp))
-    (aset items bp item)))
+    (aset items bp (int item))))
 
 
 (defn double-stack [n]
@@ -178,8 +178,8 @@
 
 (comment
 (def ds (double-stack 5))
-(.isEmptyBack ds)
-(.isEmptyFront ds)
+(isEmptyBack ds)
+(isEmptyFront ds)
 )
 
 
@@ -270,8 +270,8 @@
             ;; method Imperative.beginVisiting(int v)
             beginVisiting (fn [v]
                             ;; First time this node encountered
-                            (.pushFront vS v)
-                            (.pushFront iS 0)
+                            (pushFront vS v)
+                            (pushFront iS 0)
                             (aset root v true)
                             (aset rindex v (int @index))
                             (var-set index (inc @index)))
@@ -279,22 +279,22 @@
             ;; method Imperative.finishVisiting(int v)
             finishVisiting (fn [v]
                              ;; Take this vertex off the call stack
-                             (.popFront vS)
-                             (.popFront iS)
+                             (popFront vS)
+                             (popFront iS)
                              ;; Update component information
                              (if (aget root v)
                                (do
                                  (var-set index (dec @index))
-                                 (while (and (not (.isEmptyBack vS))
+                                 (while (and (not (isEmptyBack vS))
                                              (<= (aget rindex v)
-                                                 (aget rindex (.topBack vS))))
-                                   (let [w (.popBack vS)]
+                                                 (aget rindex (topBack vS))))
+                                   (let [w (popBack vS)]
                                      (aset rindex w (int @c))
                                      (var-set index (dec @index))))
                                  (aset rindex v (int @c))
                                  (var-set c (dec @c)))
                                ;; else
-                               (.pushBack vS v)))
+                               (pushBack vS v)))
 
             ;; method Imperative.beginEdge(int v, int k)
             beginEdge (fn [v k]
@@ -302,8 +302,8 @@
                               w (g-edges k)]
                           (if (zero? (aget rindex w))
                             (do
-                              (.popFront iS)
-                              (.pushFront iS (inc k))
+                              (popFront iS)
+                              (pushFront iS (inc k))
                               (beginVisiting w)
                               true)
                             ;; else
@@ -320,8 +320,8 @@
 
             ;; method Imperative.visitLoop()
             visitLoop (fn []
-                        (let [v (.topFront vS)
-                              i (atom (.topFront iS))
+                        (let [v (topFront vS)
+                              i (atom (topFront iS))
                               g-edges (edges v)
                               num-edges (count g-edges)]
                           ;; Continue traversing out-edges until none left.
@@ -350,7 +350,7 @@
             ;; method Imperative.visit(int v)
             visit (fn [v]
                     (beginVisiting v)
-                    (while (not (.isEmptyFront vS))
+                    (while (not (isEmptyFront vS))
                       (visitLoop)))
 
             ;; from Imperative.visit() method
