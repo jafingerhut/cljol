@@ -1,8 +1,11 @@
 (ns cljol.graph
+  (:import (java.lang.management ManagementFactory GarbageCollectorMXBean))
   (:require [clojure.set :as set]
+            [clojure.pprint :as pp]
+            [loom.alg-generic :as lalg]
             [ubergraph.core :as uber]
-            [ubergraph.alg :as ualg]))
-
+            [ubergraph.alg :as ualg]
+            [cljol.performance :as perf :refer [my-time print-perf-stats]]))
 
 (set! *warn-on-reflection* true)
 
@@ -615,6 +618,243 @@
                  init
                  (ualg/pre-traverse g n))
      init)))
+
+
+(defn last-and-count
+  "Return a vector of 2 elements, taking linear time in the size of
+  coll, and traversing through its elements only once.  The first
+  element of the returned vector is the last item in coll, or nil if
+  coll is empty.  The second element of the returned vector is the
+  number of elements in coll, 0 if coll is empty."
+  [coll]
+  (letfn [(step [s count]
+            (if (next s)
+              (recur (next s) (inc count))
+              [(first s) count]))]
+    (if-let [s (seq coll)]
+      (step s 1)
+      [nil 0])))
+
+(comment
+(last-and-count [:a :b :c])
+;; => [:c 3]
+(last-and-count (take 0 (range 100)))
+;; => [nil 0]
+(last-and-count (take 1 (range 100)))
+;; => [0 1]
+(last-and-count (take 5 (range 100)))
+;; => [4 5]
+)
+
+
+(defn all-predecessors-in-set? [g nodes-to-check-coll node-set]
+  (every? (fn [n]
+            (every? #(contains? node-set %)
+                    (uber/predecessors g n)))
+          nodes-to-check-coll))
+
+
+(defn node-status [g n node-set-reached-from-g reachable-set-complete?]
+  (cond
+    (not reachable-set-complete?)
+    ;; In this case, we did not finish the DFS traversal of nodes
+    ;; reachable from n.  Node n might be an owner, but we have not
+    ;; done enough work to find out.  Thus we only have partial
+    ;; statistics for its reachable nodes.
+    :unknown
+    
+    ;; For the rest of the cases below, we know that we did finish the
+    ;; DFS traversal, and we do have full accurate stiatics for all of
+    ;; n's reachable nodes.
+
+    ;; If we check that all nodes reached, other than
+    ;; n itself, have all of their predecessor nodes within the set of
+    ;; nodes traversed, then n is an owner.
+    (all-predecessors-in-set? g (disj node-set-reached-from-g n)
+                              node-set-reached-from-g)
+    :owner
+    
+    ;; Otherwise, we know for sure that node n is not an owner,
+    ;; because there is an edge into one of its reachable nodes that
+    ;; can be reached via a path not passing through n at all.
+    :else :not-owner))
+
+
+(defn complete-statistics? [status]
+  ;; As indicated in function node-status above, these are all node
+  ;; status values for which we know we have complete statistics on
+  ;; all reachable nodes.
+  (contains? #{:owner :not-owner} status))
+
+
+(defn add-statistics [stats1 stats2]
+  (merge-with + stats1 stats2))
+
+
+(defn bounded-reachable-node-stats2
+  "Similar in goal to total-reachable-node-size, but goes to some
+  lengths to run faster, while in some cases producing resulting
+  statistics that are only partial counts of number of reachable
+  nodes, and total reachable node size.
+
+  Returns a graph g2 that is the same as the one given, except that
+  the nodes have some additional attributes added to them, or if the
+  nodes already had those attributes, the values of those attributes
+  are replaced with new values as described here.
+
+  Node attributes given a value by this function in the returned
+  graph: :scc-num-nodes :partial-statistics :num-reachable-nodes :total-size
+
+  :scc-num-nodes
+
+  Number of nodes that are in the same strongly connected component as
+  the node with this attribute.  All of those are definitely reachable
+  from each other, so the :num-reachable-nodes attributes will always
+  be at least this large, and the :total-size attribute will always be
+  at least equal to the total size of all of the nodes in the same
+  strongly connected component.
+
+  :complete-statistics
+
+  false means that :num-reachable-nodes and :total-size represent the
+  values for some nodes reachable from this one, but not for all such
+  reachable nodes.  This can happen depending upon the structure of
+  the graph, if the algorithm deems it would take excessive time to
+  calculate an exact value.  true means that :num-reachable-nodes
+  and :total-size represent exact totals for all reachable nodes.
+
+  :num-reachable-nodes
+
+  TBD
+
+  :total-size
+
+  TBD"
+  [g node-size-fn opts]
+  (let [debug-level (get opts :bounded-reachable-node-stats2-debuglevel 0)
+        {scc-data :ret :as scc-perf} (my-time (scc-graph g))
+        {:keys [scc-graph node->scc-set components]} scc-data
+        _ (when (>= debug-level 1)
+            (print "The scc-graph has" (uber/count-nodes scc-graph) "nodes and"
+                   (uber/count-edges scc-graph) "edges, took: ")
+            (print-perf-stats scc-perf))
+        {num-reachable-nodes-in-scc :ret :as p} (my-time (into {}
+                                         (for [sccg-node components]
+                                           [sccg-node (count sccg-node)])))
+        _ (when (>= debug-level 1)
+            (print "Calculated num-reachable-nodes within each of"
+                   (count components) "SCCs in: ")
+            (print-perf-stats p))
+        {total-size-in-scc :ret :as p} (my-time (into {}
+                                (for [sccg-node components]
+                                  [sccg-node
+                                   (reduce + (map #(node-size-fn g %)
+                                                  sccg-node))])))
+        _ (when (>= debug-level 1)
+            (print "Calculated total-size within each of"
+                   (count components) "SCCs in: ")
+            (print-perf-stats p))
+        max-nodes-to-traverse-in-one-dfs 10
+        time1 (. System (nanoTime))
+        sccg-node-info
+        (loop [remaining-sccg-nodes (rseq components)
+               sccg-node-info {}
+               comp-count 0]
+          (when (and (>= debug-level 1) (zero? (mod comp-count 10000)))
+            (println "comp-count=" comp-count
+                     "in loop to calculate sccg-node-info: "
+                     (/ (- (. System (nanoTime)) time1) 1000000.0)
+                     "msec after starting loop"))
+          (if-let [rc (seq remaining-sccg-nodes)]
+            (let [owner? #(= :owner (get-in sccg-node-info [% :status]))
+                  sccg-node (first rc)
+                  ;; custom-successors-fn is the same as the normal
+                  ;; successors in the scc-graph, except that if a
+                  ;; node is categorized as an owner, we stop the DFS
+                  ;; at that point as if it were a leaf node, i.e. as
+                  ;; if it had no edges out.  This can make the DFS
+                  ;; significantly faster for owners, for whom we know
+                  ;; all of the stats already, without having to
+                  ;; re-traverse the nodes that can only be reached
+                  ;; through them.
+                  custom-successors-fn (fn [node]
+                                         (if (owner? node)
+                                           ()
+                                           (uber/successors scc-graph node)))
+                  [final-stats num-nodes-traversed]
+                  (last-and-count
+                   (take
+                    max-nodes-to-traverse-in-one-dfs
+                    (reductions
+                     (fn add-one-node [acc sccg-node]
+                       (let [{:keys [nodes-reached statistics]} acc
+                             new-statistics
+                             (if (owner? sccg-node)
+                               ;; then we can add its total stats for
+                               ;; all nodes it can reach.  Because sccg-node
+                               ;; is an owner, we know this will never
+                               ;; cause double-counting.
+                               (get-in sccg-node-info [sccg-node :statistics])
+                               ;; else we can only add the stats for
+                               ;; this one sccg-graph node sccg-node, not
+                               ;; anything that can be reached from
+                               ;; it, to avoid the possibility of
+                               ;; double-counting.
+                               {:num-reachable-nodes
+                                (num-reachable-nodes-in-scc sccg-node)
+                                :total-size
+                                (total-size-in-scc sccg-node)})]
+                         {:nodes-reached (conj nodes-reached sccg-node)
+                          :statistics (add-statistics statistics
+                                                      new-statistics)}))
+                     {:nodes-reached #{} :num-reachable-nodes 0, :total-size 0}
+                     (lalg/pre-traverse custom-successors-fn sccg-node))))
+
+;;                  _ (println "stats2 num-nodes-traversed=" num-nodes-traversed
+;;                             "(:statistics final-stats)="
+;;                             (:statistics final-stats)
+;;                             "(:nodes-reached final-stats)="
+;;                             (:nodes-reached final-stats))
+
+                  ;; If this condition is true, then we definitely
+                  ;; completed the DFS traversal.  If the two numbers
+                  ;; compared are equal, maybe we traversed all nodes,
+                  ;; but we do not have enough information to tell, so
+                  ;; assume no.
+                  dfs-completed? (< num-nodes-traversed
+                                    max-nodes-to-traverse-in-one-dfs)
+                  new-status (node-status scc-graph sccg-node
+                                          (:nodes-reached final-stats)
+                                          dfs-completed?)
+                  new-node-info {:status new-status
+                                 :statistics (:statistics final-stats)}]
+              (recur (rest rc) (assoc sccg-node-info sccg-node new-node-info)
+                     (inc comp-count)))
+            
+            ;; else
+            sccg-node-info))]
+    (when (>= debug-level 1)
+      (println "frequencies of occurrences of nodes with different :status attribute:")
+      (pp/pprint (frequencies (map :status (vals sccg-node-info))))
+      (println))
+    (reduce (fn [g n]
+              ;; tbd: since the attribute values we will add to all
+              ;; nodes in the same strongly connected component of g
+              ;; are the same, consider calculating those stats once
+              ;; and doing a nested inner loop over the nodes in the
+              ;; component.
+              (let [sccg-node (node->scc-set n)]
+                (uber/add-attrs
+                 g n
+                 (let [info (sccg-node-info sccg-node)
+                       stats (:statistics info)]
+                   (assoc stats
+                          :scc-num-nodes (num-reachable-nodes-in-scc sccg-node)
+                          :debug-status (:status info)
+                          :complete-statistics (complete-statistics?
+                                                (:status info)))))))
+            g (uber/nodes g))))
+
 
 
 (comment

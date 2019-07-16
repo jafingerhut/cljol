@@ -3,46 +3,16 @@
   (:import (org.openjdk.jol.info ClassLayout GraphLayout GraphPathRecord
                                  ClassData FieldData))
   (:import (org.openjdk.jol.vm VM))
-  (:import (java.lang.management ManagementFactory GarbageCollectorMXBean))
   (:require [clojure.set :as set]
             [clojure.string :as str]
             [clojure.pprint :as pp]
             [ubergraph.core :as uber]
             [ubergraph.alg :as ualg]
-            [cljol.graph :as gr]))
+            [cljol.graph :as gr]
+            [cljol.performance :as perf :refer [my-time print-perf-stats]]))
 
 
 (set! *warn-on-reflection* true)
-
-
-(defn gc-collection-stats []
-  (let [mxbeans (ManagementFactory/getGarbageCollectorMXBeans)]
-    (apply merge-with +
-      (for [^GarbageCollectorMXBean gc mxbeans]
-        {:gc-collection-count (max 0 (. gc getCollectionCount))
-         :gc-collection-time-msec (max 0 (. gc getCollectionTime))}))))
-
-
-(defn gc-collection-stats-delta [start-stats end-stats]
-  (merge-with - end-stats start-stats))
-
-
-(defmacro my-time [expr]
-  `(let [start-nsec# (. System (nanoTime))
-         start-gc-stats# (gc-collection-stats)
-         ret# ~expr]
-     {:time-nsec (- (. System (nanoTime)) start-nsec#)
-      :gc-stats (gc-collection-stats-delta start-gc-stats#
-                                           (gc-collection-stats))
-      :ret ret#}))
-
-
-(defn print-perf-stats [perf-stats]
-  (let [{:keys [time-nsec gc-stats]} perf-stats
-        {:keys [gc-collection-count gc-collection-time-msec]} gc-stats]
-    (println (/ time-nsec 1000000.0) "msec,"
-             gc-collection-count "gc-count,"
-             gc-collection-time-msec "gc-time-msec")))
 
 
 ;; bounded-count, starts-with? copied from Clojure's implementation,
@@ -716,27 +686,31 @@ thread."
   instead of the values if they have not been calculated for this
   node."
   [objmap opts]
-  (let [calc-tot-size (get opts :calculate-total-size-node-attribute :bounded)
-        node-count-min-limit (get opts :node-count-min-limit
-                                  default-node-count-min-limit)
-        total-size-min-limit (get opts :total-size-min-limit
-                                  default-total-size-min-limit)
-        num (:num-reachable-nodes objmap)
+  (let [num (:num-reachable-nodes objmap)
         num-known? (number? num)
         total (:total-size objmap)
         total-known? (number? total)
-        over-bounded-limits? (and num-known?
-                                  total-known?
-                                  (= :bounded calc-tot-size)
-                                  (> num node-count-min-limit)
-                                  (> total total-size-min-limit))]
+        complete-statistics? (get objmap :complete-statistics true)]
     (format "%s%s object%s, %s bytes reachable"
-            (if over-bounded-limits? "at least " "")
+            (if complete-statistics? "" "at least ")
             (if num-known? (str num) "?")
             (if num-known?
-              (if (> (:num-reachable-nodes objmap) 1) "s" "")
+              (if (> num 1) "s" "")
               "s")
             (if total-known? (str total) "?"))))
+
+
+(defn scc-size
+  "Return a string describing the number of nodes in the same strongly
+  connected component as this object."
+  [objmap opts]
+  (let [num (:scc-num-nodes objmap)
+        num-known? (number? num)]
+    (format "%s object%s in same SCC with this one"
+            (if num-known? (str num) "?")
+            (if num-known?
+              (if (> num 1) "s" "")
+              "s"))))
 
 
 (def class-name-prefix-abbreviations
@@ -895,6 +869,7 @@ thread."
   [address-hex
    size-bytes
    total-size-bytes
+   scc-size
    class-description
    field-values
    path-to-object
@@ -904,6 +879,7 @@ thread."
   [;;address-hex
    size-bytes
    total-size-bytes
+   scc-size
    class-description
    field-values
    ;;path-to-object
@@ -913,6 +889,7 @@ thread."
   [;;address-hex
    size-bytes
    total-size-bytes
+   scc-size
    class-description
    field-values
    ;;path-to-object
@@ -993,7 +970,7 @@ thread."
         debug-level (get opts :consistent-reachable-objects-debuglevel 0)]
     (when (>= debug-level 1)
       (println "reachable-objmaps try 1")
-      (pp/pprint (gc-collection-stats))
+      (pp/pprint (perf/gc-collection-stats))
       (println))
     (loop [{obj-graph :ret :as p} (my-time (reachable-objmaps obj-coll opts))
            num-tries 1]
@@ -1054,10 +1031,28 @@ thread."
         total-size-min-limit (get opts :total-size-min-limit
                                   default-total-size-min-limit)]
     (reduce (fn [g n]
-              (uber/add-attrs g n (gr/bounded-reachable-node-stats
-                                   g n object-size-bytes node-count-min-limit
-                                   total-size-min-limit)))
+              (let [stats (gr/bounded-reachable-node-stats
+                           g n object-size-bytes node-count-min-limit
+                           total-size-min-limit)
+                    num (:num-reachable-nodes stats)
+                    total (:total-size stats)
+                    over-bounded-limits? (and (> num node-count-min-limit)
+                                              (> total total-size-min-limit))]
+                (uber/add-attrs g n (assoc stats
+                                           :complete-statistics
+                                           (not over-bounded-limits?)))))
             g (uber/nodes g))))
+
+
+(defn add-bounded-total-size-bytes-node-attr2
+  "Adds attributes :total-size (in bytes, derived from the
+  existing :size attribute on the nodes) and :num-reachable-nodes to
+  all nodes of g.  Do this in a way with bounded searching through the
+  graph, which may report smaller than the actual total values of
+  reachable nodes, but always reports nodes and total size that do
+  exist."
+  [g opts]
+  (gr/bounded-reachable-node-stats2 g object-size-bytes opts))
 
 
 (defn find-node-for-obj
@@ -1088,12 +1083,14 @@ thread."
             (print "converted" (count objmaps) "objmaps into ubergraph with"
                    (uber/count-edges g) "edges: ")
             (print-perf-stats p))
-        g (if (contains? #{:complete :bounded} calc-tot-size)
+        g (if (contains? #{:complete :bounded :bounded2} calc-tot-size)
             (let [{g :ret :as p}
                   (my-time
                    (case calc-tot-size
                      :complete (add-complete-total-size-bytes-node-attr g)
-                     :bounded (add-bounded-total-size-bytes-node-attr g opts)))]
+                     :bounded (add-bounded-total-size-bytes-node-attr g opts)
+                     :bounded2 (add-bounded-total-size-bytes-node-attr2 g opts)
+                     ))]
               (when (>= debug-level 1)
                 (print "calculated" calc-tot-size "total sizes: ")
                 (print-perf-stats p))
@@ -1231,7 +1228,7 @@ thread."
 
 
 (def cljol-node-keys-to-remove
-  [:address :size :total-size :num-reachable-nodes
+  [:address :size :total-size :num-reachable-nodes :complete-statistics
    :obj :fields :path :distance])
 
 

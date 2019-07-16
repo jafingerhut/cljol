@@ -10,14 +10,16 @@
    [#'d/address-decimal
     #'d/size-bytes
     #'d/total-size-bytes
+    #'d/scc-size
     #'d/class-description
     #'d/field-values
     #'d/non-realizing-javaobj->str]
    :reachable-objmaps-debuglevel 1
    :consistent-reachable-objects-debuglevel 1
    :graph-of-reachable-objects-debuglevel 1
+   :bounded-reachable-node-stats2-debuglevel 1
 ;;   :calculate-total-size-node-attribute :complete
-   :calculate-total-size-node-attribute :bounded
+   :calculate-total-size-node-attribute :bounded2
 ;;   :calculate-total-size-node-attribute nil
    :slow-instance-size-checking? true
 ;;   :stop-walk-at-references false  ;; default true
@@ -25,6 +27,8 @@
 (def v1 (vector 2))
 )
 
+(def v1 (let [x :x y :y] {x y y x}))
+(def v1 [[:x :y] [:y :x]])
 (def v1 (list 2))
 (def v1 (class 5))
 (def v1 (vec (range 4)))
@@ -36,6 +40,29 @@
 (d/view-graph g)
 (d/view-graph g2)
 (d/view-graph g2 {:save {:filename "g2.pdf" :format :pdf}})
+
+;; Additional memory for each new 2-element vector, not counting the
+;; top level vector: 40-byte clojure.lang.PersistentVector, 24-byte
+;; java.lang.Object array with 2 elements, 2 24-byte Long objects.  So
+;; 40+24+2*24=112 additional bytes per vector.
+(def g (d/sum [[1 2] [3 4] [5 6] [7 8]] opts))
+
+;; The keywords :a and :b are shared by all of these maps, i.e. they
+;; are identical objects in memory.  The memory distinct to each map
+;; is a 32-byte clojure.lang.PersistentArrayMap, a 32-byte
+;; java.lang.Object array, and 2 24-byte Long objects.  So
+;; 2*32+2*24=112 additional bytes per map.
+(def g (d/sum [{:a 1 :b 2} {:a 3 :b 4} {:a 5 :b 6} {:a 7 :b 8}] opts))
+
+(defn remove-node-labels [g]
+  (reduce (fn [g n] (uber/remove-attr g n :label))
+          g
+          (uber/nodes g)))
+
+(def g2 (remove-node-labels (gr/bounded-reachable-node-stats2 g d/object-size-bytes)))
+(uber/pprint g2)
+(uber/viz-graph g2 {:auto-label true :rankdir :LR})
+(def dot-str (uber/viz-graph g2 {:auto-label true :rankdir :LR :save {:filename "g2.pdf" :format :pdf}}))
 
 (def scct (gr/scc-tarjan g))
 ;; :components components
@@ -534,3 +561,20 @@ g1
                  (conj! removed-nodes v)))
         ;; else
         (uber/remove-nodes* g (persistent! removed-nodes))))))
+
+
+(defn test-closure [x]
+  (loop [y 0]
+    (if (< y x)
+      (let [foo (fn [z]
+                  (println "z=" z "y=" y))]
+        (foo x)
+        (recur (inc y))))))
+
+(test-closure 4)
+
+;; z= 4 y= 0
+;; z= 4 y= 1
+;; z= 4 y= 2
+;; z= 4 y= 3
+
