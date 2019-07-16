@@ -754,7 +754,11 @@
             (print "Calculated total-size within each of"
                    (count components) "SCCs in: ")
             (print-perf-stats p))
-        max-nodes-to-traverse-in-one-dfs 10
+        ;; Make this large enough to cause nodes with 32 edges out of
+        ;; them to traverse at least those, plus the object itself,
+        ;; plus the empty stats one that is always first element in
+        ;; sequence returned by reductions, as written now.
+        max-nodes-to-traverse-in-one-dfs 10  ;; 35
         time1 (. System (nanoTime))
         sccg-node-info
         (loop [remaining-sccg-nodes (rseq components)
@@ -764,7 +768,11 @@
             (println "comp-count=" comp-count
                      "in loop to calculate sccg-node-info: "
                      (/ (- (. System (nanoTime)) time1) 1000000.0)
-                     "msec after starting loop"))
+                     "msec after starting loop")
+            (println "frequencies of occurrences of nodes with different :status attribute:")
+            (pp/pprint (into (sorted-map)
+                             (frequencies (map :status (vals sccg-node-info)))))
+            (println))
           (if-let [rc (seq remaining-sccg-nodes)]
             (let [owner? #(= :owner (get-in sccg-node-info [% :status]))
                   sccg-node (first rc)
@@ -782,39 +790,36 @@
                                            ()
                                            (uber/successors scc-graph node)))
                   [final-stats num-nodes-traversed]
-                  (last-and-count
-                   (take
-                    max-nodes-to-traverse-in-one-dfs
-                    (reductions
-                     (fn add-one-node [acc sccg-node]
-                       (let [{:keys [nodes-reached statistics]} acc
-                             new-statistics
-                             (if (owner? sccg-node)
-                               ;; then we can add its total stats for
-                               ;; all nodes it can reach.  Because sccg-node
-                               ;; is an owner, we know this will never
-                               ;; cause double-counting.
-                               (get-in sccg-node-info [sccg-node :statistics])
-                               ;; else we can only add the stats for
-                               ;; this one sccg-graph node sccg-node, not
-                               ;; anything that can be reached from
-                               ;; it, to avoid the possibility of
-                               ;; double-counting.
-                               {:num-reachable-nodes
-                                (num-reachable-nodes-in-scc sccg-node)
-                                :total-size
-                                (total-size-in-scc sccg-node)})]
-                         {:nodes-reached (conj nodes-reached sccg-node)
-                          :statistics (add-statistics statistics
-                                                      new-statistics)}))
-                     {:nodes-reached #{} :num-reachable-nodes 0, :total-size 0}
-                     (lalg/pre-traverse custom-successors-fn sccg-node))))
-
-;;                  _ (println "stats2 num-nodes-traversed=" num-nodes-traversed
-;;                             "(:statistics final-stats)="
-;;                             (:statistics final-stats)
-;;                             "(:nodes-reached final-stats)="
-;;                             (:nodes-reached final-stats))
+                  (loop [dfs-nodes (lalg/pre-traverse custom-successors-fn
+                                                      sccg-node)
+                         num-dfs-steps 0
+                         nodes-reached (transient #{})
+                         num-reachable-nodes 0
+                         total-size 0]
+                    (if-let [s (and (< num-dfs-steps
+                                       max-nodes-to-traverse-in-one-dfs)
+                                    (seq dfs-nodes))]
+                      (let [n (first s)
+                            n-owner? (owner? n)
+                            stats (if n-owner? (get-in sccg-node-info
+                                                       [n :statistics]))
+                            new-num-reachable-nodes
+                            (if n-owner?
+                              (:num-reachable-nodes stats)
+                              (num-reachable-nodes-in-scc n))
+                            new-total-size (if n-owner?
+                                             (:total-size stats)
+                                             (total-size-in-scc n))]
+                        (recur (rest s)
+                               (inc num-dfs-steps)
+                               (conj! nodes-reached n)
+                               (+ num-reachable-nodes (long new-num-reachable-nodes))
+                               (+ total-size (long new-total-size))))
+                      ;; else
+                      [{:nodes-reached (persistent! nodes-reached)
+                        :statistics {:num-reachable-nodes num-reachable-nodes
+                                     :total-size total-size}}
+                       num-dfs-steps]))
 
                   ;; If this condition is true, then we definitely
                   ;; completed the DFS traversal.  If the two numbers

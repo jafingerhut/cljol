@@ -38,6 +38,7 @@
 (def g2 (d/sum [(gr/remove-all-attrs g)] opts))
 (def g (d/sum [#'v1] opts))
 (d/view-graph g)
+(d/view-graph g {:save {:filename "g.pdf" :format :pdf}})
 (d/view-graph g2)
 (d/view-graph g2 {:save {:filename "g2.pdf" :format :pdf}})
 
