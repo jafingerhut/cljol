@@ -76,15 +76,20 @@
 
 
 (defn dense-integer-node-labels
-  "Return a map with keys :node->int and :int->node
+  "Returns a map.
 
-  The value associated with key :node->int is a map with the nodes of g
-  as keys, and distinct integers in the range [0, n-1] where n is the
-  number of nodes.
+  Keys in returned map: :node->int :int->node
 
-  The value associated with key :int->node is a Java object array
-  indexed from [0, n-1], and is the reverse mapping of the :node->int
-  map."
+  :node->int
+
+  The associated value is a map with the nodes of g as keys, and
+  distinct integers in the range [0, n-1] where n is the number of
+  nodes.
+
+  :int->node
+
+  The associated value is a Java object array indexed from [0, n-1],
+  and is the reverse mapping of the :node->int map."
   [g]
   (let [int->node (object-array (uber/count-nodes g))]
     (loop [i 0
@@ -109,12 +114,14 @@
 ;; doing so.
 
 (defn edge-vectors
-  "Given an ubergraph g, return a map with three keys:
+  "Given an ubergraph g, return a map.
 
-  :node->int :int->node - These are the same as described as returned
-  from the function dense-integer-node-labels.  See its documentation.
+  Keys in returned map: :edges plus those returned by the function
+  dense-integer-node-labels
 
-  :edges - edges is a vector of vectors of integers.  Using the
+  :edges
+
+  The associated value is a vector of vectors of integers.  Using the
   integer node labels assigned in the :node->int map, suppose node n
   in the graph g has the integer label A in the map.  Then (edge A) is
   a vector, one per successor node of node n in g.  The vector
@@ -198,29 +205,35 @@
   node numbers to each other.  This limit could easily be increased by
   replacing int with long in those parts of the implementation.
 
-  This function returns a map with all of the keys that the function
-  edge-vectors returns, plus the following:
+  Keys in returned map: :components :rindex :root plus those returned
+  by function edge-vectors.
 
-  :components - the associated value is a vector, where each vector
-  element is a set of nodes of the graph g.  Each set represents all
-  of the nodes in one strongly connected component of g.  The vector
-  is ordered such that they are in a topological ordering of the
-  components, i.e. there might be edges from set i to set j if i < j,
-  but there are guaranteed to be no edges from set j to set i.
+  :components
 
-  :rindex - A Java array of ints, used as part of the implementation.
-  I believe that the contents of this array can be used to solve other
-  graph problems efficiently, e.g. perhaps biconnected components and
-  a few other applications for depth-first search mentioned here:
+  The associated value is a vector, where each vector element is a set
+  of nodes of the graph g.  Each set represents all of the nodes in
+  one strongly connected component of g.  The vector is ordered such
+  that they are in a topological ordering of the components,
+  i.e. there might be edges from set i to set j if i < j, but there
+  are guaranteed to be no edges from set j to set i.
+
+  :rindex
+
+  A Java array of ints, used as part of the implementation.  I believe
+  that the contents of this array can be used to solve other graph
+  problems efficiently, e.g. perhaps biconnected components and a few
+  other applications for depth-first search mentioned here:
 
   https://en.wikipedia.org/wiki/Depth-first_search#Applications
 
   TBD: It would be nice to implement several of these other graph
   algorithms listed at that reference.
 
-  :root - A Java array of booleans, used as part of the
-  implementation.  Like :rindex, it may be useful for calculating
-  other information about the graph.
+  :root
+
+  A Java array of booleans, used as part of the implementation.
+  Like :rindex, it may be useful for calculating other information
+  about the graph.
 
   References for this implementation:
 
@@ -417,9 +430,6 @@
   others calculated while determining the strongly connected
   components.
 
-  The returned map contains all keys and associated values as returned
-  by the function scc-tarjan.  See its documentation for details.
-
   For each strongly connected component in g, the set of nodes in that
   component become one node in a graph we call the scc-graph.  The
   scc-graph has an edge from node A (which is a set of nodes in g) to
@@ -431,14 +441,19 @@
   itself, even if the original graph has an edge from a node in set A
   to another (or the same) node in set A.
 
-  This derived graph is returned as the value associated with
-  key :scc-graph in the return value.
+  Keys in returned map: :scc-graph :node->scc-set plus those returned
+  by the function scc-tarjan.
 
-  The key :node->scc-set in the returned map has an associated value
-  that is a map where the keys are the nodes of g, and the value
-  associated with node n is the set of nodes that are in the same
-  strongly connected component with n.  This set always contains at
-  least node n, and may contain others."
+  :scc-graph
+
+  The associated value is the derived graph described above.
+
+  :node->scc-set
+
+  This associated value is a map where the keys are the nodes of g,
+  and the value associated with node n is the set of nodes that are in
+  the same strongly connected component with n.  This set always
+  contains at least node n, and may contain others."
   [g]
   (let [{:keys [components] :as m} (scc-tarjan g)
         g-node->scc-node (into {}
