@@ -1032,7 +1032,8 @@ thread."
                                   default-total-size-min-limit)]
     (reduce (fn [g n]
               (let [stats (gr/bounded-reachable-node-stats
-                           g n object-size-bytes node-count-min-limit
+                           g n (constantly 1) #(object-size-bytes g %)
+                           node-count-min-limit
                            total-size-min-limit)
                     num (:num-reachable-nodes stats)
                     total (:total-size stats)
@@ -1042,6 +1043,81 @@ thread."
                                            :complete-statistics
                                            (not over-bounded-limits?)))))
             g (uber/nodes g))))
+
+
+(defn add-bounded-total-size-bytes-node-attr3
+  "Adds attributes :total-size (in bytes, derived from the
+  existing :size attribute on the nodes) and :num-reachable-nodes to
+  all nodes of g.  Do this in a way with bounded searching through the
+  graph, which may report smaller than the actual total values of
+  reachable nodes, but always reports nodes and total size that do
+  exist."
+  [g opts]
+  (let [debug-level (get opts :bounded-reachable-node-stats-debuglevel 0)
+        node-count-min-limit (get opts :node-count-min-limit
+                                  default-node-count-min-limit)
+        total-size-min-limit (get opts :total-size-min-limit
+                                  default-total-size-min-limit)
+        {scc-data :ret :as scc-perf} (my-time (gr/scc-graph g))
+        {:keys [scc-graph node->scc-set components]} scc-data
+        _ (when (>= debug-level 1)
+            (print "The scc-graph has" (uber/count-nodes scc-graph) "nodes and"
+                   (uber/count-edges scc-graph) "edges, took: ")
+            (print-perf-stats scc-perf))
+        {num-reachable-nodes-in-scc :ret :as p} (my-time (into {}
+                                         (for [sccg-node components]
+                                           [sccg-node (count sccg-node)])))
+        _ (when (>= debug-level 1)
+            (print "Calculated num-reachable-nodes within each of"
+                   (count components) "SCCs in: ")
+            (print-perf-stats p))
+        {total-size-in-scc :ret :as p} (my-time (into {}
+                                (for [sccg-node components]
+                                  [sccg-node
+                                   (reduce + (map #(object-size-bytes g %)
+                                                  sccg-node))])))
+        _ (when (>= debug-level 1)
+            (print "Calculated total-size within each of"
+                   (count components) "SCCs in: ")
+            (print-perf-stats p))
+
+        ;; TBD: For each of the nodes containing a root node from the
+        ;; obj-coll that was used to generate the graph, make the
+        ;; node-count-min-limit and total-size-min-limit equal to
+        ;; Double/POSITIVE_INFINITY, so that a complete exact value is
+        ;; calculated for all of those nodes.
+
+        ;; Also have a special case to make sure
+        ;; that :complete-statistics is true for those nodes.
+        {scc-node-stats :ret :as p}
+        (my-time
+         (persistent!
+          (reduce (fn [acc n]
+                    (let [stats (gr/bounded-reachable-node-stats
+                                 scc-graph n num-reachable-nodes-in-scc
+                                 total-size-in-scc
+                                 node-count-min-limit
+                                 total-size-min-limit)
+                          num (:num-reachable-nodes stats)
+                          total (:total-size stats)
+                          over-bounds? (and (> num node-count-min-limit)
+                                            (> total total-size-min-limit))]
+                      (assoc! acc n (assoc stats
+                                           :complete-statistics
+                                           (not over-bounds?)))))
+                  (transient {})
+                  (uber/nodes scc-graph))))]
+    (when (>= debug-level 1)
+      (print "Calculated num-reachable-nodes and total-size"
+             " for scc-graph in: ")
+      (print-perf-stats p))
+    (reduce (fn [g scc-node]
+              (let [stat-attrs (assoc (scc-node-stats scc-node)
+                                      :scc-num-nodes (count scc-node))]
+                (reduce (fn [g g-node]
+                          (uber/add-attrs g g-node stat-attrs))
+                        g scc-node)))
+            g (uber/nodes scc-graph))))
 
 
 (defn add-bounded-total-size-bytes-node-attr2
@@ -1083,13 +1159,14 @@ thread."
             (print "converted" (count objmaps) "objmaps into ubergraph with"
                    (uber/count-edges g) "edges: ")
             (print-perf-stats p))
-        g (if (contains? #{:complete :bounded :bounded2} calc-tot-size)
+        g (if (contains? #{:complete :bounded :bounded2 :bounded3} calc-tot-size)
             (let [{g :ret :as p}
                   (my-time
                    (case calc-tot-size
                      :complete (add-complete-total-size-bytes-node-attr g)
                      :bounded (add-bounded-total-size-bytes-node-attr g opts)
                      :bounded2 (add-bounded-total-size-bytes-node-attr2 g opts)
+                     :bounded3 (add-bounded-total-size-bytes-node-attr3 g opts)
                      ))]
               (when (>= debug-level 1)
                 (print "calculated" calc-tot-size "total sizes: ")

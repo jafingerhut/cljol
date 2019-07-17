@@ -17,9 +17,12 @@
    :reachable-objmaps-debuglevel 1
    :consistent-reachable-objects-debuglevel 1
    :graph-of-reachable-objects-debuglevel 1
+   :bounded-reachable-node-stats-debuglevel 1
    :bounded-reachable-node-stats2-debuglevel 1
 ;;   :calculate-total-size-node-attribute :complete
-   :calculate-total-size-node-attribute :bounded2
+;;   :calculate-total-size-node-attribute :bounded
+;;   :calculate-total-size-node-attribute :bounded2
+   :calculate-total-size-node-attribute :bounded3
 ;;   :calculate-total-size-node-attribute nil
    :slow-instance-size-checking? true
 ;;   :stop-walk-at-references false  ;; default true
@@ -27,6 +30,13 @@
 (def v1 (vector 2))
 )
 
+(def v1 (repeat 5))
+(take 5 v1)
+(def v1 (let [a1 (atom 5)
+              a2 (atom 10)]
+          (swap! a1 (constantly a2))
+          (swap! a2 (constantly a1))
+          [a1 a2]))
 (def v1 (let [x :x y :y] {x y y x}))
 (def v1 [[:x :y] [:y :x]])
 (def v1 (list 2))

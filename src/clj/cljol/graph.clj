@@ -604,7 +604,7 @@
   If condition (b) is not true of the values returned, then they
   represent the total among all nodes reachable from node n in the
   graph."
-  [g n node-size-fn node-count-min-limit total-size-min-limit]
+  [g n node-count-fn node-size-fn node-count-min-limit total-size-min-limit]
   (let [init {:num-reachable-nodes 0
               :total-size 0}]
     (find-first-or-last
@@ -613,8 +613,9 @@
             (> total-size total-size-min-limit)))
      (reductions (fn add-one-node [acc n]
                    (let [{:keys [num-reachable-nodes total-size]} acc]
-                     {:num-reachable-nodes (inc num-reachable-nodes)
-                      :total-size (+ total-size (node-size-fn g n))}))
+                     {:num-reachable-nodes (+ num-reachable-nodes
+                                              (node-count-fn n))
+                      :total-size (+ total-size (node-size-fn n))}))
                  init
                  (ualg/pre-traverse g n))
      init)))
