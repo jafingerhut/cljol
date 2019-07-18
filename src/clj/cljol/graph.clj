@@ -38,7 +38,7 @@
 ;; successor) has not been considered yet.  This avoids realizing any
 ;; more of the sequences returned by 'successors' than is necessary.
 
-(defn pre-traverse
+(defn pre-traverse*
   "Traverses a graph depth-first preorder from start, successors being
   a function that returns direct successors for the node. Returns a
   lazy seq of nodes."
@@ -65,6 +65,10 @@
                 (lazy-seq (cons node
                                 (step stack (conj seen node)))))))]
     (step [[start (successors start)]] seen)))
+
+
+(defn pre-traverse [g n]
+  (pre-traverse* #(uber/successors g %) n))
 
 
 (defn induced-subgraph

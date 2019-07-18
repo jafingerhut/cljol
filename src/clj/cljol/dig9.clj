@@ -8,7 +8,7 @@
             [clojure.pprint :as pp]
             [ubergraph.core :as uber]
             [ubergraph.alg :as ualg]
-            [clj-async-profiler.core :as prof]
+            ;;[clj-async-profiler.core :as prof]
             [cljol.graph :as gr]
             [cljol.performance :as perf :refer [my-time print-perf-stats]]))
 
@@ -1041,7 +1041,7 @@ thread."
                                     [n (object-size-bytes g n)]))
         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         [g counts]
-        (prof/profile
+        ;;(prof/profile
          (reduce (fn [[g counts] n]
                   (let [[stats cnt] (gr/bounded-reachable-node-stats3
                                      g n
@@ -1059,7 +1059,7 @@ thread."
                                                 (not over-bounded-limits?)))
                      (conj counts cnt)]))
                  [g []] (uber/nodes g))
-         )
+         ;;)
         ]
     (println "frequencies of different number of nodes DFS traversed:")
     (pp/pprint (into (sorted-map) (frequencies counts)))
@@ -1193,7 +1193,7 @@ thread."
         ;; that :complete-statistics is true for those nodes.
         {[scc-node-stats-trans counts] :ret :as p}
         (my-time
-         (prof/profile
+         ;;(prof/profile
          (reduce (fn [[acc counts] n]
                    (let [;;[stats cnt] (gr/bounded-reachable-node-stats
                          ;;             scc-graph n num-reachable-nodes-in-scc
@@ -1217,7 +1217,7 @@ thread."
                       (conj counts cnt)]))
                  [(transient {}) []]
                  (uber/nodes scc-graph))
-         )
+         ;;)
         )
         scc-node-stats (persistent! scc-node-stats-trans)]
     (when (>= debug-level 1)
