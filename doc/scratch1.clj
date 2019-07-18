@@ -3,6 +3,7 @@
 (do
 (require '[cljol.dig9 :as d]
          '[cljol.graph :as gr]
+         '[loom.alg-generic :as lag]
 	 '[ubergraph.core :as uber]
 	 '[ubergraph.alg :as ualg])
 (def opts
@@ -20,16 +21,19 @@
    :bounded-reachable-node-stats-debuglevel 1
    :bounded-reachable-node-stats2-debuglevel 1
 ;;   :calculate-total-size-node-attribute :complete
-   :calculate-total-size-node-attribute :bounded
+;;   :calculate-total-size-node-attribute :bounded
 ;;   :calculate-total-size-node-attribute :bounded2
 ;;   :calculate-total-size-node-attribute :bounded3
-;;   :calculate-total-size-node-attribute :bounded4
+   :calculate-total-size-node-attribute :bounded4
 ;;   :calculate-total-size-node-attribute nil
    :slow-instance-size-checking? true
 ;;   :stop-walk-at-references false  ;; default true
    })
 (def v1 (vector 2))
 )
+
+(def g (d/sum [v1] opts))
+(def g (d/sum [#'v1] opts))
 
 (def v1 (repeat 5))
 (take 5 v1)
@@ -44,6 +48,7 @@
 (def v1 (class 5))
 (def v1 (vec (range 4)))
 (def g nil)
+(def g3 nil)
 (System/gc)
 (def g (d/sum [v1] opts))
 (def g2 (d/sum [(gr/remove-all-attrs g)] opts))

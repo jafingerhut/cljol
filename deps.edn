@@ -23,6 +23,7 @@
   :eastwood {:extra-deps {jonase/eastwood {:mvn/version "0.3.5"}}
              :main-opts ["-m" "eastwood.lint"
                          "{:source-paths,[\"src/clj\"],:test-paths,[\"test\"],:exclude-linters,[:implicit-dependencies],:exclude-namespaces,[cljol.jdk9-and-later]}"]}
+  :loomlocal {:override-deps {aysylu/loom {:mvn/version "1.0.3-SNAPSHOT"}}}
   :uberlocal {:override-deps {ubergraph {:mvn/version "0.5.4-andy-mods"}}}
   :jollocal {:override-deps {org.openjdk.jol/jol-core {:mvn/version "0.9.1"}}}
   :generate {:extra-paths ["src/generate"]
@@ -42,6 +43,7 @@
                    "-XX:+DebugNonSafepoints"]
         :extra-deps {com.clojure-goes-fast/clj-async-profiler
                      {:mvn/version "0.4.0"}}}
+  :printcomp {:jvm-opts ["-XX:+PrintCompilation"]}
   :disablecompressedoops {:jvm-opts ["-XX:-UseCompressedOops"]}
   }
  :paths ["src/clj" "test"]

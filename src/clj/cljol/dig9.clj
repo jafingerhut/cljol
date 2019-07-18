@@ -1162,9 +1162,9 @@ thread."
             (print "The scc-graph has" (uber/count-nodes scc-graph) "nodes and"
                    (uber/count-edges scc-graph) "edges, took: ")
             (print-perf-stats scc-perf)
-            (if (every? integer? (uber/nodes scc-graph))
-              (println "The scc-graph has nodes that are all integers")
-              (println "The scc-graph has nodes that are NOT all integers")))
+            (if (every? #(instance? Long %) (uber/nodes scc-graph))
+              (println "The scc-graph has nodes that are all Longs")
+              (println "The scc-graph has nodes that are NOT all Longs")))
         {num-reachable-nodes-in-scc :ret :as p}
         (my-time (into {} (for [sccg-node (uber/nodes scc-graph)]
                             [sccg-node (count (scc-node-num->scc-set

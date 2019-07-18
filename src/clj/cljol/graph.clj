@@ -28,6 +28,45 @@
           g (concat (uber/nodes g) (uber/edges g))))
 
 
+;; Unlike the function loom.alg-generic/pre-traverse in the Loom
+;; library as of version 1.0.1, the function below never puts a node
+;; onto the stack unless we know it has not been seen (aka visited) in
+;; the DFS traversal before.  Thus every node will be on the stack at
+;; most once.  Also what is on the stack is not only the node, but a
+;; pair [node remaining-successors], where remaining-successors is a
+;; sequence of the successors of node such that the edge (node ->
+;; successor) has not been considered yet.  This avoids realizing any
+;; more of the sequences returned by 'successors' than is necessary.
+
+(defn pre-traverse
+  "Traverses a graph depth-first preorder from start, successors being
+  a function that returns direct successors for the node. Returns a
+  lazy seq of nodes."
+  [successors start & {:keys [seen] :or {seen #{}}}]
+  (letfn [(step [stack seen]
+            (when-let [[node remaining-successors] (peek stack)]
+              (if (seen node)
+                ;; We have seen this node before, but we may not
+                ;; have seen all of its successors yet.  Continue
+                ;; checking successors where we left off.
+                (if-let [s (seq (drop-while seen remaining-successors))]
+                  ;; Then at least one neighbor of node has not been
+                  ;; seen yet.  Remember where we are in the
+                  ;; remaining-successors sequence for node, and push
+                  ;; the unseen node onto the stack.
+                  (recur (conj (pop stack)
+                               [node (rest s)]
+                               [(first s) (successors (first s))])
+                         seen)
+                  ;; else all neighbors of node have already been
+                  ;; seen.  Backtrack on the stack.
+                  (recur (pop stack) seen))
+                ;; else we have not seen this node before
+                (lazy-seq (cons node
+                                (step stack (conj seen node)))))))]
+    (step [[start (successors start)]] seen)))
+
+
 (defn induced-subgraph
   "Given a graph g, and a collection of nodes in that graph, return
   another graph containing only those nodes, and the edges of g that
@@ -533,9 +572,8 @@
                         (map (fn [g-edge]
                                [(g-node->scc-node-num (uber/src g-edge))
                                 (g-node->scc-node-num (uber/dest g-edge))]))
-                        distinct
                         (remove (fn [[src dest]] (= src dest))))
-        sccg (-> (uber/multidigraph)
+        sccg (-> (uber/digraph)
                  (uber/add-nodes* (range (count components)))
                  (uber/add-edges* sccg-edges))]
     (assoc m
@@ -684,9 +722,8 @@
                                               (node-count-fn n))
                       :total-size (+ total-size (node-size-fn n))}))
                  init
-                 (ualg/pre-traverse g n))
+                 (pre-traverse g n))
      init)))
-
 
 (defn bounded-reachable-node-stats3
   "Do a depth-first search of graph g starting at node n, stopping at
@@ -705,7 +742,7 @@
   represent the total among all nodes reachable from node n in the
   graph."
   [g n node-count-fn node-size-fn node-count-min-limit total-size-min-limit]
-  (loop [remaining-reachable-nodes (ualg/pre-traverse g n)
+  (loop [remaining-reachable-nodes (pre-traverse g n)
          num-dfs-traversed-nodes 0
          num-reachable-nodes 0
          total-size 0]
@@ -895,8 +932,8 @@
                                            ()
                                            (uber/successors scc-graph node)))
                   [final-stats num-nodes-traversed]
-                  (loop [dfs-nodes (lalg/pre-traverse custom-successors-fn
-                                                      sccg-node)
+                  (loop [dfs-nodes (pre-traverse custom-successors-fn
+                                                 sccg-node)
                          num-dfs-steps 0
                          nodes-reached (transient #{})
                          num-reachable-nodes 0
