@@ -477,6 +477,73 @@
            :node->scc-set g-node->scc-node)))
 
 
+(defn scc-graph2
+  "Given a graph g, return a map containing several keys, one of which
+  represents the strongly connected components of the graph, and the
+  others calculated while determining the strongly connected
+  components.
+
+  For each strongly connected component in g, the set of nodes in that
+  component become one node in a graph we call the scc-graph.  The
+  scc-graph has an edge from node A (which is a set of nodes in g) to
+  another node B (which is another, disjoint, set of nodes in g), if
+  there is an edge in g from any node in set A to any node in set B.
+  The scc-graph has only one such edge from node A to any other node
+  B, no matter how many edges are in the original graph.  Also, the
+  returned graph never has a 'self loop' edge from a node A back to
+  itself, even if the original graph has an edge from a node in set A
+  to another (or the same) node in set A.
+
+  Keys in returned map: :scc-graph :node->scc-set plus those returned
+  by the function scc-tarjan.
+
+  :scc-graph
+
+  The associated value is the derived graph described above.  Its
+  nodes are actually integers in the range 0 up to the number of nodes
+  minus 1.
+
+  :node->scc-set
+
+  This associated value is a map where the keys are the nodes of g,
+  and the value associated with node n is the set of nodes that are in
+  the same strongly connected component with n.  This set always
+  contains at least node n, and may contain others.
+
+  :scc-node-num->scc-set
+
+  A map.  Its keys are integers from 0 up to the number of nodes in
+  scc-graph, minus 1.  These are the nodes of scc-graph.  Associated
+  value is the scc-set, the set of nodes values of g that are all in
+  the same strongly connected component."
+  [g]
+  (let [{:keys [components] :as m} (scc-tarjan g)
+        scc-node-num->scc-set (into {}
+                                    (for [i (range (count components))]
+                                      [i (components i)]))
+        g-node->scc-node-num (into {}
+                                   (for [i (range (count components))
+                                         g-node (components i)]
+                                     [g-node i]))
+        g-node->scc-node (into {}
+                               (for [scc-node components
+                                     g-node scc-node]
+                                 [g-node scc-node]))
+        sccg-edges (->> (uber/edges g)
+                        (map (fn [g-edge]
+                               [(g-node->scc-node-num (uber/src g-edge))
+                                (g-node->scc-node-num (uber/dest g-edge))]))
+                        distinct
+                        (remove (fn [[src dest]] (= src dest))))
+        sccg (-> (uber/multidigraph)
+                 (uber/add-nodes* (range (count components)))
+                 (uber/add-edges* sccg-edges))]
+    (assoc m
+           :scc-graph sccg
+           :scc-node-num->scc-set scc-node-num->scc-set
+           :node->scc-set g-node->scc-node)))
+
+
 (defn dag-reachable-nodes
   "Return a map with the nodes of the given ubergraph as keys, with
   the value associated with node n being a set of nodes reachable from
@@ -570,21 +637,21 @@
   item in coll, return the last item.  If coll is empty, return the
   not-found value."
   [pred coll not-found]
-  (letfn [(step [s]
+  (letfn [(step [s n]
             (let [f (first s)]
               (if (pred f)
-                f
-                (if-let [n (next s)]
-                  (recur n)
-                  f))))]
+                [f n]
+                (if-let [nxt (next s)]
+                  (recur nxt (inc n))
+                  [f n]))))]
     (if-let [s (seq coll)]
-      (step s)
-      not-found)))
+      (step s 1)
+      [not-found -1])))
 
 (comment
-(= 6 (find-first-or-last #(>= % 5) [2 4 6 8] :not-found))
-(= 8 (find-first-or-last #(>= % 10) [2 4 6 8] :not-found))
-(= :not-found (find-first-or-last #(>= % 10) [] :not-found))
+(= [6 3] (find-first-or-last #(>= % 5) [2 4 6 8] :not-found))
+(= [8 4] (find-first-or-last #(>= % 10) [2 4 6 8] :not-found))
+(= [:not-found -1] (find-first-or-last #(>= % 10) [] :not-found))
 )
 
 
@@ -619,6 +686,43 @@
                  init
                  (ualg/pre-traverse g n))
      init)))
+
+
+(defn bounded-reachable-node-stats3
+  "Do a depth-first search of graph g starting at node n, stopping at
+  the first one of these conditions to become true:
+
+  (a) There are no more nodes in the depth-first traversal, or
+
+  (b) Among nodes traversed so far, the total number is greater than
+  node-count-min-limit and the total size is greater than
+  total-size-min-limit, where the size of one node is determined by
+  the function (node-size-fn g node).
+
+  Return a map with two keys: :num-reachable-nodes :total-size
+
+  If condition (b) is not true of the values returned, then they
+  represent the total among all nodes reachable from node n in the
+  graph."
+  [g n node-count-fn node-size-fn node-count-min-limit total-size-min-limit]
+  (loop [remaining-reachable-nodes (ualg/pre-traverse g n)
+         num-dfs-traversed-nodes 0
+         num-reachable-nodes 0
+         total-size 0]
+    (let [s (seq remaining-reachable-nodes)]
+      (if (or (and (> num-reachable-nodes node-count-min-limit)
+                   (> total-size total-size-min-limit))
+              (not s))
+        [{:num-reachable-nodes num-reachable-nodes
+          :total-size total-size}
+         (inc num-dfs-traversed-nodes)]
+
+        ;; else
+        (let [n2 (first s)]
+          (recur (rest s)
+                 (inc num-dfs-traversed-nodes)
+                 (+ num-reachable-nodes (long (node-count-fn n2)))
+                 (+ total-size (long (node-size-fn n2)))))))))
 
 
 (defn last-and-count

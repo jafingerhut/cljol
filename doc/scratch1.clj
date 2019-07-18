@@ -20,9 +20,10 @@
    :bounded-reachable-node-stats-debuglevel 1
    :bounded-reachable-node-stats2-debuglevel 1
 ;;   :calculate-total-size-node-attribute :complete
-;;   :calculate-total-size-node-attribute :bounded
+   :calculate-total-size-node-attribute :bounded
 ;;   :calculate-total-size-node-attribute :bounded2
-   :calculate-total-size-node-attribute :bounded3
+;;   :calculate-total-size-node-attribute :bounded3
+;;   :calculate-total-size-node-attribute :bounded4
 ;;   :calculate-total-size-node-attribute nil
    :slow-instance-size-checking? true
 ;;   :stop-walk-at-references false  ;; default true
@@ -589,3 +590,270 @@ g1
 ;; z= 4 y= 2
 ;; z= 4 y= 3
 
+(def bounded1-stats
+{2 25915,
+ 3 10628,
+ 4 10181,
+ 5 2320,
+ 6 1854,
+ 7 1253,
+ 8 1229,
+ 9 1935,
+ 10 1608,
+ 11 734,
+ 12 1442,
+ 13 1360,
+ 14 699,
+ 15 671,
+ 16 644,
+ 17 387,
+ 18 947,
+ 19 654,
+ 20 289,
+ 21 402,
+ 22 570,
+ 23 253,
+ 24 391,
+ 25 344,
+ 26 452,
+ 27 202,
+ 28 201,
+ 29 127,
+ 30 111,
+ 31 126,
+ 32 127,
+ 33 64,
+ 34 144,
+ 35 111,
+ 36 94,
+ 37 100,
+ 38 99,
+ 39 138,
+ 40 108,
+ 41 76,
+ 42 94,
+ 43 61,
+ 44 64,
+ 45 58,
+ 46 95,
+ 47 53,
+ 48 59,
+ 49 62,
+ 50 48,
+ 51 35,
+ 52 59175})
+
+(def bounded4-stats
+{2 27109,
+ 3 22467,
+ 4 19518,
+ 5 3112,
+ 6 4600,
+ 7 1372,
+ 8 5941,
+ 9 3724,
+ 10 2031,
+ 11 1819,
+ 12 1812,
+ 13 1095,
+ 14 564,
+ 15 1012,
+ 16 963,
+ 17 634,
+ 18 977,
+ 19 702,
+ 20 542,
+ 21 394,
+ 22 317,
+ 23 336,
+ 24 645,
+ 25 320,
+ 26 317,
+ 27 214,
+ 28 507,
+ 29 264,
+ 30 290,
+ 31 153,
+ 32 165,
+ 33 144,
+ 34 134,
+ 35 118,
+ 36 148,
+ 37 135,
+ 38 155,
+ 39 129,
+ 40 120,
+ 41 87,
+ 42 90,
+ 43 107,
+ 44 82,
+ 45 73,
+ 46 90,
+ 47 68,
+ 48 78,
+ 49 44,
+ 50 83,
+ 51 55,
+ 52 3171})
+
+(defn frequencies-stats [freq-map]
+  (let [{:keys [min-val max-val sum-vals count-vals]}
+        (reduce (fn [{:keys [min-val max-val sum-vals count-vals]} [val cnt]]
+                  {:min-val (min min-val val)
+                   :max-val (max max-val val)
+                   :sum-vals (+ sum-vals (* val cnt))
+                   :count-vals (+ count-vals cnt)})
+                {:min-val Double/POSITIVE_INFINITY
+                 :max-val Double/NEGATIVE_INFINITY
+                 :sum-vals 0
+                 :count-vals 0}
+                freq-map)]
+    {:min min-val
+     :max max-val
+     :sum sum-vals
+     :count count-vals
+     :avg (/ (* 1.0 sum-vals) count-vals)}))
+
+;; bounded1-stats
+;; calculated :bounded total sizes: 20271.225107 msec, 12 gc-count, 232 gc-time-msec
+(frequencies-stats bounded1-stats)
+;; => {:min 2, :max 52, :sum 3537476, :count 128794, :avg 27.466155255679613}
+
+;; bounded4-stats
+;; Calculated num-reachable-nodes and total-size  for scc-graph in: 281970.898172 msec, 187 gc-count, 576 gc-time-msec
+;; calculated :bounded4 total sizes: 287164.087059 msec, 190 gc-count, 1650 gc-time-msec
+(frequencies-stats bounded4-stats)
+;; => {:min 2, :max 52, :sum 845280, :count 109027, :avg 7.752941931815055}
+
+
+;; This leaves the map whose value is (get-in [:node-map
+;; src :out-edges]) with the value of an empty set, if the last edge
+;; out of node src is removed.
+(update-in [:node-map src :out-edges dest] disj edge)
+
+;; It would be a little bit nicer for later calls to successors and
+;; predecessors not to have this case to deal with, if instead the key
+;; dest were removed from the map when this happens.
+(update-in [:node-map src :out-edges] remove-edge-also-node-if-last-edge dest edge)
+
+
+(defn remove-edge-also-node-if-last-edge [node->edge-set node edge]
+  (let [remaining-edges (disj (node->edge-set node) edge)]
+    (if (seq remaining-edges)
+      (assoc node->edge-set node remaining-edges)
+      (dissoc node->edge-set node))))
+
+(defn remove-edge2
+  [g edge]
+  ;; Check whether edge exists before deleting
+  (let [{:keys [src dest id] :as edge} (edge-description->edge g edge)]
+    (if (get-in g [:node-map src :out-edges dest edge])
+      (if-let
+        [reverse-edge (other-direction g edge)]
+        (-> g
+          (update-in [:attrs] dissoc id)
+          ;;(update-in [:node-map src :out-edges dest] disj edge)
+          (update-in [:node-map src :out-edges]
+                     remove-edge-also-node-if-last-edge dest edge)
+          ;;(update-in [:node-map src :in-edges dest] disj reverse-edge)
+          (update-in [:node-map src :in-edges]
+                     remove-edge-also-node-if-last-edge dest reverse-edge)
+          (update-in [:node-map src :in-degree] dec)
+          (update-in [:node-map src :out-degree] dec)
+          ;;(update-in [:node-map dest :out-edges src] disj reverse-edge)
+          (update-in [:node-map dest :out-edges]
+                     remove-edge-also-node-if-last-edge src reverse-edge)
+          ;;(update-in [:node-map dest :in-edges src] disj edge)
+          (update-in [:node-map dest :in-edges]
+                     remove-edge-also-node-if-last-edge src edge)
+          (update-in [:node-map dest :in-degree] dec)
+          (update-in [:node-map dest :out-degree] dec))
+        (-> g
+          (update-in [:attrs] dissoc id)
+          ;;(update-in [:node-map src :out-edges dest] disj edge)
+          (update-in [:node-map src :out-edges]
+                     remove-edge-also-node-if-last-edge dest edge)
+          (update-in [:node-map src :out-degree] dec)
+          ;;(update-in [:node-map dest :in-edges src] disj edge)
+          (update-in [:node-map dest :in-edges]
+                     remove-edge-also-node-if-last-edge src edge)
+          (update-in [:node-map dest :in-degree] dec)))
+      g)))
+
+
+;; Demonstrate that Loom/Ubergraph do not support nil or false as node
+;; values, at least not for ubergraph.alg/pre-traverse function.
+
+(require '[ubergraph.core :as uber]
+	 '[ubergraph.alg :as ualg]
+         '[loom.graph :as lg]
+         '[loom.alg :as lalg])
+
+;; numbers as nodes, showing the expected kind of correct output for
+;; pre-traverse.
+(def g1 (uber/digraph [1 5] [5 1]))
+(uber/pprint g1)
+(take 10 (ualg/pre-traverse g1 1))
+;; => (1 5)  good
+(take 10 (ualg/pre-traverse g1 5))
+;; => (5 1)  good
+
+;; nil as a node can lead to wrong results
+(def g1 (uber/digraph [nil 5] [5 nil]))
+(uber/pprint g1)
+(take 10 (ualg/pre-traverse g1 5))
+;; => (5)  not good.  should include both nodes
+(take 10 (ualg/pre-traverse g1 nil))
+;; => ()  not good.  should include both nodes
+
+;; I suspect that pre-traverse is not the only function that can give
+;; wrong results when used as a node value.  I just noticed it there
+;; first.
+
+;; false as a node can also lead to wrong results
+(def g1 (uber/digraph [false 5] [5 false]))
+(uber/pprint g1)
+(take 10 (ualg/pre-traverse g1 5))
+;; => (5)  not good.  should include both nodes
+(take 10 (ualg/pre-traverse g1 false))
+;; => ()  not good.  should include both nodes
+
+;; true is ok
+(def g1 (uber/digraph [true 5] [5 true]))
+(uber/pprint g1)
+(take 10 (ualg/pre-traverse g1 5))
+;; => (5 true)  good
+(take 10 (ualg/pre-traverse g1 true))
+;; => (true 5)  good
+
+
+;; Note that this wrong behavior for nodes with values nil and false
+;; is present in Loom, too.  It is not unique to ubergraph.
+
+(def g2 (lg/graph [1 2] [2 1]))
+g2
+(take 10 (lalg/pre-traverse g2 1))
+;; => (1 2)  good
+(take 10 (lalg/pre-traverse g2 2))
+;; => (2 1)  good
+
+(def g2 (lg/graph [5 nil] [nil 5]))
+g2
+(take 10 (lalg/pre-traverse g2 5))
+;; => (5)  not good.  should include both nodes
+(take 10 (lalg/pre-traverse g2 nil))
+;; => ()  not good.  should include both nodes
+
+(def g2 (lg/graph [5 false] [false 5]))
+g2
+(take 10 (lalg/pre-traverse g2 5))
+;; => (5)  not good.  should include both nodes
+(take 10 (lalg/pre-traverse g2 false))
+;; => ()  not good.  should include both nodes
+
+(def g2 (lg/graph [5 true] [true 5]))
+g2
+(take 10 (lalg/pre-traverse g2 5))
+;; => (5 true)  good
+(take 10 (lalg/pre-traverse g2 true))
+;; => (true 5)  good

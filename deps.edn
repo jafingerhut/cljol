@@ -31,6 +31,17 @@
   :socket {:jvm-opts ["-Dclojure.server.repl={:port,50505,:accept,clojure.core.server/repl}"]}
   :priv {:jvm-opts ["-Djdk.attach.allowAttachSelf" "-Djol.tryWithSudo=true"]}
   :bigmem {:jvm-opts ["-Xms4g" "-Xmx8g"]}
+  :cap {;; recommended options from README of
+        ;; https://github.com/clojure-goes-fast/clj-async-profiler
+        :jvm-opts ["-Djdk.attach.allowAttachSelf"
+                   ;; I have trouble entering password for this from
+                   ;; clj REPL.  Maybe clojure command instead of clj
+                   ;; is better for this?
+                   "-Djol.tryWithSudo=true"
+                   "-XX:+UnlockDiagnosticVMOptions"
+                   "-XX:+DebugNonSafepoints"]
+        :extra-deps {com.clojure-goes-fast/clj-async-profiler
+                     {:mvn/version "0.4.0"}}}
   :disablecompressedoops {:jvm-opts ["-XX:-UseCompressedOops"]}
   }
  :paths ["src/clj" "test"]
