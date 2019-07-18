@@ -904,7 +904,7 @@
         ;; them to traverse at least those, plus the object itself,
         ;; plus the empty stats one that is always first element in
         ;; sequence returned by reductions, as written now.
-        max-nodes-to-traverse-in-one-dfs 10  ;; 35
+        max-nodes-to-traverse-in-one-dfs 50  ;; 35
         time1 (. System (nanoTime))
         sccg-node-info
         (loop [remaining-sccg-nodes (rseq components)
@@ -936,8 +936,8 @@
                                            ()
                                            (uber/successors scc-graph node)))
                   [final-stats num-nodes-traversed]
-                  (loop [dfs-nodes (pre-traverse custom-successors-fn
-                                                 sccg-node)
+                  (loop [dfs-nodes (pre-traverse* custom-successors-fn
+                                                  sccg-node)
                          num-dfs-steps 0
                          nodes-reached (transient #{})
                          num-reachable-nodes 0

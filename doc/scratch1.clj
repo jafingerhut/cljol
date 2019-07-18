@@ -22,9 +22,8 @@
    :bounded-reachable-node-stats2-debuglevel 1
 ;;   :calculate-total-size-node-attribute :complete
 ;;   :calculate-total-size-node-attribute :bounded
-;;   :calculate-total-size-node-attribute :bounded2
+   :calculate-total-size-node-attribute :bounded2
 ;;   :calculate-total-size-node-attribute :bounded3
-   :calculate-total-size-node-attribute :bounded4
 ;;   :calculate-total-size-node-attribute nil
    :slow-instance-size-checking? true
 ;;   :stop-walk-at-references false  ;; default true
