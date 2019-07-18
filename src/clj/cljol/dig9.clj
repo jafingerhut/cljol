@@ -1085,16 +1085,19 @@ thread."
         _ (when (>= debug-level 1)
             (print "The scc-graph has" (uber/count-nodes scc-graph) "nodes and"
                    (uber/count-edges scc-graph) "edges, took: ")
-            (print-perf-stats scc-perf))
+            (print-perf-stats scc-perf)
+            (if (every? #(instance? Long %) (uber/nodes scc-graph))
+              (println "The scc-graph has nodes that are all Longs")
+              (println "The scc-graph has nodes that are NOT all Longs")))
         {num-reachable-nodes-in-scc :ret :as p} (my-time (into {}
-                                         (for [sccg-node components]
+                                         (for [sccg-node (uber/nodes scc-graph)]
                                            [sccg-node (count sccg-node)])))
         _ (when (>= debug-level 1)
             (print "Calculated num-reachable-nodes within each of"
                    (count components) "SCCs in: ")
             (print-perf-stats p))
         {total-size-in-scc :ret :as p} (my-time (into {}
-                                (for [sccg-node components]
+                                (for [sccg-node (uber/nodes scc-graph)]
                                   [sccg-node
                                    (reduce + (map #(object-size-bytes g %)
                                                   sccg-node))])))
@@ -1111,34 +1114,38 @@ thread."
 
         ;; Also have a special case to make sure
         ;; that :complete-statistics is true for those nodes.
-        {scc-node-stats :ret :as p}
+        {[scc-node-stats-trans counts] :ret :as p}
         (my-time
-         (persistent!
-          (reduce (fn [acc n]
-                    (let [stats (gr/bounded-reachable-node-stats
-                                 scc-graph n num-reachable-nodes-in-scc
-                                 total-size-in-scc
-                                 node-count-min-limit
-                                 total-size-min-limit)
-                          num (:num-reachable-nodes stats)
-                          total (:total-size stats)
-                          over-bounds? (and (> num node-count-min-limit)
-                                            (> total total-size-min-limit))]
-                      (assoc! acc n (assoc stats
+         (reduce (fn [[acc counts] n]
+                   (let [[stats cnt] (gr/bounded-reachable-node-stats3
+                                      scc-graph n num-reachable-nodes-in-scc
+                                      total-size-in-scc
+                                      node-count-min-limit
+                                      total-size-min-limit)
+                         num (:num-reachable-nodes stats)
+                         total (:total-size stats)
+                         over-bounds? (and (> num node-count-min-limit)
+                                           (> total total-size-min-limit))]
+                     [(assoc! acc n (assoc stats
                                            :complete-statistics
-                                           (not over-bounds?)))))
-                  (transient {})
-                  (uber/nodes scc-graph))))]
+                                           (not over-bounds?)))
+                      (conj counts cnt)]))
+                 [(transient {}) []]
+                 (uber/nodes scc-graph)))
+        scc-node-stats (persistent! scc-node-stats-trans)]
     (when (>= debug-level 1)
       (print "Calculated num-reachable-nodes and total-size"
              " for scc-graph in: ")
-      (print-perf-stats p))
-    (reduce (fn [g scc-node]
-              (let [stat-attrs (assoc (scc-node-stats scc-node)
-                                      :scc-num-nodes (count scc-node))]
+      (print-perf-stats p)
+      (println "frequencies of different number of nodes DFS traversed:")
+      (pp/pprint (into (sorted-map) (frequencies counts)))
+      (println))
+    (reduce (fn [g sccg-node]
+              (let [stat-attrs (assoc (scc-node-stats sccg-node)
+                                      :scc-num-nodes (count sccg-node))]
                 (reduce (fn [g g-node]
                           (uber/add-attrs g g-node stat-attrs))
-                        g scc-node)))
+                        g sccg-node)))
             g (uber/nodes scc-graph))))
 
 
