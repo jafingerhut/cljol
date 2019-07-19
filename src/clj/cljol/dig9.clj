@@ -1029,52 +1029,6 @@ thread."
   reachable nodes, but always reports nodes and total size that do
   exist."
   [g opts]
-  (let [node-count-min-limit (get opts :node-count-min-limit
-                                  default-node-count-min-limit)
-        total-size-min-limit (get opts :total-size-min-limit
-                                  default-total-size-min-limit)
-
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        node->num-reachable-nodes (into {} (for [n (uber/nodes g)]
-                                             [n 1]))
-        node->total-size (into {} (for [n (uber/nodes g)]
-                                    [n (object-size-bytes g n)]))
-        ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        [g counts]
-        ;;(prof/profile
-         (reduce (fn [[g counts] n]
-                  (let [[stats cnt] (gr/bounded-reachable-node-stats3
-                                     g n
-                                     ;;(constantly 1) #(object-size-bytes g %)
-                                     node->num-reachable-nodes
-                                     node->total-size
-                                     node-count-min-limit
-                                     total-size-min-limit)
-                        num (:num-reachable-nodes stats)
-                        total (:total-size stats)
-                        over-bounded-limits? (and (> num node-count-min-limit)
-                                                  (> total total-size-min-limit))]
-                    [(uber/add-attrs g n (assoc stats
-                                                :complete-statistics
-                                                (not over-bounded-limits?)))
-                     (conj counts cnt)]))
-                 [g []] (uber/nodes g))
-         ;;)
-        ]
-    (println "frequencies of different number of nodes DFS traversed:")
-    (pp/pprint (into (sorted-map) (frequencies counts)))
-    (println)
-    g))
-
-
-(defn add-bounded-total-size-bytes-node-attr3
-  "Adds attributes :total-size (in bytes, derived from the
-  existing :size attribute on the nodes) and :num-reachable-nodes to
-  all nodes of g.  Do this in a way with bounded searching through the
-  graph, which may report smaller than the actual total values of
-  reachable nodes, but always reports nodes and total size that do
-  exist."
-  [g opts]
   (let [debug-level (get opts :bounded-reachable-node-stats-debuglevel 0)
         node-count-min-limit (get opts :node-count-min-limit
                                   default-node-count-min-limit)
@@ -1085,10 +1039,7 @@ thread."
         _ (when (>= debug-level 1)
             (print "The scc-graph has" (uber/count-nodes scc-graph) "nodes and"
                    (uber/count-edges scc-graph) "edges, took: ")
-            (print-perf-stats scc-perf)
-            (if (every? #(instance? Long %) (uber/nodes scc-graph))
-              (println "The scc-graph has nodes that are all Longs")
-              (println "The scc-graph has nodes that are NOT all Longs")))
+            (print-perf-stats scc-perf))
         {num-reachable-nodes-in-scc :ret :as p} (my-time (into {}
                                          (for [sccg-node (uber/nodes scc-graph)]
                                            [sccg-node (count sccg-node)])))
@@ -1188,7 +1139,7 @@ thread."
             (print "converted" (count objmaps) "objmaps into ubergraph with"
                    (uber/count-edges g) "edges: ")
             (print-perf-stats p))
-        g (if (contains? #{:complete :bounded :bounded2 :bounded3}
+        g (if (contains? #{:complete :bounded :bounded2}
                          calc-tot-size)
             (let [{g :ret :as p}
                   (my-time
@@ -1196,7 +1147,6 @@ thread."
                      :complete (add-complete-total-size-bytes-node-attr g)
                      :bounded (add-bounded-total-size-bytes-node-attr g opts)
                      :bounded2 (add-bounded-total-size-bytes-node-attr2 g opts)
-                     :bounded3 (add-bounded-total-size-bytes-node-attr3 g opts)
                      ))]
               (when (>= debug-level 1)
                 (print "calculated" calc-tot-size "total sizes: ")
