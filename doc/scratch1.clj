@@ -21,8 +21,8 @@
    :bounded-reachable-node-stats-debuglevel 1
    :bounded-reachable-node-stats2-debuglevel 1
 ;;   :calculate-total-size-node-attribute :complete
-   :calculate-total-size-node-attribute :bounded
-;;   :calculate-total-size-node-attribute :bounded2
+;;   :calculate-total-size-node-attribute :bounded
+   :calculate-total-size-node-attribute :bounded2
 ;;   :calculate-total-size-node-attribute nil
    :slow-instance-size-checking? true
 ;;   :stop-walk-at-references false  ;; default true
@@ -31,8 +31,11 @@
 )
 
 (def g (d/sum [v1] opts))
+(hash v1)
+(d/view-graph g)
 (def g (d/sum [#'v1] opts))
 
+(def v1 (vector-of :long 1 2 3 4))
 (def v1 (repeat 5))
 (take 5 v1)
 (def v1 (let [a1 (atom 5)
