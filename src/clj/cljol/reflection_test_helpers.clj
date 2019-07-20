@@ -4,8 +4,7 @@
                                  ClassData FieldData))
   (:import (org.openjdk.jol.vm VM))
   (:import (io.github.classgraph ClassGraph ClassInfo))
-  (:require [clojure.set :as set]
-            [clojure.string :as str]
+  (:require [clojure.string :as str]
             [clojure.java.io :as io]
             [clojure.pprint :as pp]
             [clojure.reflect :as ref]
@@ -156,7 +155,7 @@
   (let [d (data/diff
            (per-instance-fields-common-data-via-java-reflect-api klass)
            (per-instance-fields-common-data-via-jol klass))
-        [unique-to-jra unique-to-jol common] d]
+        [unique-to-jra unique-to-jol _common] d]
     (if (and (nil? unique-to-jra)
              (nil? unique-to-jol))
       :same

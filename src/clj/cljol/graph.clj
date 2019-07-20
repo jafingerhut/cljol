@@ -2,7 +2,6 @@
   (:import (java.lang.management ManagementFactory GarbageCollectorMXBean))
   (:require [clojure.set :as set]
             [clojure.pprint :as pp]
-            [loom.alg-generic :as lalg]
             [ubergraph.core :as uber]
             [ubergraph.alg :as ualg]
             [cljol.performance :as perf :refer [my-time print-perf-stats]]))
@@ -321,7 +320,7 @@
   [g]
   (let [n (uber/count-nodes g)
         _ (assert (< n Integer/MAX_VALUE))
-        {:keys [node->int ^objects int->node edges] :as m} (edge-vectors g)]
+        {:keys [^objects int->node edges] :as m} (edge-vectors g)]
     (with-local-vars [;; from constructor Base()
                       index 1
                       c (dec n)]
@@ -329,8 +328,8 @@
             ^ints rindex (int-array n)
 
             ;; from constructor Imperative()
-            ^DoubleStack vS (double-stack n)
-            ^DoubleStack iS (double-stack n)
+            vS (double-stack n)
+            iS (double-stack n)
             root (boolean-array n)
 
             ;; method Imperative.beginVisiting(int v)
@@ -620,7 +619,7 @@
   graph g.  T is always a superset of S, since nodes are considered to
   be able to be reachable from themselves (through a path of 0 edges)."
   [g]
-  (let [{:keys [scc-graph node->scc-set]} (scc-graph g)
+  (let [{:keys [scc-graph]} (scc-graph g)
         reachable-scc-sets (dag-reachable-nodes scc-graph)]
     (into {}
           (for [[scc-set reachable-sccs] reachable-scc-sets

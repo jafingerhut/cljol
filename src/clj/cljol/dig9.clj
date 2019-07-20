@@ -606,14 +606,6 @@ thread."
      {:err :two-objects-overlap :err-data x :data g})))
 
 
-(defn first-if-exactly-one [v]
-  (if (= 1 (count v))
-    (first v)
-    (throw (ex-info (format "Expected a sequence to have exactly 1 element, but it had %d (or more)"
-                            (bounded-count-copy v 10))
-                    {:bad-sequence v}))))
-
-
 ;; Terminology:
 
 ;; A 'javaobj' is one of the Java objects found while calling
@@ -665,15 +657,15 @@ thread."
 ;; of A.
 
 
-(defn address-decimal [objmap opts]
+(defn address-decimal [objmap _opts]
   (str (:address objmap)))
 
 
-(defn address-hex [objmap opts]
+(defn address-hex [objmap _opts]
   (format "@%08x" (:address objmap)))
 
 
-(defn size-bytes [objmap opts]
+(defn size-bytes [objmap _opts]
   (format "%d bytes" (:size objmap)))
 
 
@@ -686,7 +678,7 @@ thread."
   this object, and the total size in bytes of those objects.  Shows ?
   instead of the values if they have not been calculated for this
   node."
-  [objmap opts]
+  [objmap _opts]
   (let [num (:num-reachable-nodes objmap)
         num-known? (number? num)
         total (:total-size objmap)
@@ -704,7 +696,7 @@ thread."
 (defn scc-size
   "Return a string describing the number of nodes in the same strongly
   connected component as this object."
-  [objmap opts]
+  [objmap _opts]
   (let [num (:scc-num-nodes objmap)
         num-known? (number? num)]
     (if (= num 1)
@@ -733,7 +725,7 @@ thread."
     s))
 
 
-(defn class-description [objmap opts]
+(defn class-description [objmap _opts]
   (let [obj (:obj objmap)]
     (if (array? obj)
       (format "array of %d %s" (count obj) (abbreviated-class-name-str
@@ -741,7 +733,7 @@ thread."
       (abbreviated-class-name-str (pr-str (class obj))))))
 
 
-(defn field-values [objmap opts]
+(defn field-values [objmap _opts]
   (let [obj (:obj objmap)
         cd (ClassData->map (ClassData/parseClass (class obj)))
         flds (sort-by :vm-offset (:fields cd))]
@@ -765,7 +757,7 @@ thread."
                               :else "->"))))))))
 
 
-(defn path-to-object [objmap opts]
+(defn path-to-object [objmap _opts]
   (str "path=" (:path objmap)))
 
 
@@ -937,7 +929,7 @@ thread."
 
   TBD: Document the attributes present on the nodes and edges in the
   graph created."
-  [g opts]
+  [g _opts]
   (-> (uber/multidigraph)
       (uber/add-nodes-with-attrs* (for [objmap g]
                                     [(:address objmap) objmap]))
@@ -1035,7 +1027,7 @@ thread."
         total-size-min-limit (get opts :total-size-min-limit
                                   default-total-size-min-limit)
         {scc-data :ret :as scc-perf} (my-time (gr/scc-graph g))
-        {:keys [scc-graph node->scc-set components]} scc-data
+        {:keys [scc-graph components]} scc-data
         _ (when (>= debug-level 1)
             (print "The scc-graph has" (uber/count-nodes scc-graph) "nodes and"
                    (uber/count-edges scc-graph) "edges, took: ")

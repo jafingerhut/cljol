@@ -22,7 +22,7 @@
                             {:mvn/version "4.8.42"}}}
   :eastwood {:extra-deps {jonase/eastwood {:mvn/version "0.3.5"}}
              :main-opts ["-m" "eastwood.lint"
-                         "{:source-paths,[\"src/clj\"],:test-paths,[\"test\"],:exclude-linters,[:implicit-dependencies],:exclude-namespaces,[cljol.jdk9-and-later]}"]}
+                         "{:source-paths,[\"src/clj\"],:test-paths,[\"test\"],:add-linters,[:unused-fn-args,:unused-locals,:unused-namespaces,:unused-private-vars],:exclude-linters,[:implicit-dependencies],:exclude-namespaces,[cljol.jdk9-and-later]}"]}
   :loomlocal {:override-deps {aysylu/loom {:mvn/version "1.0.3-SNAPSHOT"}}}
   :uberlocal {:override-deps {ubergraph {:mvn/version "0.5.4-andy-mods"}}}
   :jollocal {:override-deps {org.openjdk.jol/jol-core {:mvn/version "0.9.1"}}}

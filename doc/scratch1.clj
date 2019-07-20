@@ -31,7 +31,6 @@
 )
 
 (def g (d/sum [v1] opts))
-(hash v1)
 (d/view-graph g)
 (def g (d/sum [#'v1] opts))
 
