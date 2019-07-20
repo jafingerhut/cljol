@@ -16,37 +16,14 @@
 (set! *warn-on-reflection* true)
 
 
-;; bounded-count, starts-with? copied from Clojure's implementation,
-;; to enable this code to be used with slightly older versions of
-;; Clojure than 1.9.0.
-
-(defn bounded-count-copy
-  "If coll is counted? returns its count, else will count at most the first n
-  elements of coll using its seq"
-  {:added "1.9"}
-  [n coll]
-  (if (counted? coll)
-    (count coll)
-    (loop [i 0 s (seq coll)]
-      (if (and s (< i n))
-        (recur (inc i) (next s))
-        i))))
+;; starts-with? copied from Clojure's implementation, to enable this
+;; code to be used with slightly older versions of Clojure than 1.9.0.
 
 (defn starts-with?-copy
   "True if s starts with substr."
   {:added "1.8"}
   [^CharSequence s ^String substr]
   (.startsWith (.toString s) substr))
-
-
-(defn map-keys [f m]
-  (into (empty m)
-        (for [[k v] m] [(f k) v])))
-
-
-(defn map-vals [f m]
-  (into (empty m)
-        (for [[k v] m] [k (f v)])))
 
 
 ;; Main web page for JOL (Java Object Layout) library, where links to
@@ -862,26 +839,19 @@ thread."
 
 (def all-builtin-node-labels
   [address-hex
+   address-decimal
    size-bytes
    total-size-bytes
    scc-size
    class-description
    field-values
    path-to-object
-   javaobj->str])
+   javaobj->str
+   non-realizing-javaobj->str])
 
 (def default-node-labels
   [;;address-hex
-   size-bytes
-   total-size-bytes
-   scc-size
-   class-description
-   field-values
-   ;;path-to-object
-   javaobj->str])
-
-(def default-node-labels-except-value
-  [;;address-hex
+   ;;address-decimal
    size-bytes
    total-size-bytes
    scc-size
@@ -889,7 +859,7 @@ thread."
    field-values
    ;;path-to-object
    ;;javaobj->str
-   ])
+   non-realizing-javaobj->str])
 
 
 (def default-render-opts {:node-label-functions default-node-labels
@@ -1113,7 +1083,12 @@ thread."
                  (uber/nodes g))))
 
 
-(defn add-shortest-path-distances
+;; This function is not used right now to add :distance attributes to
+;; nodes, because the JOL library calculates distances from the root
+;; nodes already, and this is redundant.  Keeping the source code
+;; around as an example of using ualg/shortest-path and ualg/path-to
+
+#_(defn add-shortest-path-distances
   [g obj-coll]
   (let [start-nodes (mapv #(find-node-for-obj g %) obj-coll)
         spaths (ualg/shortest-path g {:start-nodes start-nodes})]
