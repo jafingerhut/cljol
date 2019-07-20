@@ -1017,11 +1017,10 @@ thread."
                                   [sccg-node
                                    (reduce + (map #(object-size-bytes g %)
                                                   sccg-node))]))
-        sccg-start-nodes (set (for [sccg-node (uber/nodes scc-graph)
-                                    :when (some #(uber/attr g %
-                                                            :starting-object?)
-                                                sccg-node)]
-                                sccg-node))
+        sccg-start-nodes (set (filter (fn [sccg-node]
+                                        (some #(uber/attr g % :starting-object?)
+                                              sccg-node))
+                                      (uber/nodes scc-graph)))
 
         {[scc-node-stats-trans counts] :ret :as p}
         (my-time

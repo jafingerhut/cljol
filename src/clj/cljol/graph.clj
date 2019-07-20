@@ -627,16 +627,18 @@
             [scc-set reachable-nodes]))))
 
 
-;; TBD: Consider optimizing this for the probable common case in
-;; Clojure where a graph of nodes is acyclic, and the corresponding
-;; undirected graph is a tree.  This includes a graph like the one
-;; shown below, that is not a directed tree because node C has
-;; in-degree 2, not 1.  Even that graph should be possible to
-;; calculate total reachable node sizes in linear time without
-;; having to calculate sets of reachable nodes explicitly, stored in
-;; memory.  Even if the scc-graph of the original graph has the
-;; structure shown below, we do not need to calculate reachable node
-;; sets.
+;; The function bounded-reachable-node-stats2 achieves the goal
+;; described in the next paragraph.
+
+;; Optimize this for the probable common case in Clojure where a graph
+;; of nodes is acyclic, and the corresponding undirected graph is a
+;; tree.  This includes a graph like the one shown below, that is not
+;; a directed tree because node C has in-degree 2, not 1.  Even that
+;; graph should be possible to calculate total reachable node sizes in
+;; linear time without having to calculate sets of reachable nodes
+;; explicitly, stored in memory.  Even if the scc-graph of the
+;; original graph has the structure shown below, we do not need to
+;; calculate reachable node sets.
 
 ;;   A--          --> D
 ;;      \        /
@@ -836,6 +838,15 @@
   (merge-with + stats1 stats2))
 
 
+;; Note 3
+
+;; custom-successors-fn is the same as the normal successors in the
+;; scc-graph, except that if a node is categorized as an owner, we
+;; stop the DFS at that point as if it were a leaf node, i.e. as if it
+;; had no edges out.  This can make the DFS significantly faster for
+;; owners, for whom we know all of the stats already, without having
+;; to re-traverse the nodes that can only be reached through them.
+
 (defn bounded-reachable-node-stats2
   "Similar in goal to total-reachable-node-size, but goes to some
   lengths to run faster, while in some cases producing resulting
@@ -883,53 +894,32 @@
             (print "The scc-graph has" (uber/count-nodes scc-graph) "nodes and"
                    (uber/count-edges scc-graph) "edges, took: ")
             (print-perf-stats scc-perf))
-        {num-reachable-nodes-in-scc :ret :as p} (my-time (into {}
-                                         (for [sccg-node components]
-                                           [sccg-node (count sccg-node)])))
-        _ (when (>= debug-level 1)
-            (print "Calculated num-reachable-nodes within each of"
-                   (count components) "SCCs in: ")
-            (print-perf-stats p))
-        {total-size-in-scc :ret :as p} (my-time (into {}
-                                (for [sccg-node components]
+        num-reachable-nodes-in-scc (into {}
+                                         (for [sccg-node (uber/nodes scc-graph)]
+                                           [sccg-node (count sccg-node)]))
+        total-size-in-scc (into {}
+                                (for [sccg-node (uber/nodes scc-graph)]
                                   [sccg-node
                                    (reduce + (map #(node-size-fn g %)
-                                                  sccg-node))])))
-        _ (when (>= debug-level 1)
-            (print "Calculated total-size within each of"
-                   (count components) "SCCs in: ")
-            (print-perf-stats p))
-        ;; Make this large enough to cause nodes with 32 edges out of
-        ;; them to traverse at least those, plus the object itself,
-        ;; plus the empty stats one that is always first element in
-        ;; sequence returned by reductions, as written now.
-        max-nodes-to-traverse-in-one-dfs 50  ;; 35
+                                                  sccg-node))]))
+        sccg-start-nodes (set (filter (fn [sccg-node]
+                                        (some #(uber/attr g % :starting-object?)
+                                              sccg-node))
+                                      (uber/nodes scc-graph)))
+        max-nodes-to-traverse-in-one-dfs (get opts :bounded2-max-nodes-to-traverse-in-one-dfs 50)
         time1 (. System (nanoTime))
         sccg-node-info
         (loop [remaining-sccg-nodes (rseq components)
                sccg-node-info {}
                comp-count 0]
-          (when (and (>= debug-level 1) (zero? (mod comp-count 10000)))
-            (println "comp-count=" comp-count
-                     "in loop to calculate sccg-node-info: "
-                     (/ (- (. System (nanoTime)) time1) 1000000.0)
-                     "msec after starting loop")
-            (println "frequencies of occurrences of nodes with different :status attribute:")
-            (pp/pprint (into (sorted-map)
-                             (frequencies (map :status (vals sccg-node-info)))))
-            (println))
           (if-let [rc (seq remaining-sccg-nodes)]
             (let [owner? #(= :owner (get-in sccg-node-info [% :status]))
                   sccg-node (first rc)
-                  ;; custom-successors-fn is the same as the normal
-                  ;; successors in the scc-graph, except that if a
-                  ;; node is categorized as an owner, we stop the DFS
-                  ;; at that point as if it were a leaf node, i.e. as
-                  ;; if it had no edges out.  This can make the DFS
-                  ;; significantly faster for owners, for whom we know
-                  ;; all of the stats already, without having to
-                  ;; re-traverse the nodes that can only be reached
-                  ;; through them.
+                  start-node? (contains? sccg-start-nodes sccg-node)
+                  max-nodes (if start-node?
+                              Double/POSITIVE_INFINITY
+                              max-nodes-to-traverse-in-one-dfs)
+                  ;; See Note 3
                   custom-successors-fn (fn [node]
                                          (if (owner? node)
                                            ()
@@ -941,8 +931,7 @@
                          nodes-reached (transient #{})
                          num-reachable-nodes 0
                          total-size 0]
-                    (if-let [s (and (< num-dfs-steps
-                                       max-nodes-to-traverse-in-one-dfs)
+                    (if-let [s (and (< num-dfs-steps max-nodes)
                                     (seq dfs-nodes))]
                       (let [n (first s)
                             n-owner? (owner? n)
@@ -971,8 +960,7 @@
                   ;; compared are equal, maybe we traversed all nodes,
                   ;; but we do not have enough information to tell, so
                   ;; assume no.
-                  dfs-completed? (< num-nodes-traversed
-                                    max-nodes-to-traverse-in-one-dfs)
+                  dfs-completed? (< num-nodes-traversed max-nodes)
                   new-status (node-status scc-graph sccg-node
                                           (:nodes-reached final-stats)
                                           dfs-completed?)
@@ -987,23 +975,17 @@
       (println "frequencies of occurrences of nodes with different :status attribute:")
       (pp/pprint (frequencies (map :status (vals sccg-node-info))))
       (println))
-    (reduce (fn [g n]
-              ;; tbd: since the attribute values we will add to all
-              ;; nodes in the same strongly connected component of g
-              ;; are the same, consider calculating those stats once
-              ;; and doing a nested inner loop over the nodes in the
-              ;; component.
-              (let [sccg-node (node->scc-set n)]
-                (uber/add-attrs
-                 g n
-                 (let [info (sccg-node-info sccg-node)
-                       stats (:statistics info)]
-                   (assoc stats
-                          :scc-num-nodes (num-reachable-nodes-in-scc sccg-node)
-                          :debug-status (:status info)
-                          :complete-statistics (complete-statistics?
-                                                (:status info)))))))
-            g (uber/nodes g))))
+    (reduce (fn [g sccg-node]
+              (let [{:keys [status statistics]} (sccg-node-info sccg-node)
+                    stat-attrs
+                    (assoc statistics
+                           :scc-num-nodes (num-reachable-nodes-in-scc sccg-node)
+                           :debug-status status
+                           :complete-statistics (complete-statistics? status))]
+                (reduce (fn [g g-node]
+                          (uber/add-attrs g g-node stat-attrs))
+                        g sccg-node)))
+            g (uber/nodes scc-graph))))
 
 
 
