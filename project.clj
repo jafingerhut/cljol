@@ -6,9 +6,10 @@
   :source-paths ["src/clj"]
   :dependencies [[org.clojure/clojure "1.10.1"]
                  [org.openjdk.jol/jol-core "0.9"]
-                 [ubergraph "0.5.3"]
-                 [rhizome "0.2.5"]]
-  :profiles {:uberlocal {:dependencies [[ubergraph "0.5.4-andy-mods"]]}}
+                 [ubergraph "0.5.3"]]
+  :profiles {:uberlocal {:dependencies [[ubergraph "0.5.4-andy-mods"]]}
+             :master {:dependencies [[org.clojure/clojure "1.11.0-master-SNAPSHOT"]]}
+            }
   :jvm-opts ^:replace [
                        ;;"-XX:+PrintGC"
                        ;;"-XX:+PrintGCDetails"
