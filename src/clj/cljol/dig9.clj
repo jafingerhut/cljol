@@ -315,7 +315,11 @@
               :size size-to-use
               :path (. gpr path)
               :distance (. gpr depth)
-              :fields refd-objs}))
+              :fields refd-objs
+              ;; Linear search is fast enough for small obj-coll.
+              ;; Could switch to using Java IdentityHashMap for faster
+              ;; lookups if obj-coll is expected to be large.
+              :starting-object? (boolean (some #(identical? obj %) obj-coll))}))
          addresses)))
 
 
@@ -879,8 +883,11 @@ thread."
       (reduce (fn add-node-attrs [g node]
                 (uber/add-attrs
                  g node
-                 {:shape "box"
-                  :label (node-label (uber/attrs g node) opts)}))
+                 (merge
+                  {:shape "box"
+                   :label (node-label (uber/attrs g node) opts)}
+                  (if (uber/attr g node :starting-object?)
+                    {:style "filled"}))))
               gr (uber/nodes gr))
       (reduce (fn add-edge-attrs [g edge]
                 (uber/add-attrs
@@ -1002,43 +1009,36 @@ thread."
             (print "The scc-graph has" (uber/count-nodes scc-graph) "nodes and"
                    (uber/count-edges scc-graph) "edges, took: ")
             (print-perf-stats scc-perf))
-        {num-reachable-nodes-in-scc :ret :as p} (my-time (into {}
+        num-reachable-nodes-in-scc (into {}
                                          (for [sccg-node (uber/nodes scc-graph)]
-                                           [sccg-node (count sccg-node)])))
-        _ (when (>= debug-level 1)
-            (print "Calculated num-reachable-nodes within each of"
-                   (count components) "SCCs in: ")
-            (print-perf-stats p))
-        {total-size-in-scc :ret :as p} (my-time (into {}
+                                           [sccg-node (count sccg-node)]))
+        total-size-in-scc (into {}
                                 (for [sccg-node (uber/nodes scc-graph)]
                                   [sccg-node
                                    (reduce + (map #(object-size-bytes g %)
-                                                  sccg-node))])))
-        _ (when (>= debug-level 1)
-            (print "Calculated total-size within each of"
-                   (count components) "SCCs in: ")
-            (print-perf-stats p))
+                                                  sccg-node))]))
+        sccg-start-nodes (set (for [sccg-node (uber/nodes scc-graph)
+                                    :when (some #(uber/attr g %
+                                                            :starting-object?)
+                                                sccg-node)]
+                                sccg-node))
 
-        ;; TBD: For each of the nodes containing a root node from the
-        ;; obj-coll that was used to generate the graph, make the
-        ;; node-count-min-limit and total-size-min-limit equal to
-        ;; Double/POSITIVE_INFINITY, so that a complete exact value is
-        ;; calculated for all of those nodes.
-
-        ;; Also have a special case to make sure
-        ;; that :complete-statistics is true for those nodes.
         {[scc-node-stats-trans counts] :ret :as p}
         (my-time
          (reduce (fn [[acc counts] n]
-                   (let [[stats cnt] (gr/bounded-reachable-node-stats3
+                   (let [start-node? (contains? sccg-start-nodes n)
+                         [node-count-ml total-size-ml]
+                         (if start-node?
+                           [Double/POSITIVE_INFINITY Double/POSITIVE_INFINITY]
+                           [node-count-min-limit total-size-min-limit])
+                         [stats cnt] (gr/bounded-reachable-node-stats3
                                       scc-graph n num-reachable-nodes-in-scc
-                                      total-size-in-scc
-                                      node-count-min-limit
-                                      total-size-min-limit)
+                                      total-size-in-scc node-count-ml
+                                      total-size-ml)
                          num (:num-reachable-nodes stats)
                          total (:total-size stats)
-                         over-bounds? (and (> num node-count-min-limit)
-                                           (> total total-size-min-limit))]
+                         over-bounds? (and (> num node-count-ml)
+                                           (> total total-size-ml))]
                      [(assoc! acc n (assoc stats
                                            :complete-statistics
                                            (not over-bounds?)))
