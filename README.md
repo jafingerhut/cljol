@@ -87,12 +87,12 @@ each rectangle shows:
   path of references starting from that object, which includes that
   object itself.  Also the total size in bytes of all of those
   reachable objects.
-* either the message "this object in no reference cycles" or "<number>
+* either the message "this object in no reference cycles" or "`<number>`
   objects in same SCC with this one".  The first message means that in
   the graph of objects reached from the ones you specified to start
   from, that object is not contained in any cycle of references.  The
   second message means that the object does appear in at least one
-  cycle of references, and there are <number> objects such that they
+  cycle of references, and there are `<number>` objects such that they
   are all in the same SCC, or "strongly connected component", of the
   graph of references.  Two nodes "a" and "b" being in the same SCC
   means that there is a path from "a" to "b", and also a path from "b"
