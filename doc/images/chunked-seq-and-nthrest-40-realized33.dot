@@ -1,47 +1,99 @@
 digraph {
 graph [layout=dot,rankdir=LR];
-"31793759488" [label="24 bytes
-34 objects, 936 bytes reachable
-c.l.ArrayChunk
-12: off (int) 8
-16: end (int) 32
-20: array (ref) ->",shape=box];
-"26682105024" [label="32 bytes
-41 objects, 1160 bytes reachable
-c.l.LazySeq
-12: _meta (ref) nil
-16: fn (ref) nil
-20: sv (ref) nil
-24: s (ref) ->",shape=box];
-"26682103872" [label="144 bytes
-33 objects, 912 bytes reachable
-array of 32 j.l.Object
-",shape=box];
-"26095774912" [label="16 bytes
-1 object, 16 bytes reachable
-j.u.c.atomic.AtomicReference
-12: value (ref) nil",shape=box];
-"26682107328" [label="16 bytes
-1 object, 16 bytes reachable
-user$fn__6559
-12: __methodImplCache (ref) nil",shape=box];
-"26682106880" [label="32 bytes
-5 objects, 160 bytes reachable
-c.l.LazySeq
-12: _meta (ref) nil
-16: fn (ref) ->
-20: sv (ref) nil
-24: s (ref) nil",shape=box];
-"31793759232" [label="32 bytes
-40 objects, 1128 bytes reachable
+"31898530784" ["scc-num-nodes"=1,label="32 bytes
+at least 51 objects, 1488 bytes reachable
+this object in no reference cycles
 c.l.ChunkedCons
 12: _meta (ref) nil
 16: _hash (int) 0
 20: _hasheq (int) 0
 24: chunk (ref) ->
-28: _more (ref) ->",shape=box];
-"31793764480" [label="40 bytes
+28: _more (ref) ->
+val maybe realizes if str'ed",shape=box];
+"31971360264" ["scc-num-nodes"=1,label="24 bytes
+34 objects, 936 bytes reachable
+this object in no reference cycles
+c.l.ArrayChunk
+12: off (int) 0
+16: end (int) 32
+20: array (ref) ->
+val maybe realizes if str'ed",shape=box];
+"32015189128" ["scc-num-nodes"=1,label="24 bytes
+at least 51 objects, 1496 bytes reachable
+this object in no reference cycles
+array of 2 j.l.Object
+
+val maybe realizes if str'ed",shape=box];
+"31896926152" ["scc-num-nodes"=1,label="16 bytes
+1 object, 16 bytes reachable
+this object in no reference cycles
+user$fn__7029
+12: __methodImplCache (ref) nil
+val maybe realizes if str'ed",shape=box];
+"31971321464" ["scc-num-nodes"=1,label="144 bytes
+33 objects, 912 bytes reachable
+this object in no reference cycles
+array of 32 j.l.Object
+
+[33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 4 ...",shape=box];
+"31971360320" ["scc-num-nodes"=1,label="24 bytes
+4 objects, 128 bytes reachable
+this object in no reference cycles
+clojure.core$map$fn__5866
+12: __methodImplCache (ref) nil
+16: f (ref) ->
+20: coll (ref) ->
+val maybe realizes if str'ed",shape=box];
+"28992354792" ["scc-num-nodes"=1,label="16 bytes
+1 object, 16 bytes reachable
+this object in no reference cycles
+j.u.c.atomic.AtomicReference
+12: value (ref) nil
+val maybe realizes if str'ed",shape=box];
+"28991038320" ["scc-num-nodes"=1,label="24 bytes
+3 objects, 184 bytes reachable
+this object in no reference cycles
+c.l.PersistentVector$Node
+12: edit (ref) ->
+16: array (ref) ->
+val maybe realizes if str'ed",shape=box];
+"31898530728" ["scc-num-nodes"=1,label="32 bytes
+41 objects, 1160 bytes reachable
+this object in no reference cycles
+c.l.LazySeq
+12: _meta (ref) nil
+16: fn (ref) nil
+20: sv (ref) nil
+24: s (ref) ->
+val maybe realizes if str'ed",shape=box];
+"31898491384" ["scc-num-nodes"=1,label="144 bytes
+33 objects, 912 bytes reachable
+this object in no reference cycles
+array of 32 j.l.Object
+
+[1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 2 ...",shape=box];
+"31896926648" ["scc-num-nodes"=1,label="32 bytes
+at least 51 objects, 1496 bytes reachable
+this object in no reference cycles
+c.l.LazySeq
+12: _meta (ref) nil
+16: fn (ref) nil
+20: sv (ref) nil
+24: s (ref) ->
+val maybe realizes if str'ed",shape=box];
+"31971360344" ["scc-num-nodes"=1,label="32 bytes
+40 objects, 1128 bytes reachable
+this object in no reference cycles
+c.l.ChunkedCons
+12: _meta (ref) nil
+16: _hash (int) 0
+20: _hasheq (int) 0
+24: chunk (ref) ->
+28: _more (ref) ->
+val maybe realizes if str'ed",shape=box];
+"32015189152" ["scc-num-nodes"=1,style=filled,label="40 bytes
 84 objects, 2464 bytes reachable
+this object in no reference cycles
 c.l.PersistentVector
 12: _hash (int) 0
 16: _hasheq (int) 0
@@ -49,26 +101,25 @@ c.l.PersistentVector
 24: shift (int) 5
 28: root (ref) ->
 32: tail (ref) ->
-36: _meta (ref) nil",shape=box];
-"26682103168" [label="32 bytes
-77 objects, 2160 bytes reachable
-c.l.LazySeq
-12: _meta (ref) nil
-16: fn (ref) nil
-20: sv (ref) nil
-24: s (ref) ->",shape=box];
-"26682105728" [label="144 bytes
-33 objects, 912 bytes reachable
-array of 32 j.l.Object
-",shape=box];
-"26682107136" [label="24 bytes
-4 objects, 128 bytes reachable
-clojure.core$map$fn__5866
-12: __methodImplCache (ref) nil
-16: f (ref) ->
-20: coll (ref) ->",shape=box];
-"26682107456" [label="64 bytes
+36: _meta (ref) nil
+val maybe realizes if str'ed",shape=box];
+"31896926400" ["scc-num-nodes"=1,label="24 bytes
+1 object, 24 bytes reachable
+this object in no reference cycles
+c.l.LongRange$1
+16: val$end (long) 1000
+val maybe realizes if str'ed",shape=box];
+"31898530704" ["scc-num-nodes"=1,label="24 bytes
+34 objects, 936 bytes reachable
+this object in no reference cycles
+c.l.ArrayChunk
+12: off (int) 0
+16: end (int) 32
+20: array (ref) ->
+val maybe realizes if str'ed",shape=box];
+"31971321344" ["scc-num-nodes"=1,label="64 bytes
 2 objects, 88 bytes reachable
+this object in no reference cycles
 c.l.LongRange
 12: _meta (ref) nil
 16: _hash (int) 0
@@ -79,71 +130,60 @@ c.l.LongRange
 48: boundsCheck (ref) ->
 52: _chunk (ref) nil
 56: _chunkNext (ref) nil
-60: _next (ref) nil",shape=box];
-"26682107968" [label="24 bytes
-1 object, 24 bytes reachable
-c.l.LongRange$1
-16: val$end (long) 1000",shape=box];
-"31793764288" [label="24 bytes
-80 objects, 2240 bytes reachable
-array of 2 j.l.Object
-",shape=box];
-"26682105280" [label="32 bytes
-40 objects, 1128 bytes reachable
-c.l.ChunkedCons
+60: _next (ref) nil
+val maybe realizes if str'ed",shape=box];
+"32015188528" ["scc-num-nodes"=1,label="24 bytes
+34 objects, 936 bytes reachable
+this object in no reference cycles
+c.l.ArrayChunk
+12: off (int) 8
+16: end (int) 32
+20: array (ref) ->
+val maybe realizes if str'ed",shape=box];
+"31971360288" ["scc-num-nodes"=1,label="32 bytes
+5 objects, 160 bytes reachable
+this object in no reference cycles
+c.l.LazySeq
 12: _meta (ref) nil
-16: _hash (int) 0
-20: _hasheq (int) 0
-24: chunk (ref) ->
-28: _more (ref) ->",shape=box];
-"26682103424" [label="32 bytes
-76 objects, 2128 bytes reachable
-c.l.ChunkedCons
-12: _meta (ref) nil
-16: _hash (int) 0
-20: _hasheq (int) 0
-24: chunk (ref) ->
-28: _more (ref) ->",shape=box];
-"26095775040" [label="144 bytes
+16: fn (ref) ->
+20: sv (ref) nil
+24: s (ref) nil
+val maybe realizes if str'ed",shape=box];
+"28996845768" ["scc-num-nodes"=1,label="144 bytes
 1 object, 144 bytes reachable
+this object in no reference cycles
 array of 32 j.l.Object
-",shape=box];
-"26682105536" [label="24 bytes
-34 objects, 936 bytes reachable
-c.l.ArrayChunk
-12: off (int) 0
-16: end (int) 32
-20: array (ref) ->",shape=box];
-"26682103680" [label="24 bytes
-34 objects, 936 bytes reachable
-c.l.ArrayChunk
-12: off (int) 0
-16: end (int) 32
-20: array (ref) ->",shape=box];
-"26095774720" [label="24 bytes
-3 objects, 184 bytes reachable
-c.l.PersistentVector$Node
-12: edit (ref) ->
-16: array (ref) ->",shape=box];
-"31793759488" -> "26682105728" ["field-name"=array,label=array];
-"26682105024" -> "26682105280" ["field-name"=s,label=s];
-"26682106880" -> "26682107136" ["field-name"=fn,label=fn];
-"31793759232" -> "31793759488" ["field-name"=chunk,label=chunk];
-"31793759232" -> "26682106880" ["field-name"=_more,label=_more];
-"31793764480" -> "26095774720" ["field-name"=root,label=root];
-"31793764480" -> "31793764288" ["field-name"=tail,label=tail];
-"26682103168" -> "26682103424" ["field-name"=s,label=s];
-"26682107136" -> "26682107328" ["field-name"=f,label=f];
-"26682107136" -> "26682107456" ["field-name"=coll,label=coll];
-"26682107456" -> "26682107968" ["field-name"=boundsCheck,label=boundsCheck];
-"31793764288" -> "26682103168" ["field-name"="[0]",label="[0]"];
-"31793764288" -> "31793759232" ["field-name"="[1]",label="[1]"];
-"26682105280" -> "26682105536" ["field-name"=chunk,label=chunk];
-"26682105280" -> "26682106880" ["field-name"=_more,label=_more];
-"26682103424" -> "26682103680" ["field-name"=chunk,label=chunk];
-"26682103424" -> "26682105024" ["field-name"=_more,label=_more];
-"26682105536" -> "26682105728" ["field-name"=array,label=array];
-"26682103680" -> "26682103872" ["field-name"=array,label=array];
-"26095774720" -> "26095774912" ["field-name"=edit,label=edit];
-"26095774720" -> "26095775040" ["field-name"=array,label=array];
+
+[nil nil nil nil nil nil nil nil nil nil nil nil n ...",shape=box];
+"32015188496" ["scc-num-nodes"=1,label="32 bytes
+40 objects, 1128 bytes reachable
+this object in no reference cycles
+c.l.ChunkedCons
+12: _meta (ref) nil
+16: _hash (int) 0
+20: _hasheq (int) 0
+24: chunk (ref) ->
+28: _more (ref) ->
+val maybe realizes if str'ed",shape=box];
+"31898530784" -> "31898530704" ["field-name"=chunk,label=chunk];
+"31898530784" -> "31898530728" ["field-name"=_more,label=_more];
+"31971360264" -> "31971321464" ["field-name"=array,label=array];
+"32015189128" -> "31896926648" ["field-name"="[0]",label="[0]"];
+"32015189128" -> "32015188496" ["field-name"="[1]",label="[1]"];
+"31971360320" -> "31896926152" ["field-name"=f,label=f];
+"31971360320" -> "31971321344" ["field-name"=coll,label=coll];
+"28991038320" -> "28992354792" ["field-name"=edit,label=edit];
+"28991038320" -> "28996845768" ["field-name"=array,label=array];
+"31898530728" -> "31971360344" ["field-name"=s,label=s];
+"31896926648" -> "31898530784" ["field-name"=s,label=s];
+"31971360344" -> "31971360264" ["field-name"=chunk,label=chunk];
+"31971360344" -> "31971360288" ["field-name"=_more,label=_more];
+"32015189152" -> "28991038320" ["field-name"=root,label=root];
+"32015189152" -> "32015189128" ["field-name"=tail,label=tail];
+"31898530704" -> "31898491384" ["field-name"=array,label=array];
+"31971321344" -> "31896926400" ["field-name"=boundsCheck,label=boundsCheck];
+"32015188528" -> "31971321464" ["field-name"=array,label=array];
+"31971360288" -> "31971360320" ["field-name"=fn,label=fn];
+"32015188496" -> "32015188528" ["field-name"=chunk,label=chunk];
+"32015188496" -> "31971360288" ["field-name"=_more,label=_more];
 } 

@@ -1,11 +1,14 @@
 digraph {
 graph [layout=dot,rankdir=LR];
-"32315476608" [label="16 bytes
+"31896926152" ["scc-num-nodes"=1,label="16 bytes
 1 object, 16 bytes reachable
-user$fn__6559
-12: __methodImplCache (ref) nil",shape=box];
-"32315478080" [label="64 bytes
+this object in no reference cycles
+user$fn__7029
+12: __methodImplCache (ref) nil
+val maybe realizes if str'ed",shape=box];
+"31896926336" ["scc-num-nodes"=1,label="64 bytes
 2 objects, 88 bytes reachable
+this object in no reference cycles
 c.l.LongRange
 12: _meta (ref) nil
 16: _hash (int) 0
@@ -16,26 +19,33 @@ c.l.LongRange
 48: boundsCheck (ref) ->
 52: _chunk (ref) nil
 56: _chunkNext (ref) nil
-60: _next (ref) nil",shape=box];
-"32315478592" [label="24 bytes
+60: _next (ref) nil
+val maybe realizes if str'ed",shape=box];
+"31896926400" ["scc-num-nodes"=1,label="24 bytes
 1 object, 24 bytes reachable
+this object in no reference cycles
 c.l.LongRange$1
-16: val$end (long) 1000",shape=box];
-"32315480576" [label="32 bytes
+16: val$end (long) 1000
+val maybe realizes if str'ed",shape=box];
+"31896926648" ["scc-num-nodes"=1,style=filled,label="32 bytes
 5 objects, 160 bytes reachable
+this object in no reference cycles
 c.l.LazySeq
 12: _meta (ref) nil
 16: fn (ref) ->
 20: sv (ref) nil
-24: s (ref) nil",shape=box];
-"32315480832" [label="24 bytes
+24: s (ref) nil
+val maybe realizes if str'ed",shape=box];
+"31896926680" ["scc-num-nodes"=1,label="24 bytes
 4 objects, 128 bytes reachable
+this object in no reference cycles
 clojure.core$map$fn__5866
 12: __methodImplCache (ref) nil
 16: f (ref) ->
-20: coll (ref) ->",shape=box];
-"32315478080" -> "32315478592" ["field-name"=boundsCheck,label=boundsCheck];
-"32315480576" -> "32315480832" ["field-name"=fn,label=fn];
-"32315480832" -> "32315476608" ["field-name"=f,label=f];
-"32315480832" -> "32315478080" ["field-name"=coll,label=coll];
+20: coll (ref) ->
+val maybe realizes if str'ed",shape=box];
+"31896926336" -> "31896926400" ["field-name"=boundsCheck,label=boundsCheck];
+"31896926648" -> "31896926680" ["field-name"=fn,label=fn];
+"31896926680" -> "31896926152" ["field-name"=f,label=f];
+"31896926680" -> "31896926336" ["field-name"=coll,label=coll];
 } 

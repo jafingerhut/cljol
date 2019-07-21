@@ -1,27 +1,35 @@
 digraph {
 graph [layout=dot,rankdir=LR];
-"26102850176" [label="24 bytes
+"28991406664" ["scc-num-nodes"=1,label="24 bytes
 1 object, 24 bytes reachable
+this object in no reference cycles
 j.l.Long
-16: value (long) 1",shape=box];
-"26106721920" [label="24 bytes
+16: value (long) 0
+0",shape=box];
+"28991464656" ["scc-num-nodes"=1,label="24 bytes
 1 object, 24 bytes reachable
+this object in no reference cycles
 j.l.Long
-16: value (long) 0",shape=box];
-"26124227456" [label="32 bytes
+16: value (long) 1
+1",shape=box];
+"32024788488" ["scc-num-nodes"=1,style=filled,label="32 bytes
 4 objects, 104 bytes reachable
+this object in no reference cycles
 c.l.LazySeq
 12: _meta (ref) nil
 16: fn (ref) ->
 20: sv (ref) nil
-24: s (ref) nil",shape=box];
-"26124227712" [label="24 bytes
+24: s (ref) nil
+val maybe realizes if str'ed",shape=box];
+"32024788520" ["scc-num-nodes"=1,label="24 bytes
 3 objects, 72 bytes reachable
-user$fib_fn$fn__6376
+this object in no reference cycles
+user$fib_fn$fn__7006
 12: __methodImplCache (ref) nil
 16: a (ref) ->
-20: b (ref) ->",shape=box];
-"26124227456" -> "26124227712" ["field-name"=fn,label=fn];
-"26124227712" -> "26106721920" ["field-name"=a,label=a];
-"26124227712" -> "26102850176" ["field-name"=b,label=b];
+20: b (ref) ->
+val maybe realizes if str'ed",shape=box];
+"32024788488" -> "32024788520" ["field-name"=fn,label=fn];
+"32024788520" -> "28991406664" ["field-name"=a,label=a];
+"32024788520" -> "28991464656" ["field-name"=b,label=b];
 } 

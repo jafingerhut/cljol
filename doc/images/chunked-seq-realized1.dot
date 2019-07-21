@@ -1,73 +1,72 @@
 digraph {
 graph [layout=dot,rankdir=LR];
-"32315478592" [label="24 bytes
+"28991464632" ["scc-num-nodes"=1,label="24 bytes
 1 object, 24 bytes reachable
-c.l.LongRange$1
-16: val$end (long) 1000",shape=box];
-"26103391488" [label="24 bytes
-1 object, 24 bytes reachable
+this object in no reference cycles
 j.l.Long
-16: value (long) 9",shape=box];
-"26101839872" [label="24 bytes
+16: value (long) 2
+2",shape=box];
+"28993807288" ["scc-num-nodes"=1,label="24 bytes
 1 object, 24 bytes reachable
+this object in no reference cycles
 j.l.Long
-16: value (long) 30",shape=box];
-"32321159296" [label="32 bytes
+16: value (long) 8
+8",shape=box];
+"31898530784" ["scc-num-nodes"=1,label="32 bytes
 40 objects, 1128 bytes reachable
+this object in no reference cycles
 c.l.ChunkedCons
 12: _meta (ref) nil
 16: _hash (int) 0
 20: _hasheq (int) 0
 24: chunk (ref) ->
-28: _more (ref) ->",shape=box];
-"32321158656" [label="24 bytes
-34 objects, 936 bytes reachable
-c.l.ArrayChunk
-12: off (int) 0
-16: end (int) 32
-20: array (ref) ->",shape=box];
-"26103389632" [label="24 bytes
+28: _more (ref) ->
+val maybe realizes if str'ed",shape=box];
+"28993521432" ["scc-num-nodes"=1,label="24 bytes
 1 object, 24 bytes reachable
+this object in no reference cycles
 j.l.Long
-16: value (long) 23",shape=box];
-"26104296448" [label="24 bytes
+16: value (long) 21
+21",shape=box];
+"28994166048" ["scc-num-nodes"=1,label="24 bytes
 1 object, 24 bytes reachable
+this object in no reference cycles
 j.l.Long
-16: value (long) 24",shape=box];
-"26098244928" [label="24 bytes
+16: value (long) 24
+24",shape=box];
+"28993521856" ["scc-num-nodes"=1,label="24 bytes
 1 object, 24 bytes reachable
+this object in no reference cycles
 j.l.Long
-16: value (long) 2",shape=box];
-"26103389248" [label="24 bytes
+16: value (long) 19
+19",shape=box];
+"28991464656" ["scc-num-nodes"=1,label="24 bytes
 1 object, 24 bytes reachable
+this object in no reference cycles
 j.l.Long
-16: value (long) 27",shape=box];
-"32320856384" [label="144 bytes
-33 objects, 912 bytes reachable
-array of 32 j.l.Object
-",shape=box];
-"26099045184" [label="24 bytes
+16: value (long) 1
+1",shape=box];
+"28993806416" ["scc-num-nodes"=1,label="24 bytes
 1 object, 24 bytes reachable
+this object in no reference cycles
 j.l.Long
-16: value (long) 20",shape=box];
-"26103396160" [label="24 bytes
+16: value (long) 16
+16",shape=box];
+"28993523512" ["scc-num-nodes"=1,label="24 bytes
 1 object, 24 bytes reachable
+this object in no reference cycles
 j.l.Long
-16: value (long) 16",shape=box];
-"26104296640" [label="24 bytes
+16: value (long) 12
+12",shape=box];
+"28993806560" ["scc-num-nodes"=1,label="24 bytes
 1 object, 24 bytes reachable
+this object in no reference cycles
 j.l.Long
-16: value (long) 22",shape=box];
-"26103392192" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 4",shape=box];
-"26101840064" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 28",shape=box];
-"32320855424" [label="64 bytes
+16: value (long) 14
+14",shape=box];
+"31898491264" ["scc-num-nodes"=1,label="64 bytes
 2 objects, 88 bytes reachable
+this object in no reference cycles
 c.l.LongRange
 12: _meta (ref) nil
 16: _hash (int) 0
@@ -78,153 +77,236 @@ c.l.LongRange
 48: boundsCheck (ref) ->
 52: _chunk (ref) nil
 56: _chunkNext (ref) nil
-60: _next (ref) nil",shape=box];
-"26101839680" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 31",shape=box];
-"26101841152" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 29",shape=box];
-"32315480576" [label="32 bytes
-41 objects, 1160 bytes reachable
-c.l.LazySeq
-12: _meta (ref) nil
-16: fn (ref) nil
-20: sv (ref) nil
-24: s (ref) ->",shape=box];
-"26103389952" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 21",shape=box];
-"26103391808" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 7",shape=box];
-"26103392000" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 5",shape=box];
-"26103396736" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 8",shape=box];
-"26103390272" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 19",shape=box];
-"26096607936" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 26",shape=box];
-"26105150336" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 32",shape=box];
-"26103391104" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 13",shape=box];
-"26103390912" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 15",shape=box];
-"26103395968" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 25",shape=box];
-"32321159104" [label="24 bytes
-4 objects, 128 bytes reachable
-clojure.core$map$fn__5866
-12: __methodImplCache (ref) nil
-16: f (ref) ->
-20: coll (ref) ->",shape=box];
-"26098245120" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 1",shape=box];
-"32315476608" [label="16 bytes
+60: _next (ref) nil
+val maybe realizes if str'ed",shape=box];
+"31896926152" ["scc-num-nodes"=1,label="16 bytes
 1 object, 16 bytes reachable
-user$fn__6559
-12: __methodImplCache (ref) nil",shape=box];
-"26103389440" [label="24 bytes
+this object in no reference cycles
+user$fn__7029
+12: __methodImplCache (ref) nil
+val maybe realizes if str'ed",shape=box];
+"28994166424" ["scc-num-nodes"=1,label="24 bytes
 1 object, 24 bytes reachable
+this object in no reference cycles
 j.l.Long
-16: value (long) 18",shape=box];
-"26103390464" [label="24 bytes
+16: value (long) 22
+22",shape=box];
+"28992314480" ["scc-num-nodes"=1,label="24 bytes
 1 object, 24 bytes reachable
+this object in no reference cycles
 j.l.Long
-16: value (long) 17",shape=box];
-"26104296832" [label="24 bytes
+16: value (long) 31
+31",shape=box];
+"28993523232" ["scc-num-nodes"=1,label="24 bytes
 1 object, 24 bytes reachable
+this object in no reference cycles
 j.l.Long
-16: value (long) 6",shape=box];
-"26103391296" [label="24 bytes
+16: value (long) 15
+15",shape=box];
+"28993623432" ["scc-num-nodes"=1,label="24 bytes
 1 object, 24 bytes reachable
+this object in no reference cycles
 j.l.Long
-16: value (long) 12",shape=box];
-"26103396544" [label="24 bytes
+16: value (long) 20
+20",shape=box];
+"28993805112" ["scc-num-nodes"=1,label="24 bytes
 1 object, 24 bytes reachable
+this object in no reference cycles
 j.l.Long
-16: value (long) 11",shape=box];
-"26103396352" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Long
-16: value (long) 14",shape=box];
-"32321158848" [label="32 bytes
+16: value (long) 25
+25",shape=box];
+"31898530728" ["scc-num-nodes"=1,label="32 bytes
 5 objects, 160 bytes reachable
+this object in no reference cycles
 c.l.LazySeq
 12: _meta (ref) nil
 16: fn (ref) ->
 20: sv (ref) nil
-24: s (ref) nil",shape=box];
-"26103388800" [label="24 bytes
+24: s (ref) nil
+val maybe realizes if str'ed",shape=box];
+"31898491384" ["scc-num-nodes"=1,label="144 bytes
+33 objects, 912 bytes reachable
+this object in no reference cycles
+array of 32 j.l.Object
+
+[1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 2 ...",shape=box];
+"28992314664" ["scc-num-nodes"=1,label="24 bytes
 1 object, 24 bytes reachable
+this object in no reference cycles
 j.l.Long
-16: value (long) 10",shape=box];
-"26098667520" [label="24 bytes
+16: value (long) 29
+29",shape=box];
+"31896926648" ["scc-num-nodes"=1,style=filled,label="32 bytes
+41 objects, 1160 bytes reachable
+this object in no reference cycles
+c.l.LazySeq
+12: _meta (ref) nil
+16: fn (ref) nil
+20: sv (ref) nil
+24: s (ref) ->
+val maybe realizes if str'ed",shape=box];
+"28993520304" ["scc-num-nodes"=1,label="24 bytes
 1 object, 24 bytes reachable
+this object in no reference cycles
 j.l.Long
-16: value (long) 3",shape=box];
-"32321159296" -> "32321158656" ["field-name"=chunk,label=chunk];
-"32321159296" -> "32321158848" ["field-name"=_more,label=_more];
-"32321158656" -> "32320856384" ["field-name"=array,label=array];
-"32320856384" -> "26103391488" ["field-name"="[8]",label="[8]"];
-"32320856384" -> "26101839872" ["field-name"="[29]",label="[29]"];
-"32320856384" -> "26103389632" ["field-name"="[22]",label="[22]"];
-"32320856384" -> "26104296448" ["field-name"="[23]",label="[23]"];
-"32320856384" -> "26098244928" ["field-name"="[1]",label="[1]"];
-"32320856384" -> "26103389248" ["field-name"="[26]",label="[26]"];
-"32320856384" -> "26099045184" ["field-name"="[19]",label="[19]"];
-"32320856384" -> "26103396160" ["field-name"="[15]",label="[15]"];
-"32320856384" -> "26104296640" ["field-name"="[21]",label="[21]"];
-"32320856384" -> "26103392192" ["field-name"="[3]",label="[3]"];
-"32320856384" -> "26101840064" ["field-name"="[27]",label="[27]"];
-"32320856384" -> "26101839680" ["field-name"="[30]",label="[30]"];
-"32320856384" -> "26101841152" ["field-name"="[28]",label="[28]"];
-"32320856384" -> "26103389952" ["field-name"="[20]",label="[20]"];
-"32320856384" -> "26103391808" ["field-name"="[6]",label="[6]"];
-"32320856384" -> "26103392000" ["field-name"="[4]",label="[4]"];
-"32320856384" -> "26103396736" ["field-name"="[7]",label="[7]"];
-"32320856384" -> "26103390272" ["field-name"="[18]",label="[18]"];
-"32320856384" -> "26096607936" ["field-name"="[25]",label="[25]"];
-"32320856384" -> "26105150336" ["field-name"="[31]",label="[31]"];
-"32320856384" -> "26103391104" ["field-name"="[12]",label="[12]"];
-"32320856384" -> "26103390912" ["field-name"="[14]",label="[14]"];
-"32320856384" -> "26103395968" ["field-name"="[24]",label="[24]"];
-"32320856384" -> "26098245120" ["field-name"="[0]",label="[0]"];
-"32320856384" -> "26103389440" ["field-name"="[17]",label="[17]"];
-"32320856384" -> "26103390464" ["field-name"="[16]",label="[16]"];
-"32320856384" -> "26104296832" ["field-name"="[5]",label="[5]"];
-"32320856384" -> "26103391296" ["field-name"="[11]",label="[11]"];
-"32320856384" -> "26103396544" ["field-name"="[10]",label="[10]"];
-"32320856384" -> "26103396352" ["field-name"="[13]",label="[13]"];
-"32320856384" -> "26103388800" ["field-name"="[9]",label="[9]"];
-"32320856384" -> "26098667520" ["field-name"="[2]",label="[2]"];
-"32320855424" -> "32315478592" ["field-name"=boundsCheck,label=boundsCheck];
-"32315480576" -> "32321159296" ["field-name"=s,label=s];
-"32321159104" -> "32315476608" ["field-name"=f,label=f];
-"32321159104" -> "32320855424" ["field-name"=coll,label=coll];
-"32321158848" -> "32321159104" ["field-name"=fn,label=fn];
+16: value (long) 23
+23",shape=box];
+"31896926400" ["scc-num-nodes"=1,label="24 bytes
+1 object, 24 bytes reachable
+this object in no reference cycles
+c.l.LongRange$1
+16: val$end (long) 1000
+val maybe realizes if str'ed",shape=box];
+"28993525040" ["scc-num-nodes"=1,label="24 bytes
+1 object, 24 bytes reachable
+this object in no reference cycles
+j.l.Long
+16: value (long) 5
+5",shape=box];
+"28993352960" ["scc-num-nodes"=1,label="24 bytes
+1 object, 24 bytes reachable
+this object in no reference cycles
+j.l.Long
+16: value (long) 10
+10",shape=box];
+"28993522240" ["scc-num-nodes"=1,label="24 bytes
+1 object, 24 bytes reachable
+this object in no reference cycles
+j.l.Long
+16: value (long) 17
+17",shape=box];
+"28996897328" ["scc-num-nodes"=1,label="24 bytes
+1 object, 24 bytes reachable
+this object in no reference cycles
+j.l.Long
+16: value (long) 26
+26",shape=box];
+"28993525184" ["scc-num-nodes"=1,label="24 bytes
+1 object, 24 bytes reachable
+this object in no reference cycles
+j.l.Long
+16: value (long) 4
+4",shape=box];
+"28992314504" ["scc-num-nodes"=1,label="24 bytes
+1 object, 24 bytes reachable
+this object in no reference cycles
+j.l.Long
+16: value (long) 30
+30",shape=box];
+"28991583440" ["scc-num-nodes"=1,label="24 bytes
+1 object, 24 bytes reachable
+this object in no reference cycles
+j.l.Long
+16: value (long) 13
+13",shape=box];
+"28993807136" ["scc-num-nodes"=1,label="24 bytes
+1 object, 24 bytes reachable
+this object in no reference cycles
+j.l.Long
+16: value (long) 11
+11",shape=box];
+"28992314528" ["scc-num-nodes"=1,label="24 bytes
+1 object, 24 bytes reachable
+this object in no reference cycles
+j.l.Long
+16: value (long) 28
+28",shape=box];
+"31898530760" ["scc-num-nodes"=1,label="24 bytes
+4 objects, 128 bytes reachable
+this object in no reference cycles
+clojure.core$map$fn__5866
+12: __methodImplCache (ref) nil
+16: f (ref) ->
+20: coll (ref) ->
+val maybe realizes if str'ed",shape=box];
+"31898530704" ["scc-num-nodes"=1,label="24 bytes
+34 objects, 936 bytes reachable
+this object in no reference cycles
+c.l.ArrayChunk
+12: off (int) 0
+16: end (int) 32
+20: array (ref) ->
+val maybe realizes if str'ed",shape=box];
+"28994167912" ["scc-num-nodes"=1,label="24 bytes
+1 object, 24 bytes reachable
+this object in no reference cycles
+j.l.Long
+16: value (long) 6
+6",shape=box];
+"28993523808" ["scc-num-nodes"=1,label="24 bytes
+1 object, 24 bytes reachable
+this object in no reference cycles
+j.l.Long
+16: value (long) 9
+9",shape=box];
+"28993519160" ["scc-num-nodes"=1,label="24 bytes
+1 object, 24 bytes reachable
+this object in no reference cycles
+j.l.Long
+16: value (long) 27
+27",shape=box];
+"28993524880" ["scc-num-nodes"=1,label="24 bytes
+1 object, 24 bytes reachable
+this object in no reference cycles
+j.l.Long
+16: value (long) 7
+7",shape=box];
+"28992302416" ["scc-num-nodes"=1,label="24 bytes
+1 object, 24 bytes reachable
+this object in no reference cycles
+j.l.Long
+16: value (long) 32
+32",shape=box];
+"28993519760" ["scc-num-nodes"=1,label="24 bytes
+1 object, 24 bytes reachable
+this object in no reference cycles
+j.l.Long
+16: value (long) 18
+18",shape=box];
+"28991553456" ["scc-num-nodes"=1,label="24 bytes
+1 object, 24 bytes reachable
+this object in no reference cycles
+j.l.Long
+16: value (long) 3
+3",shape=box];
+"31898530784" -> "31898530704" ["field-name"=chunk,label=chunk];
+"31898530784" -> "31898530728" ["field-name"=_more,label=_more];
+"31898491264" -> "31896926400" ["field-name"=boundsCheck,label=boundsCheck];
+"31898530728" -> "31898530760" ["field-name"=fn,label=fn];
+"31898491384" -> "28991464632" ["field-name"="[1]",label="[1]"];
+"31898491384" -> "28993807288" ["field-name"="[7]",label="[7]"];
+"31898491384" -> "28993521432" ["field-name"="[20]",label="[20]"];
+"31898491384" -> "28994166048" ["field-name"="[23]",label="[23]"];
+"31898491384" -> "28993521856" ["field-name"="[18]",label="[18]"];
+"31898491384" -> "28991464656" ["field-name"="[0]",label="[0]"];
+"31898491384" -> "28993806416" ["field-name"="[15]",label="[15]"];
+"31898491384" -> "28993523512" ["field-name"="[11]",label="[11]"];
+"31898491384" -> "28993806560" ["field-name"="[13]",label="[13]"];
+"31898491384" -> "28994166424" ["field-name"="[21]",label="[21]"];
+"31898491384" -> "28992314480" ["field-name"="[30]",label="[30]"];
+"31898491384" -> "28993523232" ["field-name"="[14]",label="[14]"];
+"31898491384" -> "28993623432" ["field-name"="[19]",label="[19]"];
+"31898491384" -> "28993805112" ["field-name"="[24]",label="[24]"];
+"31898491384" -> "28992314664" ["field-name"="[28]",label="[28]"];
+"31898491384" -> "28993520304" ["field-name"="[22]",label="[22]"];
+"31898491384" -> "28993525040" ["field-name"="[4]",label="[4]"];
+"31898491384" -> "28993352960" ["field-name"="[9]",label="[9]"];
+"31898491384" -> "28993522240" ["field-name"="[16]",label="[16]"];
+"31898491384" -> "28996897328" ["field-name"="[25]",label="[25]"];
+"31898491384" -> "28993525184" ["field-name"="[3]",label="[3]"];
+"31898491384" -> "28992314504" ["field-name"="[29]",label="[29]"];
+"31898491384" -> "28991583440" ["field-name"="[12]",label="[12]"];
+"31898491384" -> "28993807136" ["field-name"="[10]",label="[10]"];
+"31898491384" -> "28992314528" ["field-name"="[27]",label="[27]"];
+"31898491384" -> "28994167912" ["field-name"="[5]",label="[5]"];
+"31898491384" -> "28993523808" ["field-name"="[8]",label="[8]"];
+"31898491384" -> "28993519160" ["field-name"="[26]",label="[26]"];
+"31898491384" -> "28993524880" ["field-name"="[6]",label="[6]"];
+"31898491384" -> "28992302416" ["field-name"="[31]",label="[31]"];
+"31898491384" -> "28993519760" ["field-name"="[17]",label="[17]"];
+"31898491384" -> "28991553456" ["field-name"="[2]",label="[2]"];
+"31896926648" -> "31898530784" ["field-name"=s,label=s];
+"31898530760" -> "31896926152" ["field-name"=f,label=f];
+"31898530760" -> "31898491264" ["field-name"=coll,label=coll];
+"31898530704" -> "31898491384" ["field-name"=array,label=array];
 } 

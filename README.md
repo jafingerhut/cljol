@@ -39,7 +39,7 @@ can clone the repository yourself and create a JAR if you like, or use
 the `clj` / `clojure` commands provided by the Clojure installer.
 
 ```bash
-$ clj -Sdeps '{:deps {cljol {:git/url "https://github.com/jafingerhut/cljol" :sha "dbdfd6f475747486dca3ace5465ae93045151f69"}}}'
+$ clj -Sdeps '{:deps {cljol {:git/url "https://github.com/jafingerhut/cljol" :sha "a94958663ed350a7eaa350b26413b8b8d682bc06"}}}'
 ```
 
 In the REPL:
@@ -78,13 +78,25 @@ $ dot -Tpng my-map.dot -o my-map.png
 Below is the figure in the file `my-map.png` I get from the last
 command above.
 
-Each rectangle is a Java object.  By default each shows:
+Each rectangle is a Java object.  The object (or objects) that you
+specified to start from are filled with a gray shading.  By default
+each rectangle shows:
 
 * the object's size
 * the number of objects reachable from that object, via following a
   path of references starting from that object, which includes that
   object itself.  Also the total size in bytes of all of those
   reachable objects.
+* either the message "this object in no reference cycles" or "<number>
+  objects in same SCC with this one".  The first message means that in
+  the graph of objects reached from the ones you specified to start
+  from, that object is not contained in any cycle of references.  The
+  second message means that the object does appear in at least one
+  cycle of references, and there are <number> objects such that they
+  are all in the same SCC, or "strongly connected component", of the
+  graph of references.  Two nodes "a" and "b" being in the same SCC
+  means that there is a path from "a" to "b", and also a path from "b"
+  to "a".
 * its type, usually a class name, with common prefixes like
   "clojure.lang." replaced with "c.l." and "java.lang." replaced with
   "j.l.".  Java arrays are shown as "array of N `class-name`".
@@ -102,7 +114,11 @@ Each rectangle is a Java object.  By default each shows:
   value (i.e. Java null), or `->` if the reference is to another
   object -- you may find the actual class of the referenced object by
   following the edge labeled with the field name that leaves the node.
-* a string representation of the object's value
+* a string representation of the object's value, or the message "val
+  maybe realizes if str'ed".  If you see that message, it means that
+  `cljol` has determined that if it tried to convert the value to a
+  string, it might cause lazy sequences to be realized more than they
+  already have been before, and it is avoiding this possibility.
 
 The string representation is by default limited to 50 characters, with
 " ..." appearing at the end if it was truncated.
@@ -150,11 +166,11 @@ user=> (def g (d/sum [v1]))
 1097 references between them
 29480 bytes total in all objects
 no cycles
-1 weakly connected components found in 21.342081 msec
+1 weakly connected components found in: 19.503015 msec, 0 gc-count, 0 gc-time-msec
 number of nodes in all weakly connected components,
 from most to fewest nodes:
 (1067)
-The scc-graph has 1067 nodes and 1097 edges, taking 123.034738 msec to calculate.
+The scc-graph has 1067 nodes and 1097 edges, took: 24.689886 msec, 0 gc-count, 0 gc-time-msec
 The largest size strongly connected components, at most 10:
 (1 1 1 1 1 1 1 1 1 1)
 number of objects of each size in bytes:
@@ -192,6 +208,7 @@ values are number of objects with that distance:
  {:distance 3, :num-objects 31, :total-size 744}
  {:distance 4, :num-objects 31, :total-size 4464}
  {:distance 5, :num-objects 992, :total-size 23808})
+#'user/g
 ```
 
 Here is a way to create another graph `g2` from `g` with all of `g`'s

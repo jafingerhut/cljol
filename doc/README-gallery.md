@@ -26,25 +26,28 @@ you do not provide an options map, copied from the code in the
 ```
 (def default-node-labels
   [;;address-hex
+   ;;address-decimal
    size-bytes
    total-size-bytes
+   scc-size
    class-description
    field-values
    ;;path-to-object
-   javaobj->str])
+   ;;javaobj->str
+   non-realizing-javaobj->str])
 ```
 
-We will use this options map for the examples in this section.  Note
-that we leave out `javaobj->str`:
+We will use this default value for the examples in this section.  Note
+that `non-realizing-javaobj->str` tries to avoid converting Clojure
+values to strings if it might cause lazy sequences to be realized.  If
+you would prefer to try converting all values to string, even if it
+might cause lazy sequences to be realized, creating new objects in the
+process, or go into an infinite loop if you attempt to convert an
+infinite lazy sequence to a string, you can use the function
+`javaobj->str` instead of `non-realizing-javaobj->str`.
 
 ```
-(require '[cljol.dig9 :as d])
-
-(def opts {:node-label-functions
-  [d/size-bytes
-   d/total-size-bytes
-   d/class-description
-   d/field-values]})
+(def opts {})
 ```
 
 We will use the following function to create and return a lazy
@@ -147,11 +150,7 @@ realized.
 ```
 (require '[cljol.dig9 :as d])
 
-(def opts {:node-label-functions
-  [d/size-bytes
-   d/total-size-bytes
-   d/class-description
-   d/field-values]})
+(def opts {})
 ```
 
 The `range` function returns a chunked sequence, and the `map`

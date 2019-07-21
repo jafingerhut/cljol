@@ -1,45 +1,57 @@
 digraph {
 graph [layout=dot,rankdir=LR];
-"26102850176" [label="24 bytes
+"28991406664" ["scc-num-nodes"=1,label="24 bytes
 1 object, 24 bytes reachable
+this object in no reference cycles
 j.l.Long
-16: value (long) 1",shape=box];
-"26106721920" [label="24 bytes
+16: value (long) 0
+0",shape=box];
+"28991464656" ["scc-num-nodes"=1,label="24 bytes
 1 object, 24 bytes reachable
+this object in no reference cycles
 j.l.Long
-16: value (long) 0",shape=box];
-"26124227456" [label="32 bytes
+16: value (long) 1
+1",shape=box];
+"32024788488" ["scc-num-nodes"=1,style=filled,label="32 bytes
 6 objects, 168 bytes reachable
+this object in no reference cycles
 c.l.LazySeq
 12: _meta (ref) nil
 16: fn (ref) nil
 20: sv (ref) nil
-24: s (ref) ->",shape=box];
-"31713887808" [label="32 bytes
+24: s (ref) ->
+val maybe realizes if str'ed",shape=box];
+"32025552096" ["scc-num-nodes"=1,label="32 bytes
 3 objects, 80 bytes reachable
+this object in no reference cycles
 c.l.LazySeq
 12: _meta (ref) nil
 16: fn (ref) ->
 20: sv (ref) nil
-24: s (ref) nil",shape=box];
-"31713888064" [label="24 bytes
+24: s (ref) nil
+val maybe realizes if str'ed",shape=box];
+"32025552128" ["scc-num-nodes"=1,label="24 bytes
 2 objects, 48 bytes reachable
-user$fib_fn$fn__6376
+this object in no reference cycles
+user$fib_fn$fn__7006
 12: __methodImplCache (ref) nil
 16: a (ref) ->
-20: b (ref) ->",shape=box];
-"31713888256" [label="32 bytes
+20: b (ref) ->
+val maybe realizes if str'ed",shape=box];
+"32025552152" ["scc-num-nodes"=1,label="32 bytes
 5 objects, 136 bytes reachable
+this object in no reference cycles
 c.l.Cons
 12: _meta (ref) nil
 16: _hash (int) 0
 20: _hasheq (int) 0
 24: _first (ref) ->
-28: _more (ref) ->",shape=box];
-"26124227456" -> "31713888256" ["field-name"=s,label=s];
-"31713887808" -> "31713888064" ["field-name"=fn,label=fn];
-"31713888064" -> "26102850176" ["field-name"=b,label=b];
-"31713888064" -> "26102850176" ["field-name"=a,label=a];
-"31713888256" -> "26106721920" ["field-name"=_first,label=_first];
-"31713888256" -> "31713887808" ["field-name"=_more,label=_more];
+28: _more (ref) ->
+val maybe realizes if str'ed",shape=box];
+"32024788488" -> "32025552152" ["field-name"=s,label=s];
+"32025552096" -> "32025552128" ["field-name"=fn,label=fn];
+"32025552128" -> "28991464656" ["field-name"=b,label=b];
+"32025552128" -> "28991464656" ["field-name"=a,label=a];
+"32025552152" -> "28991406664" ["field-name"=_first,label=_first];
+"32025552152" -> "32025552096" ["field-name"=_more,label=_more];
 } 
