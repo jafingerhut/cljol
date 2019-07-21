@@ -1,22 +1,43 @@
 digraph {
 graph [layout=dot,rankdir=LR];
-"26107869696" [label="24 bytes
+"26094299008" ["scc-num-nodes"=1,label="24 bytes
 2 objects, 48 bytes reachable
 j.l.String
 12: value (ref) ->
 16: hash (int) 97
 a",shape=box];
-"26107869888" [label="24 bytes
+"26094299200" ["scc-num-nodes"=1,label="24 bytes
 1 object, 24 bytes reachable
 array of 1 char
 
 [\\a]",shape=box];
-"26108268928" [label="24 bytes
+"26095705984" ["scc-num-nodes"=1,label="24 bytes
 1 object, 24 bytes reachable
 j.l.Long
 16: value (long) 1
 1",shape=box];
-"26149733696" [label="32 bytes
+"31657675008" ["scc-num-nodes"=1,label="24 bytes
+2 objects, 56 bytes reachable
+j.l.String
+12: value (ref) ->
+16: hash (int) -1268878963
+foobar",shape=box];
+"31657675200" ["scc-num-nodes"=1,label="32 bytes
+1 object, 32 bytes reachable
+array of 6 char
+
+[\\f \\o \\o \\b \\a \\r]",shape=box];
+"31681196032" ["scc-num-nodes"=1,label="32 bytes
+7 objects, 184 bytes reachable
+array of 4 j.l.Object
+
+[\"a\" 1 \"foobar\" 3.5]",shape=box];
+"31681200448" ["scc-num-nodes"=1,label="24 bytes
+1 object, 24 bytes reachable
+j.l.Double
+16: value (double) 3.5
+3.5",shape=box];
+"31681200640" ["scc-num-nodes"=1,style=filled,label="32 bytes
 8 objects, 216 bytes reachable
 c.l.PersistentArrayMap
 12: _hash (int) 0
@@ -24,32 +45,11 @@ c.l.PersistentArrayMap
 20: array (ref) ->
 24: _meta (ref) nil
 {\"a\" 1, \"foobar\" 3.5}",shape=box];
-"26149733952" [label="32 bytes
-7 objects, 184 bytes reachable
-array of 4 j.l.Object
-
-[\"a\" 1 \"foobar\" 3.5]",shape=box];
-"26149734208" [label="24 bytes
-1 object, 24 bytes reachable
-j.l.Double
-16: value (double) 3.5
-3.5",shape=box];
-"26149734400" [label="24 bytes
-2 objects, 56 bytes reachable
-j.l.String
-12: value (ref) ->
-16: hash (int) -1268878963
-foobar",shape=box];
-"26149734592" [label="32 bytes
-1 object, 32 bytes reachable
-array of 6 char
-
-[\\f \\o \\o \\b \\a \\r]",shape=box];
-"26107869696" -> "26107869888" ["field-name"=value,label=value];
-"26149733696" -> "26149733952" ["field-name"=array,label=array];
-"26149733952" -> "26107869696" ["field-name"="[0]",label="[0]"];
-"26149733952" -> "26108268928" ["field-name"="[1]",label="[1]"];
-"26149733952" -> "26149734400" ["field-name"="[2]",label="[2]"];
-"26149733952" -> "26149734208" ["field-name"="[3]",label="[3]"];
-"26149734400" -> "26149734592" ["field-name"=value,label=value];
+"26094299008" -> "26094299200" ["field-name"=value,label=value];
+"31657675008" -> "31657675200" ["field-name"=value,label=value];
+"31681196032" -> "26094299008" ["field-name"="[0]",label="[0]"];
+"31681196032" -> "26095705984" ["field-name"="[1]",label="[1]"];
+"31681196032" -> "31657675008" ["field-name"="[2]",label="[2]"];
+"31681196032" -> "31681200448" ["field-name"="[3]",label="[3]"];
+"31681200640" -> "31681196032" ["field-name"=array,label=array];
 } 

@@ -1,39 +1,41 @@
 digraph {
 graph [layout=dot,rankdir=LR];
-"26107443776" [label="144 bytes
-1 object, 144 bytes reachable
-array of 32 j.l.Object
-
-[nil nil nil nil nil nil nil nil nil nil nil nil n ...",shape=box];
-"26380850048" [label="24 bytes
-5 objects, 200 bytes reachable
-array of 2 j.l.Object
-
-[\"food has only 8-bit characters\" \"fሴod has non-8- ...",shape=box];
-"26375618048" [label="80 bytes
+"26374549568" ["scc-num-nodes"=1,label="80 bytes
 1 object, 80 bytes reachable
 array of 60 byte
 
 [102 0 52 18 111 0 100 0 32 0 104 0 97 0 115 0 32  ...",shape=box];
-"26367300288" [label="48 bytes
-1 object, 48 bytes reachable
-array of 30 byte
+"26101009664" ["scc-num-nodes"=1,label="144 bytes
+1 object, 144 bytes reachable
+array of 32 j.l.Object
 
-[102 111 111 100 32 104 97 115 32 111 110 108 121  ...",shape=box];
-"26427026048" [label="24 bytes
+[nil nil nil nil nil nil nil nil nil nil nil nil n ...",shape=box];
+"26392458304" ["scc-num-nodes"=1,label="24 bytes
+2 objects, 104 bytes reachable
+j.l.String
+12: value (ref) ->
+16: hash (int) -938149940
+20: coder (byte) 1
+fሴod has non-8-bit characters!",shape=box];
+"26101009344" ["scc-num-nodes"=1,label="24 bytes
+3 objects, 184 bytes reachable
+c.l.PersistentVector$Node
+12: edit (ref) ->
+16: array (ref) ->
+clojure.lang.PersistentVector$Node@d43f205",shape=box];
+"26393894400" ["scc-num-nodes"=1,label="24 bytes
 2 objects, 72 bytes reachable
 j.l.String
 12: value (ref) ->
 16: hash (int) 511352126
 20: coder (byte) 0
 food has only 8-bit characters",shape=box];
-"26107443456" [label="24 bytes
-3 objects, 184 bytes reachable
-c.l.PersistentVector$Node
-12: edit (ref) ->
-16: array (ref) ->
-clojure.lang.PersistentVector$Node@1361e880",shape=box];
-"26380849728" [label="40 bytes
+"26376138368" ["scc-num-nodes"=1,label="24 bytes
+5 objects, 200 bytes reachable
+array of 2 j.l.Object
+
+[\"food has only 8-bit characters\" \"fሴod has non-8- ...",shape=box];
+"26376138048" ["scc-num-nodes"=1,style=filled,label="40 bytes
 9 objects, 424 bytes reachable
 c.l.PersistentVector
 12: _hash (int) 0
@@ -44,24 +46,22 @@ c.l.PersistentVector
 32: tail (ref) ->
 36: _meta (ref) nil
 [\"food has only 8-bit characters\" \"fሴod has non-8- ...",shape=box];
-"26425978112" [label="24 bytes
-2 objects, 104 bytes reachable
-j.l.String
-12: value (ref) ->
-16: hash (int) -938149940
-20: coder (byte) 1
-fሴod has non-8-bit characters!",shape=box];
-"26107443648" [label="16 bytes
+"26388302592" ["scc-num-nodes"=1,label="48 bytes
+1 object, 48 bytes reachable
+array of 30 byte
+
+[102 111 111 100 32 104 97 115 32 111 110 108 121  ...",shape=box];
+"26101009536" ["scc-num-nodes"=1,label="16 bytes
 1 object, 16 bytes reachable
 j.u.c.atomic.AtomicReference
 12: value (ref) nil
 null",shape=box];
-"26380850048" -> "26427026048" ["field-name"="[0]",label="[0]"];
-"26380850048" -> "26425978112" ["field-name"="[1]",label="[1]"];
-"26427026048" -> "26367300288" ["field-name"=value,label=value];
-"26107443456" -> "26107443648" ["field-name"=edit,label=edit];
-"26107443456" -> "26107443776" ["field-name"=array,label=array];
-"26380849728" -> "26107443456" ["field-name"=root,label=root];
-"26380849728" -> "26380850048" ["field-name"=tail,label=tail];
-"26425978112" -> "26375618048" ["field-name"=value,label=value];
+"26392458304" -> "26374549568" ["field-name"=value,label=value];
+"26101009344" -> "26101009536" ["field-name"=edit,label=edit];
+"26101009344" -> "26101009664" ["field-name"=array,label=array];
+"26393894400" -> "26388302592" ["field-name"=value,label=value];
+"26376138368" -> "26393894400" ["field-name"="[0]",label="[0]"];
+"26376138368" -> "26392458304" ["field-name"="[1]",label="[1]"];
+"26376138048" -> "26101009344" ["field-name"=root,label=root];
+"26376138048" -> "26376138368" ["field-name"=tail,label=tail];
 } 
