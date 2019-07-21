@@ -33,6 +33,9 @@
 (def g (d/sum [v1] opts))
 (d/view-graph g)
 (def g (d/sum [#'v1] opts))
+(def g3 (gr/induced-subgraph g (filter #(<= (uber/attr g % :distance) 6)
+                                        (uber/nodes g))))
+(d/view-graph g3)
 
 (def v1 (vector-of :long 1 2 3 4))
 (def v1 (repeat 5))

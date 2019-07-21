@@ -1030,7 +1030,7 @@ thread."
                          (if start-node?
                            [Double/POSITIVE_INFINITY Double/POSITIVE_INFINITY]
                            [node-count-min-limit total-size-min-limit])
-                         [stats cnt] (gr/bounded-reachable-node-stats3
+                         [stats cnt] (gr/bounded-reachable-node-stats
                                       scc-graph n num-reachable-nodes-in-scc
                                       total-size-in-scc node-count-ml
                                       total-size-ml)

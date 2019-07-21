@@ -715,38 +715,6 @@
   represent the total among all nodes reachable from node n in the
   graph."
   [g n node-count-fn node-size-fn node-count-min-limit total-size-min-limit]
-  (let [init {:num-reachable-nodes 0
-              :total-size 0}]
-    (find-first-or-last
-     (fn [{:keys [num-reachable-nodes total-size]}]
-       (and (> num-reachable-nodes node-count-min-limit)
-            (> total-size total-size-min-limit)))
-     (reductions (fn add-one-node [acc n]
-                   (let [{:keys [num-reachable-nodes total-size]} acc]
-                     {:num-reachable-nodes (+ num-reachable-nodes
-                                              (node-count-fn n))
-                      :total-size (+ total-size (node-size-fn n))}))
-                 init
-                 (pre-traverse g n))
-     init)))
-
-(defn bounded-reachable-node-stats3
-  "Do a depth-first search of graph g starting at node n, stopping at
-  the first one of these conditions to become true:
-
-  (a) There are no more nodes in the depth-first traversal, or
-
-  (b) Among nodes traversed so far, the total number is greater than
-  node-count-min-limit and the total size is greater than
-  total-size-min-limit, where the size of one node is determined by
-  the function (node-size-fn g node).
-
-  Return a map with two keys: :num-reachable-nodes :total-size
-
-  If condition (b) is not true of the values returned, then they
-  represent the total among all nodes reachable from node n in the
-  graph."
-  [g n node-count-fn node-size-fn node-count-min-limit total-size-min-limit]
   (loop [remaining-reachable-nodes (pre-traverse g n)
          num-dfs-traversed-nodes 0
          num-reachable-nodes 0
