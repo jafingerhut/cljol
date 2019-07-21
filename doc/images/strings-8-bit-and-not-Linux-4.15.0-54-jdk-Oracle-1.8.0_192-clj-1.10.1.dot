@@ -1,7 +1,59 @@
 digraph {
 graph [layout=dot,rankdir=LR];
-"31681738112" ["scc-num-nodes"=1,style=filled,label="40 bytes
+"31658763520" ["scc-num-nodes"=1,label="80 bytes
+1 object, 80 bytes reachable
+this object in no reference cycles
+array of 30 char
+
+[\\f \\ሴ \\o \\d \\space \\h \\a \\s \\space \\n \\o \\n \\- \\8 ...",shape=box];
+"31658760512" ["scc-num-nodes"=1,label="24 bytes
+2 objects, 104 bytes reachable
+this object in no reference cycles
+j.l.String
+12: value (ref) ->
+16: hash (int) 511352126
+food has only 8-bit characters",shape=box];
+"26077447936" ["scc-num-nodes"=1,label="144 bytes
+1 object, 144 bytes reachable
+this object in no reference cycles
+array of 32 j.l.Object
+
+[nil nil nil nil nil nil nil nil nil nil nil nil n ...",shape=box];
+"26071822272" ["scc-num-nodes"=1,label="24 bytes
+3 objects, 184 bytes reachable
+this object in no reference cycles
+c.l.PersistentVector$Node
+12: edit (ref) ->
+16: array (ref) ->
+clojure.lang.PersistentVector$Node@72e36677",shape=box];
+"26110378496" ["scc-num-nodes"=1,label="16 bytes
+1 object, 16 bytes reachable
+this object in no reference cycles
+j.u.c.atomic.AtomicReference
+12: value (ref) nil
+null",shape=box];
+"31658760704" ["scc-num-nodes"=1,label="80 bytes
+1 object, 80 bytes reachable
+this object in no reference cycles
+array of 30 char
+
+[\\f \\o \\o \\d \\space \\h \\a \\s \\space \\o \\n \\l \\y \\s ...",shape=box];
+"31658763328" ["scc-num-nodes"=1,label="24 bytes
+2 objects, 104 bytes reachable
+this object in no reference cycles
+j.l.String
+12: value (ref) ->
+16: hash (int) -938149940
+fሴod has non-8-bit characters!",shape=box];
+"31681933952" ["scc-num-nodes"=1,label="24 bytes
+5 objects, 232 bytes reachable
+this object in no reference cycles
+array of 2 j.l.Object
+
+[\"food has only 8-bit characters\" \"fሴod has non-8- ...",shape=box];
+"31681934144" ["scc-num-nodes"=1,style=filled,label="40 bytes
 9 objects, 456 bytes reachable
+this object in no reference cycles
 c.l.PersistentVector
 12: _hash (int) 0
 16: _hasheq (int) 0
@@ -11,55 +63,12 @@ c.l.PersistentVector
 32: tail (ref) ->
 36: _meta (ref) nil
 [\"food has only 8-bit characters\" \"fሴod has non-8- ...",shape=box];
-"31658593600" ["scc-num-nodes"=1,label="24 bytes
-2 objects, 104 bytes reachable
-j.l.String
-12: value (ref) ->
-16: hash (int) -938149940
-fሴod has non-8-bit characters!",shape=box];
-"31681737920" ["scc-num-nodes"=1,label="24 bytes
-5 objects, 232 bytes reachable
-array of 2 j.l.Object
-
-[\"food has only 8-bit characters\" \"fሴod has non-8- ...",shape=box];
-"26071820608" ["scc-num-nodes"=1,label="24 bytes
-3 objects, 184 bytes reachable
-c.l.PersistentVector$Node
-12: edit (ref) ->
-16: array (ref) ->
-clojure.lang.PersistentVector$Node@f36f34d",shape=box];
-"26079616960" ["scc-num-nodes"=1,label="144 bytes
-1 object, 144 bytes reachable
-array of 32 j.l.Object
-
-[nil nil nil nil nil nil nil nil nil nil nil nil n ...",shape=box];
-"26111548480" ["scc-num-nodes"=1,label="16 bytes
-1 object, 16 bytes reachable
-j.u.c.atomic.AtomicReference
-12: value (ref) nil
-null",shape=box];
-"31658593792" ["scc-num-nodes"=1,label="80 bytes
-1 object, 80 bytes reachable
-array of 30 char
-
-[\\f \\ሴ \\o \\d \\space \\h \\a \\s \\space \\n \\o \\n \\- \\8 ...",shape=box];
-"31658590976" ["scc-num-nodes"=1,label="80 bytes
-1 object, 80 bytes reachable
-array of 30 char
-
-[\\f \\o \\o \\d \\space \\h \\a \\s \\space \\o \\n \\l \\y \\s ...",shape=box];
-"31658590784" ["scc-num-nodes"=1,label="24 bytes
-2 objects, 104 bytes reachable
-j.l.String
-12: value (ref) ->
-16: hash (int) 511352126
-food has only 8-bit characters",shape=box];
-"31681738112" -> "26071820608" ["field-name"=root,label=root];
-"31681738112" -> "31681737920" ["field-name"=tail,label=tail];
-"31658593600" -> "31658593792" ["field-name"=value,label=value];
-"31681737920" -> "31658590784" ["field-name"="[0]",label="[0]"];
-"31681737920" -> "31658593600" ["field-name"="[1]",label="[1]"];
-"26071820608" -> "26111548480" ["field-name"=edit,label=edit];
-"26071820608" -> "26079616960" ["field-name"=array,label=array];
-"31658590784" -> "31658590976" ["field-name"=value,label=value];
+"31658760512" -> "31658760704" ["field-name"=value,label=value];
+"26071822272" -> "26110378496" ["field-name"=edit,label=edit];
+"26071822272" -> "26077447936" ["field-name"=array,label=array];
+"31658763328" -> "31658763520" ["field-name"=value,label=value];
+"31681933952" -> "31658760512" ["field-name"="[0]",label="[0]"];
+"31681933952" -> "31658763328" ["field-name"="[1]",label="[1]"];
+"31681934144" -> "26071822272" ["field-name"=root,label=root];
+"31681934144" -> "31681933952" ["field-name"=tail,label=tail];
 } 

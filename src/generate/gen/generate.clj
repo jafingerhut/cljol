@@ -43,25 +43,31 @@ collected."
 (def opts-show-field-values
   {:node-label-functions
    [;;d/address-hex
+    ;;d/address-decimal
     d/size-bytes
     d/total-size-bytes
+    d/scc-size
     d/class-description
     d/field-values
     ;;d/path-to-object
-    d/javaobj->str]})
+    d/javaobj->str
+    ;;d/non-realizing-javaobj->str
+    ]})
 
 ;; Avoid calling clojure.core/str or any similar function on a lazy
 ;; sequence if you do not want it to be realized.
 (def opts-dont-realize-values
   {:node-label-functions
    [;;d/address-hex
+    ;;d/address-decimal
     d/size-bytes
     d/total-size-bytes
+    d/scc-size
     d/class-description
     d/field-values
     ;;d/path-to-object
     ;;d/javaobj->str
-    ]})
+    d/non-realizing-javaobj->str]})
 
 (defn -main [& args]
   (let [cmdline-opts (parse-args args)
