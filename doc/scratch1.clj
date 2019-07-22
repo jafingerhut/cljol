@@ -12,6 +12,7 @@
    [#'d/address-decimal
     #'d/size-bytes
     #'d/total-size-bytes
+    #'d/uniquely-reachable-info
     #'d/scc-size
     #'d/class-description
     #'d/field-values
@@ -22,8 +23,8 @@
    :bounded-reachable-node-stats-debuglevel 1
    :bounded-reachable-node-stats2-debuglevel 1
 ;;   :calculate-total-size-node-attribute :complete
-;;   :calculate-total-size-node-attribute :bounded
-   :calculate-total-size-node-attribute :bounded2
+   :calculate-total-size-node-attribute :bounded
+;;   :calculate-total-size-node-attribute :bounded2
 ;;   :calculate-total-size-node-attribute nil
    :slow-instance-size-checking? true
 ;;   :stop-walk-at-references false  ;; default true
@@ -34,7 +35,12 @@
 )
 
 (def g (d/sum [v1] opts))
-(def g2 (gr/remove-all-attrs g))
+(def g (d/sum (let [v1 (vec (range 4))] [v1 (conj v1 4)]) opts))
+(def g (d/sum (let [m1 (zipmap (range 4) (range 5 9))] [m1 (assoc m1 4 9)]) opts))
+(def g2 (gr/remove-all-attrs-except g [:my-unique-num-reachable-nodes
+                                       :my-unique-total-size
+                                       :reachable-only-from]))
+(uber/pprint g2)
 
 (require '[clojure.java.io :as io])
 (with-open [wrtr (io/writer "dimultigraph-129k-nodes-272k-edges.edn")]
@@ -44,6 +50,7 @@
 (d/view-graph g)
 (d/view-graph g2)
 (def g (d/sum [#'v1] opts))
+(def g (d/sum [#'v1 (the-ns 'user)] opts))
 (def g3 (gr/induced-subgraph g (filter #(<= (uber/attr g % :distance) 6)
                                         (uber/nodes g))))
 (d/view-graph g3)
@@ -62,6 +69,7 @@
 (def v1 (class 5))
 (def v1 (vec (range 4)))
 (def g nil)
+(def g2 nil)
 (def g3 nil)
 (System/gc)
 (def g (d/sum [v1] opts))

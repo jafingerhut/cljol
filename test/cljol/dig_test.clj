@@ -66,6 +66,23 @@
            (set (:components scc-data))))))
 
 
+(deftest unique-owners-tests
+  (is (= (uniquely-owned-values {:a [1 2] :b [2 3] :c [4 5]})
+         {:owners {1 :a, 2 :cljol.dig9/multiple-owners, 3 :b, 4 :c, 5 :c},
+          :uniquely-owned {:a #{1}, :b #{3}, :c #{4 5}}}))
+  (is (= (uniquely-owned-values {:a [1 2] :b [2 3] :c [4 5] :d [3 4]})
+         {:owners
+          {1 :a,
+           2 :cljol.dig9/multiple-owners,
+           3 :cljol.dig9/multiple-owners,
+           4 :cljol.dig9/multiple-owners,
+           5 :c},
+          :uniquely-owned {:a #{1}, :b #{}, :c #{5}, :d #{}}}))
+  (is (= (uniquely-owned-values {:a [1 2]})
+         {:owners {1 :a, 2 :a},
+          :uniquely-owned {:a [1 2]}})))
+
+
 (deftest scc-tests
   (let [g1 (uber/multidigraph
 	    [1 2]

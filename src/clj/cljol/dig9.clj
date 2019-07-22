@@ -674,6 +674,25 @@ thread."
             (if total-known? (str total) "?"))))
 
 
+(defn uniquely-reachable-info
+  [objmap _opts]
+  (cond
+    (:starting-object? objmap)
+    (let [{:keys [my-unique-num-reachable-nodes my-unique-total-size]}
+          objmap]
+      (format "%s object%s, %s bytes reached only from here"
+              my-unique-num-reachable-nodes
+              (if (> my-unique-num-reachable-nodes 1)
+                "s" "")
+              my-unique-total-size))
+    
+    (contains? objmap :reachable-only-from)
+    (format "reached only from one start object %d"
+            (:reachable-only-from objmap))
+    
+    :else "reached from multiple start objects"))
+
+
 (defn scc-size
   "Return a string describing the number of nodes in the same strongly
   connected component as this object."
@@ -846,6 +865,7 @@ thread."
    address-decimal
    size-bytes
    total-size-bytes
+   uniquely-reachable-info
    scc-size
    class-description
    field-values
@@ -858,6 +878,7 @@ thread."
    ;;address-decimal
    size-bytes
    total-size-bytes
+   ;;uniquely-reachable-info
    scc-size
    class-description
    field-values
@@ -990,6 +1011,46 @@ thread."
             g (uber/nodes g))))
 
 
+(defn owner-if-unique
+  "Given a map from keys to collections of values, create and return a
+  map with the values as keys, and the associated value is the one key
+  of the input map for which that value is part of its collection, if
+  there is only one.  If there is more than one such key, the
+  associated value is ::multiple-owners."
+  [m]
+  (reduce-kv (fn [acc k coll]
+               (reduce (fn [acc one-val]
+                         (let [k2 (get acc one-val ::not-found)]
+                           (cond
+                             (= k2 ::not-found) (assoc acc one-val k)
+                             (= k2 k) acc
+                             :else (assoc acc
+                                          one-val ::multiple-owners))))
+                       acc coll))
+             {} m))
+
+
+(defn uniquely-owned-values
+  "Given a map from keys to collections of values, create and return a
+  map with the same keys, where the value associated with each key is
+  a set.  The elements of the set are exactly the subset of the input
+  collection associated with the same key, that are _only_ in that
+  key's collection, and no other key's collection."
+  [m]
+  (if (= (count m) 1)
+    ;; fast path for easy case
+    {:owners (zipmap (first (vals m)) (repeat (first (keys m))))
+     :uniquely-owned m}
+    (let [owners (owner-if-unique m)
+          ret (zipmap (keys m) (repeat #{}))]
+      {:owners owners
+       :uniquely-owned (reduce-kv (fn [acc val k]
+                                    (if (= k ::multiple-owners)
+                                      acc
+                                      (update acc k conj val)))
+                                  ret owners)})))
+
+
 (defn add-bounded-total-size-bytes-node-attr
   "Adds attributes :total-size (in bytes, derived from the
   existing :size attribute on the nodes) and :num-reachable-nodes to
@@ -1017,15 +1078,18 @@ thread."
                                   [sccg-node
                                    (reduce + (map #(object-size-bytes g %)
                                                   sccg-node))]))
-        sccg-start-nodes (set (filter (fn [sccg-node]
-                                        (some #(uber/attr g % :starting-object?)
-                                              sccg-node))
-                                      (uber/nodes scc-graph)))
+        sccg->orig-start-node
+        (into {} (for [sccg-node (uber/nodes scc-graph)
+                       :let [orig-start-nodes
+                             (set (filter #(uber/attr g % :starting-object?)
+                                          sccg-node))]
+                       :when (seq orig-start-nodes)]
+                   [sccg-node orig-start-nodes]))
 
-        {[scc-node-stats-trans counts] :ret :as p}
+        {[scc-node-stats-trans nodes-reached-trans counts-trans] :ret :as p}
         (my-time
-         (reduce (fn [[acc counts] n]
-                   (let [start-node? (contains? sccg-start-nodes n)
+         (reduce (fn [[acc nodes-reached counts] n]
+                   (let [start-node? (contains? sccg->orig-start-node n)
                          [node-count-ml total-size-ml]
                          (if start-node?
                            [Double/POSITIVE_INFINITY Double/POSITIVE_INFINITY]
@@ -1033,32 +1097,74 @@ thread."
                          [stats cnt] (gr/bounded-reachable-node-stats
                                       scc-graph n num-reachable-nodes-in-scc
                                       total-size-in-scc node-count-ml
-                                      total-size-ml)
+                                      total-size-ml start-node?)
                          num (:num-reachable-nodes stats)
                          total (:total-size stats)
                          over-bounds? (and (> num node-count-ml)
                                            (> total total-size-ml))]
-                     [(assoc! acc n (assoc stats
-                                           :complete-statistics
-                                           (not over-bounds?)))
-                      (conj counts cnt)]))
-                 [(transient {}) []]
+                     [(assoc! acc n (-> (dissoc stats :nodes-reached)
+                                        (assoc :complete-statistics
+                                               (not over-bounds?))))
+                      (if start-node?
+                        (assoc! nodes-reached n (:nodes-reached stats))
+                        nodes-reached)
+                      (conj! counts cnt)]))
+                 [(transient {}) (transient {}) (transient [])]
                  (uber/nodes scc-graph)))
-        scc-node-stats (persistent! scc-node-stats-trans)]
+        scc-node-stats (persistent! scc-node-stats-trans)
+        nodes-reached (persistent! nodes-reached-trans)
+        counts (persistent! counts-trans)
+        {:keys [owners uniquely-owned] :as tmp1} (uniquely-owned-values nodes-reached)]
     (when (>= debug-level 1)
       (print "Calculated num-reachable-nodes and total-size"
              " for scc-graph in: ")
       (print-perf-stats p)
       (println "frequencies of different number of nodes DFS traversed:")
       (pp/pprint (into (sorted-map) (frequencies counts)))
-      (println))
+      (println)
+      ;;(println "nodes-reached=")
+      ;;(pp/pprint nodes-reached)
+      ;;(println "uniquely-owned=")
+      ;;(pp/pprint uniquely-owned)
+      ;;(println "owners=")
+      ;;(pp/pprint owners)
+      ;;(println "tmp1=")
+      ;;(pp/pprint tmp1)
+      )
     (reduce (fn [g sccg-node]
-              (let [stat-attrs (assoc (scc-node-stats sccg-node)
-                                      :scc-num-nodes (count sccg-node))]
+              (let [stat-attrs
+                    (merge
+                     (assoc (scc-node-stats sccg-node)
+                            :scc-num-nodes (count sccg-node))
+                     (if (contains? sccg->orig-start-node sccg-node)
+                       {:my-unique-num-reachable-nodes
+                        (reduce + (map num-reachable-nodes-in-scc
+                                       (uniquely-owned sccg-node)))
+                        :my-unique-total-size
+                        (reduce + (map total-size-in-scc
+                                       (uniquely-owned sccg-node)))})
+                     (let [owner (owners sccg-node)
+                           orig-graph-start-nodes
+                           (if (not= owner ::multiple-owners)
+                             (sccg->orig-start-node owner)
+                             #{})]
+                       ;; See Note 2
+                       (if (= (count orig-graph-start-nodes) 1)
+                         {:reachable-only-from (first
+                                                orig-graph-start-nodes)})))]
                 (reduce (fn [g g-node]
                           (uber/add-attrs g g-node stat-attrs))
                         g sccg-node)))
             g (uber/nodes scc-graph))))
+
+;; Note 2
+
+;; Even if an sccg node has only one 'owner' in the scc-graph, there
+;; might be more than one node in the original graph in that sccg
+;; node.  If so, all of the nodes in scc-graph that are reachable only
+;; from the 'owner', are all reachable from multiple original nodes,
+;; and should not be marked as :reachable-only-from in the original
+;; graph.
 
 
 (defn add-bounded-total-size-bytes-node-attr2

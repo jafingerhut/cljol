@@ -21,10 +21,16 @@
   (filter #(leaf-node? g %) (uber/nodes g)))
 
 
+(defn remove-all-attrs-except
+  [g attr-keys-to-keep]
+  (reduce (fn [g n] (uber/set-attrs g n (select-keys (uber/attrs g n)
+                                                     attr-keys-to-keep)))
+          g (concat (uber/nodes g) (uber/edges g))))
+
+
 (defn remove-all-attrs
   [g]
-  (reduce (fn [g n] (uber/set-attrs g n {}))
-          g (concat (uber/nodes g) (uber/edges g))))
+  (remove-all-attrs-except g []))
 
 
 ;; Unlike the function loom.alg-generic/pre-traverse in the Loom
@@ -712,17 +718,22 @@
   If condition (b) is not true of the values returned, then they
   represent the total among all nodes reachable from node n in the
   graph."
-  [g n node-count-fn node-size-fn node-count-min-limit total-size-min-limit]
+  [g n node-count-fn node-size-fn node-count-min-limit total-size-min-limit
+   return-nodes-reached?]
   (loop [remaining-reachable-nodes (pre-traverse g n)
          num-dfs-traversed-nodes 0
          num-reachable-nodes 0
-         total-size 0]
+         total-size 0
+         nodes-reached (transient #{})]
     (let [s (seq remaining-reachable-nodes)]
       (if (or (and (> num-reachable-nodes node-count-min-limit)
                    (> total-size total-size-min-limit))
               (not s))
-        [{:num-reachable-nodes num-reachable-nodes
-          :total-size total-size}
+        [(merge
+          {:num-reachable-nodes num-reachable-nodes
+           :total-size total-size}
+          (if return-nodes-reached?
+            {:nodes-reached (persistent! nodes-reached)}))
          (inc num-dfs-traversed-nodes)]
 
         ;; else
@@ -730,7 +741,8 @@
           (recur (rest s)
                  (inc num-dfs-traversed-nodes)
                  (+ num-reachable-nodes (long (node-count-fn n2)))
-                 (+ total-size (long (node-size-fn n2)))))))))
+                 (+ total-size (long (node-size-fn n2)))
+                 (if return-nodes-reached? (conj! nodes-reached n2))))))))
 
 
 (defn last-and-count
