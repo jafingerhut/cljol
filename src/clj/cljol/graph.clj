@@ -152,11 +152,9 @@
 
 ;; Note 2:
 
-;; uber/successors returns each successor node at most once, by using
-;; clojure.core/distinct in its implementation.  This code could call
-;; distinct, too, in case that changes in the future, but it is more
-;; efficient not to call distinct here and rely upon uber/successors
-;; doing so.
+;; This code is written assuming that uber/successors returns each
+;; successor node at most once, which at least for ubergraph version
+;; 0.5.3 is true.
 
 (defn edge-vectors
   "Given an ubergraph g, return a map.
@@ -284,9 +282,9 @@
 
   https://en.wikipedia.org/wiki/Tarjan%27s_strongly_connected_components_algorithm
 
-  This code is patterned after the variant of the algorithm by David
-  J. Pearce with Java reference source code published in this
-  repository:
+  This code is fairly directly translated from Java into Clojure of
+  the variant of Tarjan's algorithm by David J. Pearce, with Java
+  reference source code published in this repository:
   https://github.com/DavePearce/StronglyConnectedComponents
 
   That repository has links to a research paper and blog article
