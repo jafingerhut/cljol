@@ -1164,7 +1164,7 @@ thread."
             g (uber/nodes g))))
 
 
-(defn graph-summary [g]
+(defn graph-summary [g opts]
   (let [size-bytes-freq (frequencies (map #(uber/attr g % :size)
                                           (uber/nodes g)))
         size-breakdown (->> (for [[size cnt] size-bytes-freq]
@@ -1172,73 +1172,78 @@ thread."
                                :num-objects cnt
                                :total-size (* size cnt)})
                             (sort-by :size-bytes))
-        total-size-bytes (reduce + (for [x size-breakdown] (:total-size x)))
-        ;; TBD: The node collections that ualg/connected-components
-        ;; returns can in some cases contain duplicate nodes.  I do
-        ;; not know why this happens.  For now, make sets out of them
-        ;; to eliminate those.
-        {weakly-connected-components :ret
-         :as wcc-perf} (my-time (map set (ualg/connected-components g)))
-        {scc-data :ret :as scc-perf} (my-time (gr/scc-graph g))
-        {:keys [scc-graph node->scc-set]} scc-data
-        scc-components (set (vals node->scc-set))
-        scc-component-sizes-sorted (sort > (map count scc-components))
-        nodes-by-distance (group-by #(uber/attr g % :distance)
-                                    (uber/nodes g))
-        node-stats-by-distance
-        (->> (for [[k nodes] nodes-by-distance]
-               {:distance k
-                :num-objects (count nodes)
-                :total-size (reduce + (for [n nodes]
-                                        (uber/attr g n :size)))})
-             (sort-by :distance))]
+        total-size-bytes (reduce + (for [x size-breakdown] (:total-size x)))]
     (println (uber/count-nodes g) "objects")
     (println (uber/count-edges g) "references between them")
     (println total-size-bytes "bytes total in all objects")
     (println (if (ualg/dag? g)
                "no cycles"
                "has at least one cycle"))
-    (print (count weakly-connected-components) "weakly connected components"
-           "found in: ")
-    (print-perf-stats wcc-perf)
-    (println "number of nodes in all weakly connected components,")
-    (println "from most to fewest nodes:")
-    (println (sort > (map count weakly-connected-components)))
-    (print "The scc-graph has" (uber/count-nodes scc-graph) "nodes and"
-           (uber/count-edges scc-graph) "edges, took: ")
-    (print-perf-stats scc-perf)
-    (println "The largest size strongly connected components, at most 10:")
-    (pp/pprint (take 10 scc-component-sizes-sorted))
-    (println "number of objects of each size in bytes:")
-    (pp/pprint size-breakdown)
-    (println "number and size of objects of each class:")
-    (pp/pprint (->> (for [[cls nodes] (group-by #(class (uber/attr g % :obj))
-                                                (uber/nodes g))]
-                      {:total-size (reduce + (for [n nodes]
-                                               (uber/attr g n :size)))
-                       :num-objects (count nodes)
-                       :class (abbreviated-class-name-str (pr-str cls))})
-                    (sort-by :total-size)))
-    (println)
+    (when (some #{:all :wcc-details} (opts :summary-options))
+      (let [;; TBD: The node collections that
+            ;; ualg/connected-components returns can in some cases
+            ;; contain duplicate nodes.  I do not know why this
+            ;; happens.  For now, make sets out of them to eliminate
+            ;; those.
+            {weakly-connected-components :ret
+             :as wcc-perf} (my-time (map set (ualg/connected-components g)))]
+        (print (count weakly-connected-components) "weakly connected components"
+               "found in: ")
+        (print-perf-stats wcc-perf)
+        (println "number of nodes in all weakly connected components,")
+        (println "from most to fewest nodes:")
+        (println (sort > (map count weakly-connected-components)))))
+    (when (some #{:all :scc-details} (opts :summary-options))
+      (let [{scc-data :ret :as scc-perf} (my-time (gr/scc-graph g))
+            {:keys [scc-graph node->scc-set]} scc-data
+            scc-components (set (vals node->scc-set))
+            scc-component-sizes-sorted (sort > (map count scc-components))]
+        (print "The scc-graph has" (uber/count-nodes scc-graph) "nodes and"
+               (uber/count-edges scc-graph) "edges, took: ")
+        (print-perf-stats scc-perf)
+        (println "The largest size strongly connected components, at most 10:")
+        (pp/pprint (take 10 scc-component-sizes-sorted))))
+    (when (some #{:all :size-breakdown} (opts :summary-options))
+      (println "number of objects of each size in bytes:")
+      (pp/pprint size-breakdown))
+    (when (some #{:all :class-breakdown} (opts :summary-options))
+      (println "number and size of objects of each class:")
+      (pp/pprint (->> (for [[cls nodes] (group-by #(class (uber/attr g % :obj))
+                                                  (uber/nodes g))]
+                        {:total-size (reduce + (for [n nodes]
+                                                 (uber/attr g n :size)))
+                         :num-objects (count nodes)
+                         :class (abbreviated-class-name-str (pr-str cls))})
+                      (sort-by :total-size)))
+      (println))
     (println (count (filter #(= 0 (uber/out-degree g %)) (uber/nodes g)))
              "leaf objects (no references to other objects)")
     (println (count (filter #(= 0 (uber/in-degree g %)) (uber/nodes g)))
              "root nodes (no reference to them from other objects _in this graph_)")
 
-    (println "number of objects of each in-degree (# of references to it):")
-    (pp/pprint (->> (for [[k v] (frequencies (map #(uber/in-degree g %)
-                                                  (uber/nodes g)))]
-                      {:in-degree k :num-objects v})
-                    (sort-by :in-degree)))
-    (println "number of objects of each out-degree (# of references from it):")
-    (pp/pprint (->> (for [[k v] (frequencies (map #(uber/out-degree g %)
-                                                  (uber/nodes g)))]
-                      {:out-degree k :num-objects v})
-                    (sort-by :out-degree)))
-
-    (println "map where keys are distance of an object from a start node,")
-    (println "values are number of objects with that distance:")
-    (pp/pprint node-stats-by-distance)))
+    (when (some #{:all :node-degree-breakdown} (opts :summary-options))
+      (println "number of objects of each in-degree (# of references to it):")
+      (pp/pprint (->> (for [[k v] (frequencies (map #(uber/in-degree g %)
+                                                    (uber/nodes g)))]
+                        {:in-degree k :num-objects v})
+                      (sort-by :in-degree)))
+      (println "number of objects of each out-degree (# of references from it):")
+      (pp/pprint (->> (for [[k v] (frequencies (map #(uber/out-degree g %)
+                                                    (uber/nodes g)))]
+                        {:out-degree k :num-objects v})
+                      (sort-by :out-degree))))
+    (when (some #{:all :distance-breakdown} (opts :summary-options))
+      (let [nodes-by-distance (group-by #(uber/attr g % :distance)
+                                        (uber/nodes g))
+            node-stats-by-distance
+            (->> (for [[k nodes] nodes-by-distance]
+                   {:distance k
+                    :num-objects (count nodes)
+                    :total-size (reduce + (for [n nodes]
+                                            (uber/attr g n :size)))})
+                 (sort-by :distance))]
+        (println "Number and total size of objects at each distance from a starting object:")
+        (pp/pprint node-stats-by-distance)))))
 
 
 (defn sum
@@ -1246,7 +1251,7 @@ thread."
    (sum obj-coll {}))
   ([obj-coll opts]
    (let [g (graph-of-reachable-objects obj-coll opts)]
-     (graph-summary g)
+     (graph-summary g opts)
      g)))
 
 
@@ -1448,7 +1453,7 @@ props1
 
 (uber/viz-graph (keep-only-dot-safe-attrs g1) {:rankdir :LR})
 (uber/viz-graph (keep-only-dot-safe-attrs g2) {:rankdir :LR})
-(graph-summary g2)
+(graph-summary g2 opts)
 
 (def g2 (uber/remove-nodes* g1 (gr/leaf-nodes g1)))
 (def g2 (gr/induced-subgraph g1 (filter #(<= (uber/attr g % :distance) 2)

@@ -4,6 +4,7 @@
 (require '[cljol.dig9 :as d]
          '[cljol.graph :as gr]
          '[loom.alg-generic :as lag]
+         '[loom.alg :as lalg]
 	 '[ubergraph.core :as uber]
 	 '[ubergraph.alg :as ualg])
 (def opts
@@ -26,12 +27,22 @@
 ;;   :calculate-total-size-node-attribute nil
    :slow-instance-size-checking? true
 ;;   :stop-walk-at-references false  ;; default true
+;;   :summary-options [:all]
+;;   :summary-options [:wcc-details :scc-details :size-breakdown :class-breakdown :node-degree-breakdown :distance-breakdown]
    })
 (def v1 (vector 2))
 )
 
 (def g (d/sum [v1] opts))
+(def g2 (gr/remove-all-attrs g))
+
+(require '[clojure.java.io :as io])
+(with-open [wrtr (io/writer "dimultigraph-129k-nodes-272k-edges.edn")]
+  (binding [*out* wrtr]
+    (uber/pprint g2)))
+
 (d/view-graph g)
+(d/view-graph g2)
 (def g (d/sum [#'v1] opts))
 (def g3 (gr/induced-subgraph g (filter #(<= (uber/attr g % :distance) 6)
                                         (uber/nodes g))))
