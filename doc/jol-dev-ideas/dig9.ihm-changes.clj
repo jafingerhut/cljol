@@ -777,6 +777,25 @@ thread."
             (if total-known? (str total) "?"))))
 
 
+(defn uniquely-reachable-info
+  [objmap _opts]
+  (cond
+    (:starting-object? objmap)
+    (let [{:keys [my-unique-num-reachable-nodes my-unique-total-size]}
+          objmap]
+      (format "%s object%s, %s bytes reached only from here"
+              my-unique-num-reachable-nodes
+              (if (> my-unique-num-reachable-nodes 1)
+                "s" "")
+              my-unique-total-size))
+    
+    (contains? objmap :reachable-only-from)
+    (format "reached only from one start object %d"
+            (:reachable-only-from objmap))
+    
+    :else "reached from multiple start objects"))
+
+
 (defn scc-size
   "Return a string describing the number of nodes in the same strongly
   connected component as this object."
@@ -951,6 +970,7 @@ thread."
    address-decimal
    size-bytes
    total-size-bytes
+   uniquely-reachable-info
    scc-size
    class-description
    field-values
@@ -963,6 +983,7 @@ thread."
    ;;address-decimal
    size-bytes
    total-size-bytes
+   ;;uniquely-reachable-info
    scc-size
    class-description
    field-values
@@ -1095,6 +1116,46 @@ thread."
             g (uber/nodes g))))
 
 
+(defn owner-if-unique
+  "Given a map from keys to collections of values, create and return a
+  map with the values as keys, and the associated value is the one key
+  of the input map for which that value is part of its collection, if
+  there is only one.  If there is more than one such key, the
+  associated value is ::multiple-owners."
+  [m]
+  (reduce-kv (fn [acc k coll]
+               (reduce (fn [acc one-val]
+                         (let [k2 (get acc one-val ::not-found)]
+                           (cond
+                             (= k2 ::not-found) (assoc acc one-val k)
+                             (= k2 k) acc
+                             :else (assoc acc
+                                          one-val ::multiple-owners))))
+                       acc coll))
+             {} m))
+
+
+(defn uniquely-owned-values
+  "Given a map from keys to collections of values, create and return a
+  map with the same keys, where the value associated with each key is
+  a set.  The elements of the set are exactly the subset of the input
+  collection associated with the same key, that are _only_ in that
+  key's collection, and no other key's collection."
+  [m]
+  (if (= (count m) 1)
+    ;; fast path for easy case
+    {:owners (zipmap (first (vals m)) (repeat (first (keys m))))
+     :uniquely-owned m}
+    (let [owners (owner-if-unique m)
+          ret (zipmap (keys m) (repeat #{}))]
+      {:owners owners
+       :uniquely-owned (reduce-kv (fn [acc val k]
+                                    (if (= k ::multiple-owners)
+                                      acc
+                                      (update acc k conj val)))
+                                  ret owners)})))
+
+
 (defn add-bounded-total-size-bytes-node-attr
   "Adds attributes :total-size (in bytes, derived from the
   existing :size attribute on the nodes) and :num-reachable-nodes to
@@ -1122,15 +1183,18 @@ thread."
                                   [sccg-node
                                    (reduce + (map #(object-size-bytes g %)
                                                   sccg-node))]))
-        sccg-start-nodes (set (filter (fn [sccg-node]
-                                        (some #(uber/attr g % :starting-object?)
-                                              sccg-node))
-                                      (uber/nodes scc-graph)))
+        sccg->orig-start-node
+        (into {} (for [sccg-node (uber/nodes scc-graph)
+                       :let [orig-start-nodes
+                             (set (filter #(uber/attr g % :starting-object?)
+                                          sccg-node))]
+                       :when (seq orig-start-nodes)]
+                   [sccg-node orig-start-nodes]))
 
-        {[scc-node-stats-trans counts] :ret :as p}
+        {[scc-node-stats-trans nodes-reached-trans counts-trans] :ret :as p}
         (my-time
-         (reduce (fn [[acc counts] n]
-                   (let [start-node? (contains? sccg-start-nodes n)
+         (reduce (fn [[acc nodes-reached counts] n]
+                   (let [start-node? (contains? sccg->orig-start-node n)
                          [node-count-ml total-size-ml]
                          (if start-node?
                            [Double/POSITIVE_INFINITY Double/POSITIVE_INFINITY]
@@ -1138,32 +1202,74 @@ thread."
                          [stats cnt] (gr/bounded-reachable-node-stats
                                       scc-graph n num-reachable-nodes-in-scc
                                       total-size-in-scc node-count-ml
-                                      total-size-ml)
+                                      total-size-ml start-node?)
                          num (:num-reachable-nodes stats)
                          total (:total-size stats)
                          over-bounds? (and (> num node-count-ml)
                                            (> total total-size-ml))]
-                     [(assoc! acc n (assoc stats
-                                           :complete-statistics
-                                           (not over-bounds?)))
-                      (conj counts cnt)]))
-                 [(transient {}) []]
+                     [(assoc! acc n (-> (dissoc stats :nodes-reached)
+                                        (assoc :complete-statistics
+                                               (not over-bounds?))))
+                      (if start-node?
+                        (assoc! nodes-reached n (:nodes-reached stats))
+                        nodes-reached)
+                      (conj! counts cnt)]))
+                 [(transient {}) (transient {}) (transient [])]
                  (uber/nodes scc-graph)))
-        scc-node-stats (persistent! scc-node-stats-trans)]
+        scc-node-stats (persistent! scc-node-stats-trans)
+        nodes-reached (persistent! nodes-reached-trans)
+        counts (persistent! counts-trans)
+        {:keys [owners uniquely-owned] :as tmp1} (uniquely-owned-values nodes-reached)]
     (when (>= debug-level 1)
       (print "Calculated num-reachable-nodes and total-size"
              " for scc-graph in: ")
       (print-perf-stats p)
       (println "frequencies of different number of nodes DFS traversed:")
       (pp/pprint (into (sorted-map) (frequencies counts)))
-      (println))
+      (println)
+      ;;(println "nodes-reached=")
+      ;;(pp/pprint nodes-reached)
+      ;;(println "uniquely-owned=")
+      ;;(pp/pprint uniquely-owned)
+      ;;(println "owners=")
+      ;;(pp/pprint owners)
+      ;;(println "tmp1=")
+      ;;(pp/pprint tmp1)
+      )
     (reduce (fn [g sccg-node]
-              (let [stat-attrs (assoc (scc-node-stats sccg-node)
-                                      :scc-num-nodes (count sccg-node))]
+              (let [stat-attrs
+                    (merge
+                     (assoc (scc-node-stats sccg-node)
+                            :scc-num-nodes (count sccg-node))
+                     (if (contains? sccg->orig-start-node sccg-node)
+                       {:my-unique-num-reachable-nodes
+                        (reduce + (map num-reachable-nodes-in-scc
+                                       (uniquely-owned sccg-node)))
+                        :my-unique-total-size
+                        (reduce + (map total-size-in-scc
+                                       (uniquely-owned sccg-node)))})
+                     (let [owner (owners sccg-node)
+                           orig-graph-start-nodes
+                           (if (not= owner ::multiple-owners)
+                             (sccg->orig-start-node owner)
+                             #{})]
+                       ;; See Note 2
+                       (if (= (count orig-graph-start-nodes) 1)
+                         {:reachable-only-from (first
+                                                orig-graph-start-nodes)})))]
                 (reduce (fn [g g-node]
                           (uber/add-attrs g g-node stat-attrs))
                         g sccg-node)))
             g (uber/nodes scc-graph))))
+
+;; Note 2
+
+;; Even if an sccg node has only one 'owner' in the scc-graph, there
+;; might be more than one node in the original graph in that sccg
+;; node.  If so, all of the nodes in scc-graph that are reachable only
+;; from the 'owner', are all reachable from multiple original nodes,
+;; and should not be marked as :reachable-only-from in the original
+;; graph.
 
 
 (defn add-bounded-total-size-bytes-node-attr2
@@ -1269,7 +1375,7 @@ thread."
             g (uber/nodes g))))
 
 
-(defn graph-summary [g]
+(defn graph-summary [g opts]
   (let [size-bytes-freq (frequencies (map #(uber/attr g % :size)
                                           (uber/nodes g)))
         size-breakdown (->> (for [[size cnt] size-bytes-freq]
@@ -1277,73 +1383,78 @@ thread."
                                :num-objects cnt
                                :total-size (* size cnt)})
                             (sort-by :size-bytes))
-        total-size-bytes (reduce + (for [x size-breakdown] (:total-size x)))
-        ;; TBD: The node collections that ualg/connected-components
-        ;; returns can in some cases contain duplicate nodes.  I do
-        ;; not know why this happens.  For now, make sets out of them
-        ;; to eliminate those.
-        {weakly-connected-components :ret
-         :as wcc-perf} (my-time (map set (ualg/connected-components g)))
-        {scc-data :ret :as scc-perf} (my-time (gr/scc-graph g))
-        {:keys [scc-graph node->scc-set]} scc-data
-        scc-components (set (vals node->scc-set))
-        scc-component-sizes-sorted (sort > (map count scc-components))
-        nodes-by-distance (group-by #(uber/attr g % :distance)
-                                    (uber/nodes g))
-        node-stats-by-distance
-        (->> (for [[k nodes] nodes-by-distance]
-               {:distance k
-                :num-objects (count nodes)
-                :total-size (reduce + (for [n nodes]
-                                        (uber/attr g n :size)))})
-             (sort-by :distance))]
+        total-size-bytes (reduce + (for [x size-breakdown] (:total-size x)))]
     (println (uber/count-nodes g) "objects")
     (println (uber/count-edges g) "references between them")
     (println total-size-bytes "bytes total in all objects")
     (println (if (ualg/dag? g)
                "no cycles"
                "has at least one cycle"))
-    (print (count weakly-connected-components) "weakly connected components"
-           "found in: ")
-    (print-perf-stats wcc-perf)
-    (println "number of nodes in all weakly connected components,")
-    (println "from most to fewest nodes:")
-    (println (sort > (map count weakly-connected-components)))
-    (print "The scc-graph has" (uber/count-nodes scc-graph) "nodes and"
-           (uber/count-edges scc-graph) "edges, took: ")
-    (print-perf-stats scc-perf)
-    (println "The largest size strongly connected components, at most 10:")
-    (pp/pprint (take 10 scc-component-sizes-sorted))
-    (println "number of objects of each size in bytes:")
-    (pp/pprint size-breakdown)
-    (println "number and size of objects of each class:")
-    (pp/pprint (->> (for [[cls nodes] (group-by #(class (uber/attr g % :obj))
-                                                (uber/nodes g))]
-                      {:total-size (reduce + (for [n nodes]
-                                               (uber/attr g n :size)))
-                       :num-objects (count nodes)
-                       :class (abbreviated-class-name-str (pr-str cls))})
-                    (sort-by :total-size)))
-    (println)
+    (when (some #{:all :wcc-details} (opts :summary-options))
+      (let [;; TBD: The node collections that
+            ;; ualg/connected-components returns can in some cases
+            ;; contain duplicate nodes.  I do not know why this
+            ;; happens.  For now, make sets out of them to eliminate
+            ;; those.
+            {weakly-connected-components :ret
+             :as wcc-perf} (my-time (map set (ualg/connected-components g)))]
+        (print (count weakly-connected-components) "weakly connected components"
+               "found in: ")
+        (print-perf-stats wcc-perf)
+        (println "number of nodes in all weakly connected components,")
+        (println "from most to fewest nodes:")
+        (println (sort > (map count weakly-connected-components)))))
+    (when (some #{:all :scc-details} (opts :summary-options))
+      (let [{scc-data :ret :as scc-perf} (my-time (gr/scc-graph g))
+            {:keys [scc-graph node->scc-set]} scc-data
+            scc-components (set (vals node->scc-set))
+            scc-component-sizes-sorted (sort > (map count scc-components))]
+        (print "The scc-graph has" (uber/count-nodes scc-graph) "nodes and"
+               (uber/count-edges scc-graph) "edges, took: ")
+        (print-perf-stats scc-perf)
+        (println "The largest size strongly connected components, at most 10:")
+        (pp/pprint (take 10 scc-component-sizes-sorted))))
+    (when (some #{:all :size-breakdown} (opts :summary-options))
+      (println "number of objects of each size in bytes:")
+      (pp/pprint size-breakdown))
+    (when (some #{:all :class-breakdown} (opts :summary-options))
+      (println "number and size of objects of each class:")
+      (pp/pprint (->> (for [[cls nodes] (group-by #(class (uber/attr g % :obj))
+                                                  (uber/nodes g))]
+                        {:total-size (reduce + (for [n nodes]
+                                                 (uber/attr g n :size)))
+                         :num-objects (count nodes)
+                         :class (abbreviated-class-name-str (pr-str cls))})
+                      (sort-by :total-size)))
+      (println))
     (println (count (filter #(= 0 (uber/out-degree g %)) (uber/nodes g)))
              "leaf objects (no references to other objects)")
     (println (count (filter #(= 0 (uber/in-degree g %)) (uber/nodes g)))
              "root nodes (no reference to them from other objects _in this graph_)")
-
-    (println "number of objects of each in-degree (# of references to it):")
-    (pp/pprint (->> (for [[k v] (frequencies (map #(uber/in-degree g %)
-                                                  (uber/nodes g)))]
-                      {:in-degree k :num-objects v})
-                    (sort-by :in-degree)))
-    (println "number of objects of each out-degree (# of references from it):")
-    (pp/pprint (->> (for [[k v] (frequencies (map #(uber/out-degree g %)
-                                                  (uber/nodes g)))]
-                      {:out-degree k :num-objects v})
-                    (sort-by :out-degree)))
-
-    (println "map where keys are distance of an object from a start node,")
-    (println "values are number of objects with that distance:")
-    (pp/pprint node-stats-by-distance)))
+    
+    (when (some #{:all :node-degree-breakdown} (opts :summary-options))
+      (println "number of objects of each in-degree (# of references to it):")
+      (pp/pprint (->> (for [[k v] (frequencies (map #(uber/in-degree g %)
+                                                    (uber/nodes g)))]
+                        {:in-degree k :num-objects v})
+                      (sort-by :in-degree)))
+      (println "number of objects of each out-degree (# of references from it):")
+      (pp/pprint (->> (for [[k v] (frequencies (map #(uber/out-degree g %)
+                                                    (uber/nodes g)))]
+                        {:out-degree k :num-objects v})
+                      (sort-by :out-degree))))
+    (when (some #{:all :distance-breakdown} (opts :summary-options))
+      (let [nodes-by-distance (group-by #(uber/attr g % :distance)
+                                        (uber/nodes g))
+            node-stats-by-distance
+            (->> (for [[k nodes] nodes-by-distance]
+                   {:distance k
+                    :num-objects (count nodes)
+                    :total-size (reduce + (for [n nodes]
+                                            (uber/attr g n :size)))})
+                 (sort-by :distance))]
+        (println "Number and total size of objects at each distance from a starting object:")
+        (pp/pprint node-stats-by-distance)))))
 
 
 (defn sum
@@ -1351,7 +1462,7 @@ thread."
    (sum obj-coll {}))
   ([obj-coll opts]
    (let [g (graph-of-reachable-objects obj-coll opts)]
-     (graph-summary g)
+     (graph-summary g opts)
      g)))
 
 
@@ -1553,7 +1664,7 @@ props1
 
 (uber/viz-graph (keep-only-dot-safe-attrs g1) {:rankdir :LR})
 (uber/viz-graph (keep-only-dot-safe-attrs g2) {:rankdir :LR})
-(graph-summary g2)
+(graph-summary g2 opts)
 
 (def g2 (uber/remove-nodes* g1 (gr/leaf-nodes g1)))
 (def g2 (gr/induced-subgraph g1 (filter #(<= (uber/attr g % :distance) 2)

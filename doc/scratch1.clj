@@ -5,6 +5,8 @@
          '[cljol.graph :as gr]
          '[loom.alg-generic :as lag]
          '[loom.alg :as lalg]
+         '[cljol.object-walk :as ow :refer [ClassData->map]]
+         '[cljol.performance :as perf :refer [my-time print-perf-stats]]
 	 '[ubergraph.core :as uber]
 	 '[ubergraph.alg :as ualg])
 (def opts
@@ -897,3 +899,81 @@ g2
 (def x clojure.core__init)
 (class x)
 (mm/measure x :debug 10 :bytes true :shallow true)
+
+
+(do
+
+(defn graph->ihm [g]
+  (let [ihm (java.util.IdentityHashMap.)]
+    (doseq [node (uber/nodes g)]
+      (. ihm put (uber/attr g node :obj) nil))
+    ihm))
+
+(defn objmaps->ihm [objmaps]
+  (let [ihm (java.util.IdentityHashMap.)]
+    (doseq [objmap objmaps]
+      (. ihm put (:obj objmap) nil))
+    ihm))
+
+(defn ihm-key-diffs [^java.util.IdentityHashMap ihm1
+                     ^java.util.IdentityHashMap ihm2]
+  (let [^java.util.IdentityHashMap ihm1-but-not-2 (java.util.IdentityHashMap.)
+        ^java.util.IdentityHashMap ihm2-but-not-1 (java.util.IdentityHashMap.)]
+    (doseq [obj (keys ihm1)]
+      (when-not (. ihm2 containsKey obj)
+        (. ihm1-but-not-2 put obj nil)))
+    (doseq [obj (keys ihm2)]
+      (when-not (. ihm1 containsKey obj)
+        (. ihm2-but-not-1 put obj nil)))
+    {:same-keys? (and (zero? (count ihm1-but-not-2))
+                      (zero? (count ihm2-but-not-1)))
+     :num-objects-in-ihm1 (count ihm1)
+     :num-objects-in-ihm2 (count ihm2)
+     :num-objects-in-ihm1-but-not-2 (count ihm1-but-not-2)
+     :num-objects-in-ihm2-but-not-1 (count ihm2-but-not-1)
+     :in-ihm1-but-not-2 ihm1-but-not-2
+     :in-ihm2-but-not-1 ihm2-but-not-1}))
+
+(defn compare1 [obj-coll opts stop-fn]
+  (let [objmaps (d/consistent-reachable-objmaps obj-coll opts)
+        {ihm :ret :as p} (my-time (ow/parse-instance-ids stop-fn obj-coll))
+        diffs (ihm-key-diffs (objmaps->ihm objmaps) (:objects-found ihm))]
+    (merge diffs
+           {:objmaps objmaps
+            :ihm ihm
+            :ihm-perf (dissoc p :ret)})))
+
+(def stop-fn nil)
+)
+
+(def v1 (vector 2))
+(def v1 (vector-of :long 1 2 3 4))
+(def v1 (repeat 5))
+(def v1 (let [a1 (atom 5)
+              a2 (atom 10)]
+          (swap! a1 (constantly a2))
+          (swap! a2 (constantly a1))
+          [a1 a2]))
+(def v1 (let [x :x y :y] {x y y x}))
+(def v1 [[:x :y] [:y :x]])
+(def v1 [nil])
+(def v1 [#'v2])
+
+(def v1 nil)
+(def v2 nil)
+(def diffs nil)
+(System/gc)
+
+(def diffs (compare1 [v1] opts stop-fn))
+(pprint (dissoc diffs :objmaps :ihm))
+(pprint (select-keys diffs [:same-keys?
+                            :ihm-perf
+                            :num-objects-in-ihm1
+                            :num-objects-in-ihm2
+                            :num-objects-in-ihm1-but-not-2
+                            :num-objects-in-ihm2-but-not-1]))
+
+(def diffs (let [g (:g diffs)
+                 ihm (:ihm diffs)
+                 diffs (ihm-key-diffs (graph->ihm g) (:objects-found ihm))]
+             (merge diffs {:g g :ihm ihm})))

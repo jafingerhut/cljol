@@ -9,6 +9,7 @@
             [ubergraph.core :as uber]
             [ubergraph.alg :as ualg]
             ;;[clj-async-profiler.core :as prof]
+            [cljol.object-walk :as ow :refer [ClassData->map]]
             [cljol.graph :as gr]
             [cljol.performance :as perf :refer [my-time print-perf-stats]]))
 
@@ -50,44 +51,6 @@
 (defn instance-layout->str [obj]
   (let [parsed-inst (ClassLayout/parseInstance obj)]
     (.toPrintable parsed-inst)))
-
-
-(defn FieldData->map [^FieldData fd]
-  (let [^Field ref-field (.refField fd)]
-    {:field-name (.name fd)
-     :type-class (.typeClass fd)
-     :host-class (.hostClass fd)
-     :is-contended? (.isContended fd)
-     :contended-group (.contendedGroup fd)
-     :ref-field ref-field
-     :is-primitive? (. (. ref-field getType) isPrimitive)
-     :vm-offset (.vmOffset fd)}))
-
-
-;; Note that much of the information about a class returned by
-;; ClassData->map can also be obtained via the Java reflection API in
-;; the java.lang.reflect.* classes.  At least one kind of information
-;; that can be obtained from ClassData->map that cannot be gotten from
-;; Java's reflection API is the :vm-offset of fields.
-
-(defn ClassData->map [^ClassData cd]
-  (merge
-   {:class-name (.name cd)
-    :superclass (.superClass cd)
-    :class-hierarchy (.classHierarchy cd)
-    :is-array? (.isArray cd)
-    :is-contended? (.isContended cd)
-    :fields (->> (.fields cd)
-                 (map FieldData->map)
-                 (sort-by :vm-offset))}
-   (if (.isArray cd)
-     ;; info specific to array objects
-     {:array-component-type (.arrayComponentType cd)
-      :array-length (.arrayLength cd)}
-     ;; info specific to non-array objects
-     {;; oops are "Ordinary Object Pointers" according to this article:
-      ;; https://www.baeldung.com/jvm-compressed-oops
-      :oops-count (.oopsCount cd)})))
 
 
 (defn array? [x]
@@ -288,39 +251,44 @@
   over this one for the assistance it provides in trying to return a
   consistent set of addresses across all objects."
   [obj-coll opts]
-  (let [parsed-inst (GraphLayout/parseInstance (object-array obj-coll))
+  (let [debug-level (get opts :consistent-reachable-objects-debuglevel 0)
+        {^GraphLayout parsed-inst :ret :as p}
+        (my-time (GraphLayout/parseInstance (object-array obj-coll)))
         addresses (.addresses parsed-inst)]
-    (map (fn [addr]
-           (let [gpr (. parsed-inst record addr)
-                 obj (gpr->java-obj gpr)
-                 arr? (array? obj)
-                 ref-arr? (and arr?
-                               (not (. (array-element-type obj) isPrimitive)))
-                 cd (ClassData/parseClass (class obj))
-                 flds (->> cd ClassData->map :fields (remove :is-primitive?)
-                           (map :ref-field))
-                 ;; TBD: Consider calling both
-                 ;; array-elem-name-and-address _and_
-                 ;; field-name-and-address for array objects, just in
-                 ;; case any Java array objects actually do return
-                 ;; fields.
-                 refd-objs (if ref-arr?
-                             (into {} (map #(array-elem-name-and-address % obj)
-                                           (range (count obj))))
-                             (into {} (map #(field-name-and-address % obj)
-                                           flds)))
-                 size-to-use (workaround-object-size-bytes obj gpr opts)]
-             {:address addr
-              :obj obj
-              :size size-to-use
-              :path (. gpr path)
-              :distance (. gpr depth)
-              :fields refd-objs
-              ;; Linear search is fast enough for small obj-coll.
-              ;; Could switch to using Java IdentityHashMap for faster
-              ;; lookups if obj-coll is expected to be large.
-              :starting-object? (boolean (some #(identical? obj %) obj-coll))}))
-         addresses)))
+    (when (>= debug-level 1)
+      (print "found" (.totalCount parsed-inst) "objects via GraphLayout/parseInstance: ")
+      (print-perf-stats p))
+    (mapv (fn [addr]
+            (let [gpr (. parsed-inst record addr)
+                  obj (gpr->java-obj gpr)
+                  arr? (array? obj)
+                  ref-arr? (and arr?
+                                (not (. (array-element-type obj) isPrimitive)))
+                  cd (ClassData/parseClass (class obj))
+                  flds (->> cd ClassData->map :fields (remove :is-primitive?)
+                            (map :ref-field))
+                  ;; TBD: Consider calling both
+                  ;; array-elem-name-and-address _and_
+                  ;; field-name-and-address for array objects, just in
+                  ;; case any Java array objects actually do return
+                  ;; fields.
+                  refd-objs (if ref-arr?
+                              (into {} (map #(array-elem-name-and-address % obj)
+                                            (range (count obj))))
+                              (into {} (map #(field-name-and-address % obj)
+                                            flds)))
+                  size-to-use (workaround-object-size-bytes obj gpr opts)]
+              {:address addr
+               :obj obj
+               :size size-to-use
+               :path (. gpr path)
+               :distance (. gpr depth)
+               :fields refd-objs
+               ;; Linear search is fast enough for small obj-coll.
+               ;; Could switch to using Java IdentityHashMap for faster
+               ;; lookups if obj-coll is expected to be large.
+               :starting-object? (boolean (some #(identical? obj %) obj-coll))}))
+          addresses)))
 
 
 ;; When I use externals on many data structures, I see objects
