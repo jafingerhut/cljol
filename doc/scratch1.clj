@@ -889,3 +889,11 @@ g2
 ;; => (5 true)  good
 (take 10 (lalg/pre-traverse g2 true))
 ;; => (true 5)  good
+
+(require '[cljol.reflection-test-helpers :as t]
+         '[clj-memory-meter.core :as mm])
+
+(class clojure.core__init)
+(def x clojure.core__init)
+(class x)
+(mm/measure x :debug 10 :bytes true :shallow true)

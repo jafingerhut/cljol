@@ -10,6 +10,7 @@
             [clojure.reflect :as ref]
             [clojure.data :as data]
             [cljol.version-info :as ver]
+            [clj-memory-meter.core :as mm]
             [cljol.dig9 :as d]))
 
 
@@ -229,11 +230,11 @@
         ;; particular array object it is given, which includes the
         ;; base size returned by ClassLayout/parseClass, but also the
         ;; size of all array elements.
-        array-mismatch? (= vm-size inst-size)
+        array-match? (= vm-size inst-size)
         ;; For non-array objects, all three of these sizes should
         ;; match each other.
-        non-array-mismatch? (= vm-size cl-size inst-size)
-        size-mismatch? (if arr? array-mismatch? non-array-mismatch?)]
+        non-array-match? (= vm-size cl-size inst-size)
+        size-match? (if arr? array-match? non-array-match?)]
     ;;(println "toPrintable of parseInstance ret value:")
     ;;(print (.toPrintable parsed-inst))
     ;;(println)
@@ -244,13 +245,31 @@
     ;;(println vm-size "(. (VM/current) sizeOf obj)")
     ;;(println inst-size "(. (ClassLayout/parseInstance obj) instanceSize)")
     ;;(println cl-size "(. (ClassLayout/parseClass cls) instanceSize)")
-    (if size-mismatch?
+    (if size-match?
       {:difference false :obj obj :class (class obj) :vm-size vm-size}
       {:difference true :obj obj :class (class obj)
        :array? arr?
        :vm-size vm-size
        :classlayout-parseclass-size cl-size
-       :classlayout-pareinstance-size inst-size})))
+       :classlayout-parseinstance-size inst-size})))
+
+
+(defn jamm-vs-jol-size-difference-info [obj]
+  (let [arr? (d/array? obj)
+	parsed-inst (ClassLayout/parseInstance obj)
+        inst-size (. parsed-inst instanceSize)
+        jamm-size (mm/measure obj :shallow true :bytes true)
+        size-match? (= inst-size jamm-size)]
+    (if size-match?
+      {:difference false :obj obj :class (class obj)}
+      {:difference true :obj obj :class (class obj)
+       :array? arr?
+       :classlayout-parseinstance-size inst-size
+       :jamm-size jamm-size})))
+
+
+(defn avg [vals]
+  (/ (reduce + vals) (count vals)))
 
 
 (defn report []
@@ -299,7 +318,18 @@
                                                           test-array-objs)
                                   :let [results (size-difference-info klass)]
                                   :when (:difference results)]
-                              results)]
+                              results)
+            ;; Disable testing of jamm sizes by default.
+            test-jamm? false
+            jamm-vs-jol-diffs (when test-jamm?
+                                (for [{:keys [klass]} (concat loaded-klass-infos
+                                                              test-array-objs)
+                                      :let [results
+                                            (jamm-vs-jol-size-difference-info
+                                             klass)]
+                                      :when (:difference results)]
+                                  results))
+            ]
         
         (println (count no-differences)
                  "classes with no difference in their field data.")
@@ -313,6 +343,11 @@
         (println "Found" (count inst-size-diffs) "classes with different"
                  "sizes according to different JOL APIs.")
         (println "Wrote differences below after heading '# inst-size-diffs'.")
+
+        (when test-jamm?
+          (println "Found" (count jamm-vs-jol-diffs) "classes with different"
+                   "sizes according to jamm vs JOL APIs.")
+          (println "Wrote differences below after heading '# jamm-vs-jol-diffs'."))
 
         (println)
         (println "############################################################")
@@ -341,6 +376,31 @@
         (println "############################################################")
         (when (not= 0 (count inst-size-diffs))
           (pp/pprint inst-size-diffs))
+
+        (when test-jamm?
+          (println)
+          (println "############################################################")
+          (println "# jamm-vs-jol-diffs")
+          (let [jamm-vs-jol-diffs
+                (->> jamm-vs-jol-diffs
+                     (map (fn [x]
+                            (assoc x :jamm-over-jol-size-ratio
+                                   (/ (* 1.0 (:jamm-size x))
+                                      (:classlayout-parseinstance-size x)))))
+                     (sort-by :jamm-over-jol-size-ratio >))
+                ratios (map :jamm-over-jol-size-ratio jamm-vs-jol-diffs)]
+            (println "# Statistics about ratio of size according to jamm vs.")
+            (println "# size according to JOL parseInstance:")
+            (println (format "# min ratio=%.3f" (apply min ratios)))
+            (println (format "# max ratio=%.3f" (apply max ratios)))
+            (println (format "# avg ratio=%.3f" (avg ratios)))
+            (println "# Largest 5 ratios:")
+            (pp/pprint (take 5 jamm-vs-jol-diffs))
+            (println "# Smallest 3 ratios:")
+            (pp/pprint (take-last 3 jamm-vs-jol-diffs)))
+          (println "############################################################")
+          (when (not= 0 (count jamm-vs-jol-diffs))
+            (pp/pprint jamm-vs-jol-diffs)))
 
         pif-diffs))))
 
