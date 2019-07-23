@@ -76,6 +76,36 @@
   (pre-traverse* #(uber/successors g %) n))
 
 
+(defn induced-subgraph-build-from-empty
+  [g node-set]
+  ;; TBD: I haven't tested this yet, but I believe that for graphs
+  ;; that contain undirected edges, out-edges will return an edge e in
+  ;; the collection for both of its endpoint nodes, but for one of
+  ;; those the edges (mirror-edge? e) will return true, and the other
+  ;; false.
+  (as-> (uber/ubergraph (uber/allow-parallel-edges? g)
+                        (uber/undirected-graph? g))
+      new-g
+    (reduce (fn add-node [new-g n]
+              (uber/add-nodes-with-attrs new-g [n (uber/attrs g n)]))
+            new-g node-set)
+    (reduce (fn add-edges-of-node [new-g n]
+              (uber/add-edges*
+               new-g
+               (for [e (uber/out-edges g n)
+                     :when (and (contains? node-set (uber/dest e))
+                                (not (uber/mirror-edge? e)))]
+                 [(uber/src e) (uber/dest e)
+                  (uber/attrs g e)])))
+            new-g node-set)))
+
+
+(defn induced-subgraph-by-removing-nodes
+  [g node-set]
+  (let [nodes-to-remove (remove #(contains? node-set %) (uber/nodes g))]
+    (uber/remove-nodes* g nodes-to-remove)))
+
+
 (defn induced-subgraph
   "Given a graph g, and a collection of nodes in that graph, return
   another graph containing only those nodes, and the edges of g that
@@ -91,39 +121,18 @@
   ignored.  The returned graph will not contain those values as
   nodes."
   [g nodes]
-  (let [nodes (set (filter #(uber/has-node? g %) nodes))
+  (let [node-set (set (filter #(uber/has-node? g %) nodes))
         old-node-count (uber/count-nodes g)
-        new-node-count (count nodes)]
+        new-node-count (count node-set)]
     (if (< new-node-count (/ old-node-count 2))
       ;; Then guess that it will be faster to start with an empty
       ;; graph and build up from there.  It is a guess, because it
       ;; really depends upon the number of edges in the resulting
       ;; graph, too.
-
-      ;; TBD: I haven't tested this yet, but I believe that for graphs
-      ;; that contain undirected edges, out-edges will return an edge
-      ;; e in the collection for both of its endpoint nodes, but for
-      ;; one of those the edges (mirror-edge? e) will return true, and
-      ;; the other false.
-      (as-> (uber/ubergraph (uber/allow-parallel-edges? g)
-                            (uber/undirected-graph? g))
-          new-g
-        (reduce (fn add-node [new-g n]
-                  (uber/add-nodes-with-attrs new-g [n (uber/attrs g n)]))
-                new-g nodes)
-        (reduce (fn add-edges-of-node [new-g n]
-                  (uber/add-edges*
-                   new-g
-                   (for [e (uber/out-edges g n)
-                         :when (and (contains? nodes (uber/dest e))
-                                    (not (uber/mirror-edge? e)))]
-                     [(uber/src e) (uber/dest e)
-                      (uber/attrs g e)])))
-                new-g nodes))
+      (induced-subgraph-build-from-empty g node-set)
       ;; else guess that it will be faster to remove the nodes in g
       ;; that are not in 'nodes'.
-      (let [nodes-to-remove (remove #(contains? nodes %) (uber/nodes g))]
-        (uber/remove-nodes* g nodes-to-remove)))))
+      (induced-subgraph-by-removing-nodes g node-set))))
 
 
 (defn dense-integer-node-labels

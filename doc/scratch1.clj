@@ -52,8 +52,13 @@
 (def g (d/sum [#'v1] opts))
 (def g (d/sum [#'v1 (the-ns 'user)] opts))
 (def g3 (gr/induced-subgraph g (filter #(<= (uber/attr g % :distance) 6)
-                                        (uber/nodes g))))
+                                       (uber/nodes g))))
 (d/view-graph g3)
+
+(def close-nodes (set (filter #(<= (uber/attr g % :distance) 6)
+                              (uber/nodes g))))
+(= (gr/induced-subgraph-build-from-empty g close-nodes)
+   (gr/induced-subgraph-by-removing-nodes g close-nodes))
 
 (def v1 (vector-of :long 1 2 3 4))
 (def v1 (repeat 5))
