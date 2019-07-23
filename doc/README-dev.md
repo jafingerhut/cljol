@@ -26,6 +26,14 @@ The `gen.generate` namespace is not normally present on the Java
 classpath.  It is if you use the `:generate` alias to the `clj`
 program, which is defined in the `deps.edn` file.
 
+Running the command `./doc/generate-report.sh` from the root directory
+of this repository, on a macOS or Linux machine, runs code in the
+`cljol.reflection-test-helpers` namespace.  It uses the `classgraph`
+Java library to attempt to find all classes defined in the running
+JVM, and iterate through all except a handful of classes that cause
+problems, comparing multiple different ways of extracting information
+about those classes, reporting any differences.
+
 The file `./doc/scratch1.clj` contains many expressions that I have
 used while doing REPL development and testing of cljol, as well as a
 `(comment ..`) block at the end of the namespace `cljol.dig9`.  Some
