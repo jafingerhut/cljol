@@ -534,17 +534,11 @@
 ;; When should two objects be considered the same in two object
 ;; graphs?
 
-;; TBD: Get rid of discussion of :path values below if I go with
-;; GraphPathRecord2 implementation that leaves them out.
-
 ;; If no compaction/moving of objects has occurred in memory between
 ;; traversing the object graph of objects X and Y, then an object in
 ;; X's object graph and in Y's object graph are the same if their
 ;; addresses are the same.  They should also point at identical
-;; objects, and have equal :size and :fields values.  Note that the
-;; value of their :path keys _could_ differ (I believe), since the
-;; path of an object in X's object graph is relative to X, and in Y's
-;; object graph is relative to Y.
+;; objects, and have equal :size and :fields values.
 
 ;; If compaction/moving of objects _has_ occurred, then objects in X
 ;; and Y's object graphs could overlap, perhaps at the same address,
