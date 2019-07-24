@@ -281,7 +281,6 @@
               {:address addr
                :obj obj
                :size size-to-use
-               :path (. gpr path)
                :distance (. gpr depth)
                :fields refd-objs
                ;; Linear search is fast enough for small obj-coll.
@@ -321,7 +320,6 @@
 ;;   :address - value satisfies integer? and >= 0
 ;;   :obj - no check on value
 ;;   :size - value satisfies integer? and > 0
-;;   :path - value is string
 ;;   :fields - value is map, where keys are strings, and values are same
 ;;     as :address, or nil.
 
@@ -330,7 +328,7 @@
         {:err :non-map
          :data m}
 
-        (not (every? #(contains? m %) [:address :obj :size :path :fields]))
+        (not (every? #(contains? m %) [:address :obj :size :fields]))
         {:err :obj-map-missing-required-key
          :data m}
         
@@ -348,10 +346,6 @@
         
         (not (> (:size m) 0))
         {:err :size-not-positive-integer
-         :data m}
-        
-        (not (string? (:path m)))
-        {:err :path-not-string
          :data m}
         
         (not (map? (:fields m)))
@@ -443,10 +437,7 @@
 ;; traversing the object graph of objects X and Y, then an object in
 ;; X's object graph and in Y's object graph are the same if their
 ;; addresses are the same.  They should also point at identical
-;; objects, and have equal :size and :fields values.  Note that the
-;; value of their :path keys _could_ differ (I believe), since the
-;; path of an object in X's object graph is relative to X, and in Y's
-;; object graph is relative to Y.
+;; objects, and have equal :size and :fields values.
 
 ;; If compaction/moving of objects _has_ occurred, then objects in X
 ;; and Y's object graphs could overlap, perhaps at the same address,
@@ -725,10 +716,6 @@ thread."
                               :else "->"))))))))
 
 
-(defn path-to-object [objmap _opts]
-  (str "path=" (:path objmap)))
-
-
 (defn node-label [objmap opts]
   (str/join "\n"
             (for [f (:node-label-functions opts)]
@@ -837,7 +824,6 @@ thread."
    scc-size
    class-description
    field-values
-   path-to-object
    javaobj->str
    non-realizing-javaobj->str])
 
@@ -850,7 +836,6 @@ thread."
    scc-size
    class-description
    field-values
-   ;;path-to-object
    ;;javaobj->str
    non-realizing-javaobj->str])
 
@@ -1294,7 +1279,7 @@ thread."
              "leaf objects (no references to other objects)")
     (println (count (filter #(= 0 (uber/in-degree g %)) (uber/nodes g)))
              "root nodes (no reference to them from other objects _in this graph_)")
-
+    
     (when (some #{:all :node-degree-breakdown} (opts :summary-options))
       (println "number of objects of each in-degree (# of references to it):")
       (pp/pprint (->> (for [[k v] (frequencies (map #(uber/in-degree g %)
@@ -1331,7 +1316,7 @@ thread."
 
 (def cljol-node-keys-to-remove
   [:address :size :total-size :num-reachable-nodes :complete-statistics
-   :obj :fields :path :distance])
+   :obj :fields :distance])
 
 
 (defn keep-only-dot-safe-attrs
@@ -1410,7 +1395,6 @@ thread."
                                  total-size-bytes
                                  class-description
                                  field-values
-                                 ;;path-to-object
                                  javaobj->str
                                  ]}))
 (def opts opts-for-ubergraph)
@@ -1425,7 +1409,6 @@ thread."
                                  ;;total-size-bytes
                                  ;;class-description
                                  ;;field-values
-                                 ;;path-to-object
                                  ;;javaobj->str
                                  ]}))
 (def opts default-render-opts)
@@ -1437,11 +1420,10 @@ thread."
 (def o2 (conj o1 5))
 (d/view [o1 o2])
 (def opts {:node-label-functions [address-decimal
-           size-bytes
-           total-size-bytes
-           class-description
-           field-values
-           ;;path-to-object
+                                  size-bytes
+                                  total-size-bytes
+                                  class-description
+                                  field-values
                                   javaobj->str]
            :max-value-len 50})
 
@@ -1498,7 +1480,6 @@ props1
                                  total-size-bytes
                                  class-description
                                  field-values
-                                 ;;path-to-object
                                  ;;javaobj->str
                                  ]}))
 (def opts opts-no-value-str)
@@ -1754,7 +1735,6 @@ props1
                                                        size-bytes
                                                        class-description
                                                        ;;field-values
-                                                       ;;path-to-object
                                                        javaobj->str-dot-escaping
                                                        ]}))
 
