@@ -53,4 +53,4 @@
   }
  :paths ["src/clj" "test"]
  :deps {org.openjdk.jol/jol-core {:mvn/version "0.9"}
-        ubergraph {:mvn/version "0.5.3"}}}
+        ubergraph {:mvn/version "0.6.0"}}}

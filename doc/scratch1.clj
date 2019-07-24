@@ -24,10 +24,12 @@
    :graph-of-reachable-objects-debuglevel 1
    :bounded-reachable-node-stats-debuglevel 1
    :bounded-reachable-node-stats2-debuglevel 1
+
 ;;   :calculate-total-size-node-attribute :complete
    :calculate-total-size-node-attribute :bounded
 ;;   :calculate-total-size-node-attribute :bounded2
 ;;   :calculate-total-size-node-attribute nil
+
    :slow-instance-size-checking? true
 ;;   :stop-walk-at-references false  ;; default true
 ;;   :summary-options [:all]
@@ -959,8 +961,13 @@ g2
 (def v1 [nil])
 (def v1 [#'v2])
 
+(def g (d/sum [v1] opts))
+(d/view-graph g)
+
 (def v1 nil)
 (def v2 nil)
+(def g nil)
+(def g3 nil)
 (def diffs nil)
 (System/gc)
 
