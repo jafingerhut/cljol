@@ -28,7 +28,7 @@
              :main-opts ["-m" "eastwood.lint"
                          "{:source-paths,[\"src/clj\"],:test-paths,[\"test\"],:add-linters,[:unused-fn-args,:unused-locals,:unused-namespaces,:unused-private-vars],:exclude-linters,[:implicit-dependencies],:exclude-namespaces,[cljol.jdk9-and-later]}"]}
   :loomlocal {:override-deps {aysylu/loom {:mvn/version "1.0.3-SNAPSHOT"}}}
-  :uberlocal {:override-deps {ubergraph {:mvn/version "0.5.4-andy-mods"}}}
+  :uberlocal {:override-deps {ubergraph {:mvn/version "0.6.1-andy-mods"}}}
   :jollocal {:override-deps {org.openjdk.jol/jol-core {:mvn/version "0.9.1"}}}
   :generate {:extra-paths ["src/generate"]
              :extra-deps {org.clojure/data.int-map {:mvn/version "0.2.4"}}}
@@ -53,4 +53,5 @@
   }
  :paths ["src/clj" "test"]
  :deps {org.openjdk.jol/jol-core {:mvn/version "0.9"}
-        ubergraph {:mvn/version "0.6.0"}}}
+        ubergraph {:mvn/version "0.6.1"
+                   :exclusions [tailrecursion/cljs-priority-map]}}}
