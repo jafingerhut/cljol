@@ -31,3 +31,11 @@ take advantage of the changes in the last batch of files above.
 
 Early July 2019 version of the last file above contains changes that
 take advantage of the first patch above.
+
+
+If you do not have javadoc installed in a system, you can still build
+and test JOL with this command:
+
+```bash
+$ mvn -Dmaven.javadoc.skip=true clean install
+```
