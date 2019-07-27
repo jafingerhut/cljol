@@ -39,6 +39,7 @@
 )
 
 (def g (d/sum [v1] opts))
+(uber/check-ubergraph-implementation-invariants g)
 (def g (d/sum (let [v1 (vec (range 4))] [v1 (conj v1 4)]) opts))
 (def g (d/sum (let [m1 (zipmap (range 4) (range 5 9))] [m1 (assoc m1 4 9)]) opts))
 (def g2 (gr/remove-all-attrs-except g [:my-unique-num-reachable-nodes
@@ -58,6 +59,16 @@
 (def g3 (gr/induced-subgraph g (filter #(<= (uber/attr g % :distance) 6)
                                        (uber/nodes g))))
 (d/view-graph g3)
+
+(defrecord MyRec [field1 field2 field3 field4])
+(def v1 (->MyRec 1 2 3 4))
+v1
+(def v2 (assoc v1 :field5 5))
+(def g (d/sum [v2] opts))
+(d/view-graph g)
+(def v3 (dissoc v1 :field4))
+(def g (d/sum [v3] opts))
+
 
 (def close-nodes (set (filter #(<= (uber/attr g % :distance) 6)
                               (uber/nodes g))))
@@ -88,6 +99,13 @@
 (d/view-graph g {:save {:filename "g.pdf" :format :pdf}})
 (d/view-graph g2)
 (d/view-graph g2 {:save {:filename "g2.pdf" :format :pdf}})
+
+(require '[clojure.reflect :as ref])
+(class v1)
+(def t1 (ref/type-reflect (class v1)))
+(pprint t1)
+(filter #(= "hash" (str (:name %))) (:members t1))
+(pprint (map (juxt type :name :flags) (:members t1)))
 
 ;; Additional memory for each new 2-element vector, not counting the
 ;; top level vector: 40-byte clojure.lang.PersistentVector, 24-byte
