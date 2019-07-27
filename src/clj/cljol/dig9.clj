@@ -129,14 +129,6 @@
         (. gpr address)))))
 
 
-#_(defn field-name-and-address [^Field fld obj]
-  [(. fld getName)
-   (let [fld-val (ofv/obj-field-value obj fld inaccessible-field-val-sentinel)]
-     (if (nil? fld-val)
-       nil
-       (address-of fld-val)))])
-
-
 (defn field-name-and-snapshot-address [^Field fld obj obj->gpr]
   (let [field-name (. fld getName)]
     [field-name
@@ -152,35 +144,12 @@
 
 (set! *warn-on-reflection* false)
 
-#_(defn array-elem-name-and-address [idx array-obj]
-  (let [array-idx-val (aget array-obj idx)]
-    [(str "[" idx "]")
-     (if (nil? array-idx-val)
-       nil
-       (address-of array-idx-val))]))
-
-
 (defn array-elem-name-and-snapshot-address [idx array-obj obj->gpr]
   (let [field-name (str "[" idx "]")]
     [field-name
      (let [array-idx-val (aget array-obj idx)]
        (address-from-snapshot array-idx-val obj->gpr
                               array-obj field-name))]))
-
-
-;; obj() is a private method of class GraphPathRecord2.  Use some Java
-;; hackery to call it anyway, as long as the security policy in place
-;; allows us to.
-
-;;(def gpr-class (Class/forName "org.openjdk.jol.info.GraphPathRecord2"))
-(def gpr-class (Class/forName "com.fingerhutpress.cljol_jvm_support.GraphPathRecord2"))
-(def gpr-obj-method (.getDeclaredMethod gpr-class "obj" nil))
-(.setAccessible gpr-obj-method true)
-
-(def empty-obj-array (object-array []))
-
-(defn gpr->java-obj [gpr]
-  (.invoke gpr-obj-method gpr empty-obj-array))
 
 (set! *warn-on-reflection* true)
 
@@ -354,9 +323,7 @@
              "objects via reachable-objmaps-helper: ")
       (print-perf-stats p))
     (mapv (fn [^GraphPathRecord2 gpr]
-            (let [obj (gpr->java-obj gpr)
-                  ;; TBD: Eliminate code gpr->java-obj since I made
-                  ;; GraphPathRecord2 obj() method public.
+            (let [obj (. gpr obj)
                   arr? (array? obj)
                   ref-arr? (and arr?
                                 (not (. (array-element-type obj) isPrimitive)))
