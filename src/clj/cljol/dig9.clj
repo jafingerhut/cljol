@@ -237,21 +237,31 @@
       (slow-object-size-bytes obj))))
 
 
-(def stop? (proxy [java.util.function.Predicate] []
-             (test [obj]
-;;               (when (instance? java.lang.ref.Reference obj)
-;;                 (println "called proxy obj with arg having" (class obj)))
-               (instance? java.lang.ref.Reference obj))))
+(def stop-fn (proxy [java.util.function.Function] []
+               (apply [obj]
+;;                 (when (instance? java.lang.ref.Reference obj)
+;;                   (println "called proxy obj with arg having" (class obj)))
+                 (cond
+                   ;; follow no references of fields of Reference objects
+                   (instance? java.lang.ref.Reference obj)
+                   {"only-fields-in-set" #{}}
+                   
+                   ;; else follow all field with references
+                   :else nil))))
 
 
 (defn reachable-objmaps-helper
   [obj-coll opts]
   (let [debug-level (get opts :reachable-objmaps-debuglevel 0)
         max-attempts (get opts :max-address-snapshot-attempts 3)
-        stop-at-references (get opts :stop-walk-at-references true)
-        stop-walk-predicate (if stop-at-references stop? nil)
+        stop-walk-fn-from-opts (get opts :stop-walk-fn nil)
+        stop-at-references? (get opts :stop-walk-at-references true)
+        stop-walk-fn (cond
+                       stop-walk-fn-from-opts stop-walk-fn-from-opts
+                       stop-at-references? stop-fn
+                       :else nil)
         {^GraphLayout2 parsed-inst :ret :as p}
-        (my-time (GraphLayout2/parseInstanceIds stop-walk-predicate
+        (my-time (GraphLayout2/parseInstanceIds stop-walk-fn
                                                 (object-array obj-coll)))
         num-objects-found (. parsed-inst totalCount)
         _ (when (>= debug-level 1)

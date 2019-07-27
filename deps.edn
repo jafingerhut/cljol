@@ -53,6 +53,6 @@
   :jvm {:jvm-opts ["-XX:-OmitStackTraceInFastThrow"]}
   }
  :paths ["src/clj" "test"]
- :deps {com.fingerhutpress.cljol_jvm_support/cljol_jvm_support {:mvn/version "0.9"}
+ :deps {com.fingerhutpress.cljol_jvm_support/cljol_jvm_support {:mvn/version "1.0"}
         ubergraph {:mvn/version "0.6.1"
                    :exclusions [tailrecursion/cljs-priority-map]}}}
