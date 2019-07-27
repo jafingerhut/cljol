@@ -137,21 +137,12 @@
        (address-from-snapshot fld-val obj->gpr obj field-name))]))
 
 
-;; Several Java interop calls in the next few lines of code cause
-;; reflection warnings that are not easily eliminated via type hints,
-;; at least not in any way that I know of.  Disable reflection
-;; warnings for this short section of code.
-
-(set! *warn-on-reflection* false)
-
-(defn array-elem-name-and-snapshot-address [idx array-obj obj->gpr]
+(defn array-elem-name-and-snapshot-address [idx ^objects array-obj obj->gpr]
   (let [field-name (str "[" idx "]")]
     [field-name
      (let [array-idx-val (aget array-obj idx)]
        (address-from-snapshot array-idx-val obj->gpr
                               array-obj field-name))]))
-
-(set! *warn-on-reflection* true)
 
 
 (def size-mismatch-warnings (atom {}))
