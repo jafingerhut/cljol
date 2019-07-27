@@ -50,9 +50,9 @@
                      {:mvn/version "0.4.0"}}}
   :printcomp {:jvm-opts ["-XX:+PrintCompilation"]}
   :disablecompressedoops {:jvm-opts ["-XX:-UseCompressedOops"]}
+  :jvm {:jvm-opts ["-XX:-OmitStackTraceInFastThrow"]}
   }
  :paths ["src/clj" "test"]
- :deps {;;org.openjdk.jol/jol-core {:mvn/version "0.9"}
-        com.fingerhutpress.cljol_jvm_support/cljol_jvm_support {:mvn/version "0.9"}
+ :deps {com.fingerhutpress.cljol_jvm_support/cljol_jvm_support {:mvn/version "0.9"}
         ubergraph {:mvn/version "0.6.1"
                    :exclusions [tailrecursion/cljs-priority-map]}}}
