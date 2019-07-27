@@ -1,7 +1,6 @@
 (ns cljol.reflection-test-helpers
   (:import (java.lang.reflect Field Method Modifier))
-  (:import (org.openjdk.jol.info ClassLayout GraphLayout
-                                 ClassData FieldData))
+  (:import (org.openjdk.jol.info ClassLayout ClassData FieldData))
   (:import (org.openjdk.jol.vm VM))
   (:import (io.github.classgraph ClassGraph ClassInfo))
   (:require [clojure.string :as str]

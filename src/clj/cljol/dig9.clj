@@ -1,8 +1,8 @@
 (ns cljol.dig9
   (:import (java.lang.reflect Field Method Modifier))
-  (:import (org.openjdk.jol.info ClassLayout GraphLayout GraphPathRecord
-                                 ClassData FieldData))
+  (:import (org.openjdk.jol.info ClassLayout ClassData FieldData))
   (:import (org.openjdk.jol.vm VM))
+  (:import (com.fingerhutpress.cljol_jvm_support GraphLayout2 GraphPathRecord2))
   (:require [clojure.set :as set]
             [clojure.string :as str]
             [clojure.pprint :as pp]
@@ -67,16 +67,22 @@
 
 
 (def inaccessible-field-val-sentinel (Object.))
+(def non-strong-ref-sentinel (Object.))
+(def unknown-sentinel (Object.))
 
 (comment
 ;; sometimes useful for debugging sentinel values in REPL
 (pprint
-  [["inaccessible" d/inaccessible-field-val-sentinel]])
+  [["inaccessible" d/inaccessible-field-val-sentinel]
+   ["non-strong" d/non-strong-ref-sentinel]
+   ["unknown" d/unknown-sentinel]])
 )
 
 
 (defn cljol-sentinel-value? [obj]
-  (identical? obj inaccessible-field-val-sentinel))
+  (or (identical? obj inaccessible-field-val-sentinel)
+      (identical? obj non-strong-ref-sentinel)
+      (identical? obj unknown-sentinel)))
 
 
 ;; Conditionally require one of cljol.jdk8-and-earlier or
@@ -96,12 +102,47 @@
   (require '[cljol.jdk8-and-earlier :as ofv]))
 
 
-(defn field-name-and-address [^Field fld obj]
+(defn non-strong-reference? [obj]
+  (instance? java.lang.ref.Reference obj))
+
+
+(defn address-from-snapshot [obj ^java.util.IdentityHashMap obj->gpr
+                             parent-obj parent-obj-field-name-str]
+  (cond
+    (nil? obj) nil
+    (cljol-sentinel-value? obj) obj
+    (non-strong-reference? parent-obj) non-strong-ref-sentinel
+    :else
+    (let [^GraphPathRecord2 gpr (.get obj->gpr obj)]
+      (if (nil? gpr)
+        (let [^GraphPathRecord2 parent-gpr (.get obj->gpr parent-obj)
+              msg (format "Failed to find GraphPathRecord2 in IdentityHashMap obj->grp for object with %s.  Parent object has %s address %s and refers to object through field named '%s'"
+                          (class obj) (class parent-obj)
+                          (if (nil? parent-gpr)
+                            "(unknown)"
+                            (. parent-gpr address))
+                          parent-obj-field-name-str)
+              exception-data {:obj obj :obj->gpr :obj->gpr}]
+          ;;(throw (ex-info msg exception-data))
+          (println msg)
+          unknown-sentinel)
+        (. gpr address)))))
+
+
+#_(defn field-name-and-address [^Field fld obj]
   [(. fld getName)
    (let [fld-val (ofv/obj-field-value obj fld inaccessible-field-val-sentinel)]
      (if (nil? fld-val)
        nil
        (address-of fld-val)))])
+
+
+(defn field-name-and-snapshot-address [^Field fld obj obj->gpr]
+  (let [field-name (. fld getName)]
+    [field-name
+     (let [fld-val (ofv/obj-field-value obj fld
+                                        inaccessible-field-val-sentinel)]
+       (address-from-snapshot fld-val obj->gpr obj field-name))]))
 
 
 ;; Several Java interop calls in the next few lines of code cause
@@ -111,7 +152,7 @@
 
 (set! *warn-on-reflection* false)
 
-(defn array-elem-name-and-address [idx array-obj]
+#_(defn array-elem-name-and-address [idx array-obj]
   (let [array-idx-val (aget array-obj idx)]
     [(str "[" idx "]")
      (if (nil? array-idx-val)
@@ -119,11 +160,20 @@
        (address-of array-idx-val))]))
 
 
-;; obj() is a private method of class GraphPathRecord.  Use some Java
+(defn array-elem-name-and-snapshot-address [idx array-obj obj->gpr]
+  (let [field-name (str "[" idx "]")]
+    [field-name
+     (let [array-idx-val (aget array-obj idx)]
+       (address-from-snapshot array-idx-val obj->gpr
+                              array-obj field-name))]))
+
+
+;; obj() is a private method of class GraphPathRecord2.  Use some Java
 ;; hackery to call it anyway, as long as the security policy in place
 ;; allows us to.
 
-(def gpr-class (Class/forName "org.openjdk.jol.info.GraphPathRecord"))
+;;(def gpr-class (Class/forName "org.openjdk.jol.info.GraphPathRecord2"))
+(def gpr-class (Class/forName "com.fingerhutpress.cljol_jvm_support.GraphPathRecord2"))
 (def gpr-obj-method (.getDeclaredMethod gpr-class "obj" nil))
 (.setAccessible gpr-obj-method true)
 
@@ -153,7 +203,7 @@
                          (if (zero? (count sorted-offsets))
                            0
                            (peek sorted-offsets)))]
-        (println "WARNING:" cls "has GraphPathRecord size" fast-size
+        (println "WARNING:" cls "has GraphPathRecord2 size" fast-size
                  "but ClassLayout size" slow-size
                  "sorted-offsets" sorted-offsets)
         (swap! size-mismatch-warnings assoc cls
@@ -206,7 +256,7 @@
   (. (ClassLayout/parseInstance obj) instanceSize))
 
 
-(defn fast-but-has-bugs-object-size-bytes [^GraphPathRecord gpr]
+(defn fast-but-has-bugs-object-size-bytes [^GraphPathRecord2 gpr]
   (. gpr size))
 
 
@@ -225,6 +275,49 @@
 ;;        (fast-but-has-bugs-object-size-bytes gpr))
 
       (slow-object-size-bytes obj))))
+
+
+(def stop? (proxy [java.util.function.Predicate] []
+             (test [obj]
+;;               (when (instance? java.lang.ref.Reference obj)
+;;                 (println "called proxy obj with arg having" (class obj)))
+               (instance? java.lang.ref.Reference obj))))
+
+
+(defn reachable-objmaps-helper
+  [obj-coll opts]
+  (let [debug-level (get opts :reachable-objmaps-debuglevel 0)
+        max-attempts (get opts :max-address-snapshot-attempts 3)
+        stop-at-references (get opts :stop-walk-at-references true)
+        stop-walk-predicate (if stop-at-references stop? nil)
+        {^GraphLayout2 parsed-inst :ret :as p}
+        (my-time (GraphLayout2/parseInstanceIds stop-walk-predicate
+                                                (object-array obj-coll)))
+        num-objects-found (. parsed-inst totalCount)
+        _ (when (>= debug-level 1)
+            (print "reachable-objmaps-helper found" num-objects-found
+                   "objects: ")
+            (print-perf-stats p))]
+    (loop [attempts 0
+           done? false]
+      (if done?
+        parsed-inst
+        (if (< attempts max-attempts)
+          (let [{success :ret :as p}
+                (my-time (. parsed-inst createAddressSnapshot 1))]
+            (when (>= debug-level 1)
+              (print "Tried to get consistent address for" num-objects-found
+                     "objects. " (if success "Succeeded!" "failed") ": ")
+              (print-perf-stats p))
+            (recur (inc attempts) success))
+          ;; else
+          (let [msg (str "Failed to get consistent address snapshot after "
+                         max-attempts " attempts.")]
+            (throw (ex-info msg
+                            {:obj-coll obj-coll
+                             :parsed-inst parsed-inst
+                             :opts opts
+                             :max-attempts max-attempts}))))))))
 
 
 (defn reachable-objmaps
@@ -252,15 +345,18 @@
   consistent set of addresses across all objects."
   [obj-coll opts]
   (let [debug-level (get opts :consistent-reachable-objects-debuglevel 0)
-        {^GraphLayout parsed-inst :ret :as p}
-        (my-time (GraphLayout/parseInstance (object-array obj-coll)))
-        addresses (.addresses parsed-inst)]
+        {^GraphLayout2 parsed-inst :ret :as p}
+        (my-time (reachable-objmaps-helper obj-coll opts))
+        obj->gpr (.objectsFound parsed-inst)
+        gprs (. obj->gpr values)]
     (when (>= debug-level 1)
-      (print "found" (.totalCount parsed-inst) "objects via GraphLayout/parseInstance: ")
+      (print "found" (.totalCount parsed-inst)
+             "objects via reachable-objmaps-helper: ")
       (print-perf-stats p))
-    (mapv (fn [addr]
-            (let [gpr (. parsed-inst record addr)
-                  obj (gpr->java-obj gpr)
+    (mapv (fn [^GraphPathRecord2 gpr]
+            (let [obj (gpr->java-obj gpr)
+                  ;; TBD: Eliminate code gpr->java-obj since I made
+                  ;; GraphPathRecord2 obj() method public.
                   arr? (array? obj)
                   ref-arr? (and arr?
                                 (not (. (array-element-type obj) isPrimitive)))
@@ -272,13 +368,16 @@
                   ;; field-name-and-address for array objects, just in
                   ;; case any Java array objects actually do return
                   ;; fields.
-                  refd-objs (if ref-arr?
-                              (into {} (map #(array-elem-name-and-address % obj)
-                                            (range (count obj))))
-                              (into {} (map #(field-name-and-address % obj)
-                                            flds)))
+                  refd-objs
+                  (into {}
+                        (if ref-arr?
+                          (map #(array-elem-name-and-snapshot-address % obj
+                                                                      obj->gpr)
+                               (range (count obj)))
+                          (map #(field-name-and-snapshot-address % obj obj->gpr)
+                               flds)))
                   size-to-use (workaround-object-size-bytes obj gpr opts)]
-              {:address addr
+              {:address (. gpr address)
                :obj obj
                :size size-to-use
                :distance (. gpr depth)
@@ -287,7 +386,7 @@
                ;; Could switch to using Java IdentityHashMap for faster
                ;; lookups if obj-coll is expected to be large.
                :starting-object? (boolean (some #(identical? obj %) obj-coll))}))
-          addresses)))
+          gprs)))
 
 
 ;; When I use externals on many data structures, I see objects
@@ -386,6 +485,9 @@
 
 (defn field-addresses [g]
   (->> g
+       ;; Ignore any references leading out of soft, weak, or phantom
+       ;; reference objects.
+       (remove #(instance? java.lang.ref.Reference (:obj %)))
        (mapcat #(vals (:fields %)))
        (remove #(or (nil? %) (cljol-sentinel-value? %)))
        set))
@@ -540,8 +642,8 @@ thread."
   [g]
   (or 
    (validate-obj-graph g)
-   (if-let [x (any-object-moved? g)]
-     {:err :object-moved :err-data x :data g})
+;;   (if-let [x (any-object-moved? g)]
+;;     {:err :object-moved :err-data x :data g})
    (if-let [x (any-objects-overlap? g)]
      {:err :two-objects-overlap :err-data x :data g})))
 
@@ -694,6 +796,7 @@ thread."
 
 (defn field-values [objmap _opts]
   (let [obj (:obj objmap)
+        from-non-strong-obj? (instance? java.lang.ref.Reference obj)
         cd (ClassData->map (ClassData/parseClass (class obj)))
         flds (sort-by :vm-offset (:fields cd))]
     (if (seq flds)
@@ -713,6 +816,7 @@ thread."
                               inaccessible? ".setAccessible failed"
                               primitive? val
                               (nil? val) "nil"
+                              from-non-strong-obj? "--not-strong-->"
                               :else "->"))))))))
 
 
@@ -1158,7 +1262,11 @@ thread."
 (defn graph-of-reachable-objects [obj-coll opts]
   (let [debug-level (get opts :graph-of-reachable-objects-debuglevel 0)
         calc-tot-size (get opts :calculate-total-size-node-attribute :bounded)
-        objmaps (consistent-reachable-objmaps obj-coll opts)
+        {objmaps :ret :as p} (my-time (consistent-reachable-objmaps obj-coll
+                                                                    opts))
+        _ (when (>= debug-level 1)
+            (print "Found" (count objmaps) " objects with consistent set of addresses: ")
+            (print-perf-stats p))
         {g :ret :as p} (my-time (object-graph->ubergraph objmaps opts))
         _ (when (>= debug-level 1)
             (print "converted" (count objmaps) "objmaps into ubergraph with"
@@ -1420,10 +1528,10 @@ thread."
 (def o2 (conj o1 5))
 (d/view [o1 o2])
 (def opts {:node-label-functions [address-decimal
-                                  size-bytes
-                                  total-size-bytes
-                                  class-description
-                                  field-values
+           size-bytes
+           total-size-bytes
+           class-description
+           field-values
                                   javaobj->str]
            :max-value-len 50})
 
