@@ -1261,7 +1261,11 @@ thread."
 (defn graph-of-reachable-objects [obj-coll opts]
   (let [debug-level (get opts :graph-of-reachable-objects-debuglevel 0)
         calc-tot-size (get opts :calculate-total-size-node-attribute :bounded)
-        objmaps (consistent-reachable-objmaps obj-coll opts)
+        {objmaps :ret :as p} (my-time (consistent-reachable-objmaps obj-coll
+                                                                    opts))
+        _ (when (>= debug-level 1)
+            (print "Found" (count objmaps) " objects with consistent set of addresses: ")
+            (print-perf-stats p))
         {g :ret :as p} (my-time (object-graph->ubergraph objmaps opts))
         _ (when (>= debug-level 1)
             (print "converted" (count objmaps) "objmaps into ubergraph with"
