@@ -5,7 +5,7 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :source-paths ["src/clj"]
   :dependencies [[org.clojure/clojure "1.10.1"]
-                 [org.openjdk.jol/jol-core "0.9"]
+                 [com.fingerhutpress.cljol_jvm_support/cljol_jvm_support "0.9"]
                  [ubergraph "0.6.1"
                   :exclusions [tailrecursion/cljs-priority-map]]]
   :profiles {:uberlocal {:dependencies [[ubergraph "0.5.4-andy-mods"]]}

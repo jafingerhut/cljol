@@ -9,6 +9,7 @@
             [clojure.reflect :as ref]
             [clojure.data :as data]
             [cljol.version-info :as ver]
+            [cljol.object-walk :as ow]
             [clj-memory-meter.core :as mm]
             [cljol.dig9 :as d]))
 
@@ -106,7 +107,7 @@
 ;; JOL v0.9 also returns this data about each field that is not
 ;; available from the Java reflection API, named via the keys as I
 ;; have chosen to be returned from the function
-;; cljol.dig9/ClassData->map :
+;; cljol.object-walk/ClassData->map :
 
 ;; :is-contended? - boolean
 ;; :contended-group - a String, which I have only seen as null because
@@ -135,7 +136,7 @@
 
 (defn full-data-via-jol [klass]
   (->> (ClassData/parseClass klass)
-       d/ClassData->map))
+       ow/ClassData->map))
 
 
 (defn per-instance-fields-common-data-via-jol [klass]
@@ -500,7 +501,7 @@ f2
 (require '[cljol.dig9 :as d])
 (import '(org.openjdk.jol.info ClassLayout GraphLayout
                                ClassData FieldData))
-(def cd (d/ClassData->map (ClassData/parseClass c1)))
+(def cd (ow/ClassData->map (ClassData/parseClass c1)))
 (pprint (-> cd :fields))
 (def int-field (-> cd :fields (nth 1) :ref-field))
 (= (. int-field getType) Integer/TYPE)
