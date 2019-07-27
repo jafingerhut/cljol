@@ -1,6 +1,8 @@
 (ns cljol.version-info
   (:require [clojure.string :as str]))
 
+(set! *warn-on-reflection* true)
+
 
 (defn clean-os-version [s]
   (str/replace s #"-generic$" ""))

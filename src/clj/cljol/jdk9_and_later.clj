@@ -1,6 +1,8 @@
 (ns cljol.jdk9-and-later
   (:import (java.lang.reflect Field InaccessibleObjectException)))
 
+(set! *warn-on-reflection* true)
+
 
 (defn obj-field-value [obj ^Field fld inaccessible-field-val-sentinel]
   (try
