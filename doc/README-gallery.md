@@ -467,3 +467,91 @@ different data structures?
 (/ 8016.0 (* 8 1000))
 ;; 1.002 times more than the long values themselves
 ```
+
+
+# Avoid walking into messes of objects
+
+The initial walk of objects performed by `cljol` can be customized, to
+avoid walking some references.  By default `cljol` uses the following
+object, implementing the `apply` method of Java's
+`java.util.function.Function` type, to decide which references to
+follow and which to avoid:
+
+```
+(def stop-fn (proxy [java.util.function.Function] []
+               (apply [obj]
+                 (cond
+                   ;; follow no references of fields of Reference objects
+                   (instance? java.lang.ref.Reference obj)
+                   {"only-fields-in-set" #{}}
+                   
+                   ;; else follow all field with references
+                   :else nil))))
+```
+
+You may write your own custom code to control which references are
+followed and which are not.  One possibility is given below, followed
+by reasons for the customizations used in the example.
+
+```
+(def stop-fn (proxy [java.util.function.Function] []
+               (apply [obj]
+                 (cond
+                   ;; follow no references of fields of Reference objects
+                   (instance? java.lang.ref.Reference obj)
+                   {"only-fields-in-set" #{}}
+
+                   (instance? java.lang.Thread obj)
+                   {"only-fields-in-set" #{}}
+
+                   (instance? clojure.lang.Namespace obj)
+                   {"only-fields-in-set" #{}}
+
+                   (instance? java.lang.Class obj)
+                   {"never-fields-in-set" #{"name" "annotationData"
+		                            "reflectionData"}}
+                   
+                   ;; else follow all field with references
+                   :else nil))))
+
+;; To use the function above when walking objects, include the key
+:stop-walk-fn in your opts map, with its value equal stop-fn above.
+```
+
+The default code never walks any references out of an object with
+class `java.lang.ref.Reference`, or any of its subclasses like
+`SoftReference`.  This is because at least some of the references out
+of such objects are lists of objects that are eligible for
+finalization and/or garbage collection, and often have little
+relationship to the objects that you likely care about.  They just
+happen to have become no longer reachable through any stronger kinds
+of references recently.
+
+The example adds `java.lang.Thread` objects to those out of which no
+references will be followed.  If such an object does appear in a data
+structure of yours, you may find that the object graph starts to
+include many objects that you do not need or want.
+
+Similarly for `clojure.lang.Namespace`.  If you want to investigate
+how Clojure namespaces are represented internally, you do not want
+code to prevent walking references from those objects, but realize
+that from a namespace object, you can reach all vars def'd in that
+namespace, and all namespace objects that it requires, and thus all
+namespaces that _they_ require and all vars they def, etc.  It can get
+quite large, depending upon what code you have loaded in your running
+JVM.
+
+The code related to `java.lang.Class` is different than the others.
+Instead of saying "follow no references out of such objects", it says
+"here are the names of 3 specific fields not to follow their
+references -- but follow any other fields that contain references".  I
+have found that those 3 field names, when `java.lang.Class` objects
+are walked for the first time, often change their values during the
+walk, I believe because the data they refer to is computed on demand
+and cached, which can happen during `cljol`'s investigation into what
+fields each class contains.  That can lead to a flurry of warnings
+similar to the one below:
+
+```
+Failed to find GraphPathRecord2 in IdentityHashMap obj->grp for object with class java.lang.Class$AnnotationData.  Parent object has class java.lang.Class address 28991268992 and refers to object through field named 'annotationData'
+```
