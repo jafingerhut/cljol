@@ -6,6 +6,7 @@
   (:require [clojure.set :as set]
             [clojure.string :as str]
             [clojure.pprint :as pp]
+            [clojure.reflect :as ref]
             [ubergraph.core :as uber]
             [ubergraph.alg :as ualg]
             ;;[clj-async-profiler.core :as prof]
@@ -762,23 +763,40 @@ thread."
       (abbreviated-class-name-str (pr-str (class obj))))))
 
 
-(defn field-values [objmap _opts]
-  (let [obj (:obj objmap)
+;; TBD: This function could be memoized, as long as classes cannot be
+;; redefined.  Can they?
+(defn field-info [klass]
+  (->> (ref/type-reflect klass)
+       :members
+       (filter #(instance? java.lang.reflect.Field %))
+       (group-by :name)))
+
+
+(defn field-values [objmap opts]
+  (let [show-flags? (get opts :show-field-flags false)
+        obj (:obj objmap)
+        name->info (if show-flags? (field-info (class obj)))
         from-non-strong-obj? (instance? java.lang.ref.Reference obj)
         cd (ClassData->map (ClassData/parseClass (class obj)))
         flds (sort-by :vm-offset (:fields cd))]
     (if (seq flds)
       (str/join "\n"
                 (for [fld-info flds]
-                  (let [primitive? (:is-primitive? fld-info)
+                  (let [name (:field-name fld-info)
+                        flags (if show-flags?
+                                (str (str/join " " (:flags (name->info name)))
+                                     " ")
+                                "")
+                        primitive? (:is-primitive? fld-info)
                         val (ofv/obj-field-value
                              obj (:ref-field fld-info)
                              inaccessible-field-val-sentinel)
                         inaccessible? (identical?
                                        val inaccessible-field-val-sentinel)]
-                    (format "%d: %s (%s) %s"
+                    (format "%d: %s%s (%s) %s"
                             (:vm-offset fld-info)
-                            (:field-name fld-info)
+                            flags
+                            name
                             (if primitive? (:type-class fld-info) "ref")
                             (cond
                               inaccessible? ".setAccessible failed"
