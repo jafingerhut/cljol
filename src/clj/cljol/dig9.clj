@@ -768,8 +768,8 @@ thread."
 (defn field-info [klass]
   (->> (ref/type-reflect klass)
        :members
-       (filter #(instance? java.lang.reflect.Field %))
-       (group-by :name)))
+       (filter #(instance? clojure.reflect.Field %))
+       (group-by #(str (:name %)))))
 
 
 (defn field-values [objmap opts]
@@ -782,9 +782,13 @@ thread."
     (if (seq flds)
       (str/join "\n"
                 (for [fld-info flds]
-                  (let [name (:field-name fld-info)
+                  (let [name-str (:field-name fld-info)
                         flags (if show-flags?
-                                (str (str/join " " (:flags (name->info name)))
+                                (str (str/join " "
+                                               (->> (name->info name-str)
+                                                    first
+                                                    :flags
+                                                    (map name)))
                                      " ")
                                 "")
                         primitive? (:is-primitive? fld-info)
@@ -796,7 +800,7 @@ thread."
                     (format "%d: %s%s (%s) %s"
                             (:vm-offset fld-info)
                             flags
-                            name
+                            name-str
                             (if primitive? (:type-class fld-info) "ref")
                             (cond
                               inaccessible? ".setAccessible failed"
