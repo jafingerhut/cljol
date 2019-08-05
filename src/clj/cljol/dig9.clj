@@ -873,16 +873,17 @@ thread."
     ;; and assume the worst, that the overall value could cause
     ;; realization of lazy objects to occur if it was str'ed.
     false
+    ;; Try to enable cljol working with slightly older versions of
+    ;; Clojure, by avoiding the use of some functions added in later
+    ;; Clojure versions.
     (or (nil? x)
         (number? x)
         (string? x)
         (keyword? x)
         (symbol? x)
-        (boolean? x)
-        (bytes? x)
-        (inst? x)
-        (uri? x)
-        (uuid? x)
+        (instance? Boolean x)   ;; boolean? added 1.9
+        (instance? java.net.URI x)  ;; uri? added 1.9
+        (instance? java.util.UUID x) ;; uuid? added 1.9
         (class? x)
         ;; Namespaces .toString is just retrieving its name string
         (instance? clojure.lang.Namespace x)
