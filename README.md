@@ -326,8 +326,8 @@ Tested with:
 * Mac OS X 10.13 High Sierra, Oracle JDK 8, Clojure 1.10.1
 
 It should work with older versions of Clojure, too, but I do not know
-how far back it can go.  Probably as far back as Clojure 1.6, in which
-this code was originally developed.
+how far back it can go.  Probably as far back as Clojure 1.7, which is
+required by the version of the Loom library that cljol depends upon.
 
 
 # Possible future work
