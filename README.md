@@ -16,7 +16,9 @@ the `view` function, or writing to a GraphViz dot file using the
 `write-dot-file` function.
 
 `cljol` has been tested most with Clojure 1.10.1 so far, but as far as
-I know should work fine with Clojure 1.5.1 or later.
+I know should work fine with Clojure 1.7.0 or later (it cannot go
+earlier, since the Loom graph library requires that version of Clojure
+or later).
 
 See the [gallery](doc/README-gallery.md) for examples of figures
 created by this library that demonstrate aspects of the Java VM or
