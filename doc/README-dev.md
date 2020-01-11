@@ -171,7 +171,7 @@ searches, one starting at each node, and collecting the results?
 
 I cannot think of a way right now to calculate total-size for all
 nodes faster than this, in the worst case.  It seems like any
-computational compexity results for the transitive closure problem
+computational complexity results for the transitive closure problem
 apply here, because I believe that _is_ the problem being solved.
 
 For a directed graph with cycles, the set of all strongly connected
