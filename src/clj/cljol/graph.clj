@@ -1,10 +1,8 @@
 (ns cljol.graph
   (:import (java.lang.management ManagementFactory GarbageCollectorMXBean))
-  (:require [clojure.set :as set]
-            [clojure.pprint :as pp]
+  (:require [clojure.pprint :as pp]
             [ubergraph.core :as uber]
             [cljol.ubergraph-extras :as ubere]
-            [ubergraph.alg :as ualg]
             [cljol.performance :as perf :refer [my-time print-perf-stats]]))
 
 (set! *warn-on-reflection* true)
@@ -32,164 +30,6 @@
 (defn remove-all-attrs
   [g]
   (remove-all-attrs-except g []))
-
-
-(defn scc-graph
-  "Given a graph g, return a map containing several keys, one of which
-  represents the strongly connected components of the graph, and the
-  others calculated while determining the strongly connected
-  components.
-
-  For each strongly connected component in g, the set of nodes in that
-  component become one node in a graph we call the scc-graph.  The
-  scc-graph has an edge from node A (which is a set of nodes in g) to
-  another node B (which is another, disjoint, set of nodes in g), if
-  there is an edge in g from any node in set A to any node in set B.
-  The scc-graph has only one such edge from node A to any other node
-  B, no matter how many edges are in the original graph.  Also, the
-  returned graph never has a 'self loop' edge from a node A back to
-  itself, even if the original graph has an edge from a node in set A
-  to another (or the same) node in set A.
-
-  Keys in returned map: :scc-graph :node->scc-set plus those returned
-  by the function scc-tarjan.
-
-  :scc-graph
-
-  The associated value is the derived graph described above.
-
-  :node->scc-set
-
-  This associated value is a map where the keys are the nodes of g,
-  and the value associated with node n is the set of nodes that are in
-  the same strongly connected component with n.  This set always
-  contains at least node n, and may contain others."
-  [g]
-  (let [{:keys [components] :as m} (ubere/scc-tarjan g)
-        g-node->scc-node (into {}
-                               (for [scc-node components
-                                     g-node scc-node]
-                                 [g-node scc-node]))
-        sccg-edges (->> (uber/edges g)
-                        (map (fn [g-edge]
-                               [(g-node->scc-node (uber/src g-edge))
-                                (g-node->scc-node (uber/dest g-edge))]))
-                        distinct
-                        (remove (fn [[src dest]] (= src dest))))
-        sccg (-> (uber/multidigraph)
-                 (uber/add-nodes* components)
-                 (uber/add-edges* sccg-edges))]
-    (assoc m
-           :scc-graph sccg
-           :node->scc-set g-node->scc-node)))
-
-
-(defn scc-graph2
-  "Given a graph g, return a map containing several keys, one of which
-  represents the strongly connected components of the graph, and the
-  others calculated while determining the strongly connected
-  components.
-
-  For each strongly connected component in g, the set of nodes in that
-  component become one node in a graph we call the scc-graph.  The
-  scc-graph has an edge from node A (which is a set of nodes in g) to
-  another node B (which is another, disjoint, set of nodes in g), if
-  there is an edge in g from any node in set A to any node in set B.
-  The scc-graph has only one such edge from node A to any other node
-  B, no matter how many edges are in the original graph.  Also, the
-  returned graph never has a 'self loop' edge from a node A back to
-  itself, even if the original graph has an edge from a node in set A
-  to another (or the same) node in set A.
-
-  Keys in returned map: :scc-graph :node->scc-set plus those returned
-  by the function scc-tarjan.
-
-  :scc-graph
-
-  The associated value is the derived graph described above.  Its
-  nodes are actually integers in the range 0 up to the number of nodes
-  minus 1.
-
-  :node->scc-set
-
-  This associated value is a map where the keys are the nodes of g,
-  and the value associated with node n is the set of nodes that are in
-  the same strongly connected component with n.  This set always
-  contains at least node n, and may contain others.
-
-  :scc-node-num->scc-set
-
-  A map.  Its keys are integers from 0 up to the number of nodes in
-  scc-graph, minus 1.  These are the nodes of scc-graph.  Associated
-  value is the scc-set, the set of nodes values of g that are all in
-  the same strongly connected component."
-  [g]
-  (let [{:keys [components] :as m} (ubere/scc-tarjan g)
-        scc-node-num->scc-set (into {}
-                                    (for [i (range (count components))]
-                                      [i (components i)]))
-        g-node->scc-node-num (into {}
-                                   (for [i (range (count components))
-                                         g-node (components i)]
-                                     [g-node i]))
-        g-node->scc-node (into {}
-                               (for [scc-node components
-                                     g-node scc-node]
-                                 [g-node scc-node]))
-        sccg-edges (->> (uber/edges g)
-                        (map (fn [g-edge]
-                               [(g-node->scc-node-num (uber/src g-edge))
-                                (g-node->scc-node-num (uber/dest g-edge))]))
-                        (remove (fn [[src dest]] (= src dest))))
-        sccg (-> (uber/digraph)
-                 (uber/add-nodes* (range (count components)))
-                 (uber/add-edges* sccg-edges))]
-    (assoc m
-           :scc-graph sccg
-           :scc-node-num->scc-set scc-node-num->scc-set
-           :node->scc-set g-node->scc-node)))
-
-
-(defn dag-reachable-nodes
-  "Return a map with the nodes of the given ubergraph as keys, with
-  the value associated with node n being a set of nodes reachable from
-  n via a path in the graph.  n is counted as reachable from itself.
-  Throws an exception if the graph contains a cycle (TBD: any
-  undirected edge counts as a cycle for this function?).  Use function
-  reachable-nodes instead if you want the answer for a graph that may
-  contain cycles."
-  [dag]
-  (let [topsort (ualg/topsort dag)
-        ;; ualg/topsort returns nil if the graph has a cycle.
-        _ (assert (not (nil? topsort)))
-        ;; rnm = "reachable node map", a map with nodes as keys, and
-        ;; collections of nodes reachable from that node (including
-        ;; itself) as associated values.
-        rnm (reduce (fn [rnm cur-node]
-                      (let [coll-of-node-sets
-                            (for [edge (uber/out-edges dag cur-node)]
-                              (rnm (uber/dest edge)))]
-                        (assoc rnm cur-node
-                               (conj (apply set/union coll-of-node-sets)
-                                     cur-node))))
-                    {} (reverse topsort))]
-    rnm))
-
-
-(defn reachable-nodes
-  "Given a graph g, return a map where the keys are sets of nodes in g.
-  Each node will be in exactly one key of the map.  The value
-  associated with a set of nodes S, is a set of nodes T.  T is exactly
-  those nodes that can be reached from a node in S via a path in the
-  graph g.  T is always a superset of S, since nodes are considered to
-  be able to be reachable from themselves (through a path of 0 edges)."
-  [g]
-  (let [{:keys [scc-graph]} (scc-graph g)
-        reachable-scc-sets (dag-reachable-nodes scc-graph)]
-    (into {}
-          (for [[scc-set reachable-sccs] reachable-scc-sets
-                :let [reachable-nodes (apply set/union reachable-sccs)]]
-            [scc-set reachable-nodes]))))
 
 
 ;; The function bounded-reachable-node-stats2 achieves the goal
@@ -229,7 +69,7 @@
   treated as if it were the directed graph where every undirected edge
   is treated as 2 directed edges, one in each direction (TBD)."
   [g node-size-fn]
-  (let [reachable-node-map (reachable-nodes g)]
+  (let [reachable-node-map (ubere/reachable-nodes g)]
     (into {}
           (for [[node-set reachable-node-set] reachable-node-map
                 :let [sum (reduce + (map #(node-size-fn g %)
@@ -237,30 +77,6 @@
                 node node-set]
             [node {:total-size sum
                    :num-reachable-nodes (count reachable-node-set)}]))))
-
-
-(defn find-first-or-last
-  "Find and return the first item of coll such that (pred item) returns
-  logical true.  If there is no such item, but there is at least one
-  item in coll, return the last item.  If coll is empty, return the
-  not-found value."
-  [pred coll not-found]
-  (letfn [(step [s n]
-            (let [f (first s)]
-              (if (pred f)
-                [f n]
-                (if-let [nxt (next s)]
-                  (recur nxt (inc n))
-                  [f n]))))]
-    (if-let [s (seq coll)]
-      (step s 1)
-      [not-found -1])))
-
-(comment
-(= [6 3] (find-first-or-last #(>= % 5) [2 4 6 8] :not-found))
-(= [8 4] (find-first-or-last #(>= % 10) [2 4 6 8] :not-found))
-(= [:not-found -1] (find-first-or-last #(>= % 10) [] :not-found))
-)
 
 
 (defn bounded-reachable-node-stats
@@ -306,33 +122,6 @@
                  (if return-nodes-reached? (conj! nodes-reached n2))))))))
 
 
-(defn last-and-count
-  "Return a vector of 2 elements, taking linear time in the size of
-  coll, and traversing through its elements only once.  The first
-  element of the returned vector is the last item in coll, or nil if
-  coll is empty.  The second element of the returned vector is the
-  number of elements in coll, 0 if coll is empty."
-  [coll]
-  (letfn [(step [s count]
-            (if (next s)
-              (recur (next s) (inc count))
-              [(first s) count]))]
-    (if-let [s (seq coll)]
-      (step s 1)
-      [nil 0])))
-
-(comment
-(last-and-count [:a :b :c])
-;; => [:c 3]
-(last-and-count (take 0 (range 100)))
-;; => [nil 0]
-(last-and-count (take 1 (range 100)))
-;; => [0 1]
-(last-and-count (take 5 (range 100)))
-;; => [4 5]
-)
-
-
 (defn all-predecessors-in-set? [g nodes-to-check-coll node-set]
   (every? (fn [n]
             (every? #(contains? node-set %)
@@ -371,10 +160,6 @@
   ;; status values for which we know we have complete statistics on
   ;; all reachable nodes.
   (contains? #{:owner :not-owner} status))
-
-
-(defn add-statistics [stats1 stats2]
-  (merge-with + stats1 stats2))
 
 
 ;; Note 3
@@ -427,7 +212,7 @@
   TBD"
   [g node-size-fn opts]
   (let [debug-level (get opts :bounded-reachable-node-stats2-debuglevel 0)
-        {scc-data :ret :as scc-perf} (my-time (scc-graph g))
+        {scc-data :ret :as scc-perf} (my-time (ubere/scc-graph g))
         {:keys [scc-graph node->scc-set components]} scc-data
         _ (when (>= debug-level 1)
             (print "The scc-graph has" (uber/count-nodes scc-graph) "nodes and"

@@ -12,6 +12,7 @@
             ;;[clj-async-profiler.core :as prof]
             [cljol.object-walk :as ow :refer [ClassData->map]]
             [cljol.graph :as gr]
+            [cljol.ubergraph-extras :as ubere]
             [cljol.performance :as perf :refer [my-time print-perf-stats]]))
 
 
@@ -1112,7 +1113,7 @@ thread."
                                   default-node-count-min-limit)
         total-size-min-limit (get opts :total-size-min-limit
                                   default-total-size-min-limit)
-        {scc-data :ret :as scc-perf} (my-time (gr/scc-graph g))
+        {scc-data :ret :as scc-perf} (my-time (ubere/scc-graph g))
         {:keys [scc-graph components]} scc-data
         _ (when (>= debug-level 1)
             (print "The scc-graph has" (uber/count-nodes scc-graph) "nodes and"
@@ -1296,7 +1297,7 @@ thread."
                                 attr-map :node
                                 (find-node-for-obj g (:only-from attr-map))))))
         start-node-map (group-by :node start-objs)
-        reachable-node-map-from-sets (gr/reachable-nodes g)
+        reachable-node-map-from-sets (ubere/reachable-nodes g)
         reachable-node-map (into {}
                                  (for [[from-nodes to-nodes]
                                        reachable-node-map-from-sets
@@ -1352,7 +1353,7 @@ thread."
         (println "from most to fewest nodes:")
         (println (sort > (map count weakly-connected-components)))))
     (when (some #{:all :scc-details} (opts :summary-options))
-      (let [{scc-data :ret :as scc-perf} (my-time (gr/scc-graph g))
+      (let [{scc-data :ret :as scc-perf} (my-time (ubere/scc-graph g))
             {:keys [scc-graph node->scc-set]} scc-data
             scc-components (set (vals node->scc-set))
             scc-component-sizes-sorted (sort > (map count scc-components))]

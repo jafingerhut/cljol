@@ -1,5 +1,7 @@
 (ns cljol.ubergraph-extras
-  (:require [ubergraph.core :as uber]))
+  (:require [clojure.set :as set]
+            [ubergraph.core :as uber]
+            [ubergraph.alg :as ualg]))
 
 
 
@@ -450,3 +452,161 @@
 ;; = num-components - 1 - cindex
 ;; = (n - 1 - @c) - 1 - (n - 1 - (aget rindex i))
 ;; = (aget rindex i) - (@c + 1)
+
+
+(defn scc-graph
+  "Given a graph g, return a map containing several keys, one of which
+  represents the strongly connected components of the graph, and the
+  others calculated while determining the strongly connected
+  components.
+
+  For each strongly connected component in g, the set of nodes in that
+  component become one node in a graph we call the scc-graph.  The
+  scc-graph has an edge from node A (which is a set of nodes in g) to
+  another node B (which is another, disjoint, set of nodes in g), if
+  there is an edge in g from any node in set A to any node in set B.
+  The scc-graph has only one such edge from node A to any other node
+  B, no matter how many edges are in the original graph.  Also, the
+  returned graph never has a 'self loop' edge from a node A back to
+  itself, even if the original graph has an edge from a node in set A
+  to another (or the same) node in set A.
+
+  Keys in returned map: :scc-graph :node->scc-set plus those returned
+  by the function scc-tarjan.
+
+  :scc-graph
+
+  The associated value is the derived graph described above.
+
+  :node->scc-set
+
+  This associated value is a map where the keys are the nodes of g,
+  and the value associated with node n is the set of nodes that are in
+  the same strongly connected component with n.  This set always
+  contains at least node n, and may contain others."
+  [g]
+  (let [{:keys [components] :as m} (scc-tarjan g)
+        g-node->scc-node (into {}
+                               (for [scc-node components
+                                     g-node scc-node]
+                                 [g-node scc-node]))
+        sccg-edges (->> (uber/edges g)
+                        (map (fn [g-edge]
+                               [(g-node->scc-node (uber/src g-edge))
+                                (g-node->scc-node (uber/dest g-edge))]))
+                        distinct
+                        (remove (fn [[src dest]] (= src dest))))
+        sccg (-> (uber/multidigraph)
+                 (uber/add-nodes* components)
+                 (uber/add-edges* sccg-edges))]
+    (assoc m
+           :scc-graph sccg
+           :node->scc-set g-node->scc-node)))
+
+
+(defn scc-graph2
+  "Given a graph g, return a map containing several keys, one of which
+  represents the strongly connected components of the graph, and the
+  others calculated while determining the strongly connected
+  components.
+
+  For each strongly connected component in g, the set of nodes in that
+  component become one node in a graph we call the scc-graph.  The
+  scc-graph has an edge from node A (which is a set of nodes in g) to
+  another node B (which is another, disjoint, set of nodes in g), if
+  there is an edge in g from any node in set A to any node in set B.
+  The scc-graph has only one such edge from node A to any other node
+  B, no matter how many edges are in the original graph.  Also, the
+  returned graph never has a 'self loop' edge from a node A back to
+  itself, even if the original graph has an edge from a node in set A
+  to another (or the same) node in set A.
+
+  Keys in returned map: :scc-graph :node->scc-set plus those returned
+  by the function scc-tarjan.
+
+  :scc-graph
+
+  The associated value is the derived graph described above.  Its
+  nodes are actually integers in the range 0 up to the number of nodes
+  minus 1.
+
+  :node->scc-set
+
+  This associated value is a map where the keys are the nodes of g,
+  and the value associated with node n is the set of nodes that are in
+  the same strongly connected component with n.  This set always
+  contains at least node n, and may contain others.
+
+  :scc-node-num->scc-set
+
+  A map.  Its keys are integers from 0 up to the number of nodes in
+  scc-graph, minus 1.  These are the nodes of scc-graph.  Associated
+  value is the scc-set, the set of nodes values of g that are all in
+  the same strongly connected component."
+  [g]
+  (let [{:keys [components] :as m} (scc-tarjan g)
+        scc-node-num->scc-set (into {}
+                                    (for [i (range (count components))]
+                                      [i (components i)]))
+        g-node->scc-node-num (into {}
+                                   (for [i (range (count components))
+                                         g-node (components i)]
+                                     [g-node i]))
+        g-node->scc-node (into {}
+                               (for [scc-node components
+                                     g-node scc-node]
+                                 [g-node scc-node]))
+        sccg-edges (->> (uber/edges g)
+                        (map (fn [g-edge]
+                               [(g-node->scc-node-num (uber/src g-edge))
+                                (g-node->scc-node-num (uber/dest g-edge))]))
+                        (remove (fn [[src dest]] (= src dest))))
+        sccg (-> (uber/digraph)
+                 (uber/add-nodes* (range (count components)))
+                 (uber/add-edges* sccg-edges))]
+    (assoc m
+           :scc-graph sccg
+           :scc-node-num->scc-set scc-node-num->scc-set
+           :node->scc-set g-node->scc-node)))
+
+
+(defn dag-reachable-nodes
+  "Return a map with the nodes of the given ubergraph as keys, with
+  the value associated with node n being a set of nodes reachable from
+  n via a path in the graph.  n is counted as reachable from itself.
+  Throws an exception if the graph contains a cycle (TBD: any
+  undirected edge counts as a cycle for this function?).  Use function
+  reachable-nodes instead if you want the answer for a graph that may
+  contain cycles."
+  [dag]
+  (let [topsort (ualg/topsort dag)
+        ;; ualg/topsort returns nil if the graph has a cycle.
+        _ (assert (not (nil? topsort)))
+        ;; rnm = "reachable node map", a map with nodes as keys, and
+        ;; collections of nodes reachable from that node (including
+        ;; itself) as associated values.
+        rnm (reduce (fn [rnm cur-node]
+                      (let [coll-of-node-sets
+                            (for [edge (uber/out-edges dag cur-node)]
+                              (rnm (uber/dest edge)))]
+                        (assoc rnm cur-node
+                               (conj (apply set/union coll-of-node-sets)
+                                     cur-node))))
+                    {} (reverse topsort))]
+    rnm))
+
+
+(defn reachable-nodes
+  "Given a graph g, return a map where the keys are sets of nodes in g.
+  Each node will be in exactly one key of the map.  The value
+  associated with a set of nodes S, is a set of nodes T.  T is exactly
+  those nodes that can be reached from a node in S via a path in the
+  graph g.  T is always a superset of S, since nodes are considered to
+  be able to be reachable from themselves (through a path of 0 edges)."
+  [g]
+  (let [{:keys [scc-graph]} (scc-graph g)
+        reachable-scc-sets (dag-reachable-nodes scc-graph)]
+    (into {}
+          (for [[scc-set reachable-sccs] reachable-scc-sets
+                :let [reachable-nodes (apply set/union reachable-sccs)]]
+            [scc-set reachable-nodes]))))
