@@ -289,7 +289,7 @@
 
   The two with Imperative in their names use iteration, and no
   recursion, maintaining an explicit stack data structure on the heap.
-  Thus they are a better fit for large graphs and deafult maximum JVM
+  Thus they are a better fit for large graphs and default maximum JVM
   stack sizes.
 
   The PeaFindScc1 versions allocate a bit more additional memory over
@@ -446,7 +446,7 @@
 
 ;; To cause them to be created in topological order, not reversed, we
 ;; can instead use cindex2 equal to (- num-components 1 cindex), which
-;; with a llittle bit of algebra, written in infix notation, is:
+;; with a little bit of algebra, written in infix notation, is:
 
 ;;   cindex2
 ;; = num-components - 1 - cindex
