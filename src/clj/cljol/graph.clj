@@ -1,5 +1,4 @@
 (ns cljol.graph
-  (:import (java.lang.management ManagementFactory GarbageCollectorMXBean))
   (:require [clojure.pprint :as pp]
             [ubergraph.core :as uber]
             [cljol.ubergraph-extras :as ubere]
