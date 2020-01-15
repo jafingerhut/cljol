@@ -2,6 +2,7 @@
   (:import (java.io File))
   (:require [clojure.test :refer :all]
             [clojure.java.shell :as sh]
+            [clojure.java.io :as io]
             [ubergraph.core :as uber]))
 
 
@@ -36,6 +37,8 @@
 
 (deftest graphs-with-labels-bad-for-graphviz-dot
   (let [opts {:output-dir "doc/tryout-images"}
+        ;; ensure that the directory exists, creating it if not
+        _ (io/make-parents (:output-dir opts) "tmp")
         strings [(str (char 0))
                  (str (char 1))
                  "\\"

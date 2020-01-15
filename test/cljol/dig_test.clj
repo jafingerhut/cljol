@@ -6,6 +6,7 @@
             [ubergraph.core :as uber]
             [cljol.performance :as perf]
             [cljol.graph :as gr]
+            [cljol.ubergraph-extras :as gre]
             [cljol.dig9 :refer :all]))
 
 (def ref-array (object-array 5))
@@ -58,7 +59,7 @@
   (let [{loom-scc :ret :as p} (perf/my-time (lalg/scc g))
         _ (do (print "Using loom.alg/scc, found" (count loom-scc) "SCCs in: ")
               (perf/print-perf-stats p))
-        {scc-data :ret :as p} (perf/my-time (gr/scc-tarjan g))
+        {scc-data :ret :as p} (perf/my-time (gre/scc-tarjan g))
         _ (do (print "Using cljol.graph/scc-tarjan, found"
                      (count (:components scc-data)) "SCCs in: ")
               (perf/print-perf-stats p))]
@@ -112,6 +113,6 @@
               (perf/print-perf-stats p))
         ]
     (is (= (set (map set (lalg/scc g1)))
-           (set (:components (gr/scc-tarjan g1)))))
+           (set (:components (gre/scc-tarjan g1)))))
     (compare-sccs-with-perf g1)
     (compare-sccs-with-perf g2)))
