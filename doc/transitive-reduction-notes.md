@@ -36,7 +36,8 @@ An _irreducible kernel_ of a directed graph `G=(V,E)` is any graph
 
 Note: `F` might be, but need not be, a minimum size subset of `E` with
 these properties.  There might be multiple irreducible kernels of `G`
-with different number of edges from each other.  (TBD: example?)
+with different number of edges from each other.  See section ["Graphs
+with cycles"](#graphs-with-cycles) for an example.
 
 
 ### Minimum equivalent graph
