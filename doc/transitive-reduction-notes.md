@@ -166,11 +166,11 @@ Abbreviations:
                        a TR of G1         nor a TR of G1
 ```
 
-For graph `G1`, it has at least the two different irreducible kernels
-shown, and one has 4 edges while the other has 3.  The one with 3
-edges is also a minimum equivalent graph and a transitive reduction of
-`G1`, but the one with 4 edges is neither, because it has more than
-the minimum possible number of edges.
+Graph `G1` has at least the two different irreducible kernels shown,
+where one has 4 edges and the other has 3.  The one with 3 edges is
+also a minimum equivalent graph and a transitive reduction of `G1`,
+but the one with 4 edges is neither, because it has more than the
+minimum possible number of edges.
 
 ```
      +-----+             +-----+             +-----+
@@ -189,9 +189,9 @@ the minimum possible number of edges.
   IK and MEG of G2
 ```
 
-For graph `G2`, it has only one irreducible kernel and minimum
-equivalent graph, which includes all of the edges of `G2`, because
-removing any of them would not preserve reachability.
+Graph `G2` has only one irreducible kernel and one minimum equivalent
+graph.  They include all of the edges of `G2`, because removing any of
+them would not preserve reachability.
 
 The two transitive reductions shown in the figure have only 3 edges,
 strictly less than the 4 edges in the irreducible kernel or minimum
@@ -202,13 +202,13 @@ fewer edges than the minimum equivalent graph.
 We can extend graph `G2` to a graph `G(N)` that has nodes 4, 5, 6,
 etc. up to `N`, with edges `(1,i)` and `(i,1)` for every node `i > 1`.
 `G(N)` has only itself as its irreducible kernel and minimum
-equivalent graph, with `2*N-2` edges.  Any cycle among the `N`
-vertices is a transitive reduction of `G(N)`, with only `N` edges.
-This demonstrates that the minimum equivalent graph and transitive
-reduction can have almost twice as many edges as a transitive
-reduction.  I do not know if there are graphs where the irreducible
-kernel or minimum equivalent graph have more than twice as many edges
-as a transitive reduction.
+equivalent graph, with `2*N-2` edges.  Any cycle that includes all `N`
+vertices once each, in any order, is a transitive reduction of `G(N)`.
+They all have `N` edges.  This demonstrates that the minimum
+equivalent graph and transitive reduction can have almost twice as
+many edges as a transitive reduction.  I do not know if there are
+graphs where the irreducible kernel or minimum equivalent graph have
+more than twice as many edges as a transitive reduction.
 
 So there are graphs with cycles that have more than one irreducible
 kernel, more than one minimum equivalent graph, and more than one
