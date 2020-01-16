@@ -20,6 +20,43 @@ Wikipedia descriptions of:
   graph](https://en.wikipedia.org/wiki/Directed_acyclic_graph)
 
 
+## Reachability
+
+There are many problems where directed graphs are used to represent
+whether one thing can be reached from another, e.g.
+
++ class diagrams in Java and other object-oriented languages where an
+  edge `(u,v)` represents that class `u` extends class `v`,
++ control flow in a computer program
++ street corners in a city with many one-way-streets
+
+In such a situation, if we wish to answer queries of the form "is it
+possible to reach `v` from `u` via a path of one or more edges", we
+can do so by performing a search in the graph starting at `u` for node
+`v`, e.g. via breadth-first search, depth-first search, shortest path
+calculations, etc.
+
+Two kinds of optimizations present themselves in this situation:
+
++ We want to create a different graph that has the same reachability,
+  but lets us answer "can `v` be reached from `u`?" questions as
+  quickly as possible, without searching.  In this case creating a
+  second graph that has an edge `(u,v)` whenever the original graph
+  has a path from `u` to `v` is helpful.  This second graph is called
+  the _transitive closure_ of the original.
++ We want to create a different graph that still requires searching,
+  but in some sense is as small as we can make it, yet still preserves
+  the property that if there is a path from `u` to `v` in the original
+  graph, then the second graph has one, too.  There are several
+  variations of this idea described below called _irreducible kernel_,
+  _minimum equivalent graph_, and _transitive reduction_.
+
+Given a directed graph `G=(V,E)`, we say that the graph `H=(V,F)`
+_preserves reachability with `G`_ if, for every pair of vertices `u`, `v`
+in `V`, there is a directed path from `u` to `v` in `H` if and only if
+there is a directed path from `u` to `v` in `G`.
+
+
 ## Transitive closure
 
 The _transitive closure_ of a directed graph `G=(V,E)` is the unique
@@ -27,11 +64,8 @@ graph `tc(G)=(V,E*)` with the same set of vertices as `G`, and an edge
 `(u,v)` in `E*` if and only if there is a directed path from `u` to `v
 `in `G`.
 
-Given a directed graph `G=(V,E)`, we say that the graph `H=(V,F)`
-_preserves reachability with `G`_ if, for every pair of vertices `u`, `v`
-in `V`, there is a directed path from `u` to `v` in `H` if and only if
-there is a directed path from `u` to `v` in `G`.  This is true if and
-only if `tc(H)=tc(G)`.
+A graph `H` preserves reachability with `G` if and only if
+`tc(H)=tc(G)`.
 
 
 ## Irreducible kernel
@@ -165,20 +199,20 @@ Abbreviations:
 + TR - transitive reduction
 
 ```
-     +-----+             +-----+             +-----+
-   --|  1  |--         --|  1  |           --|  1  |--
-  /  +-----+  \       /  +-----+          /  +-----+  \
-  |   ^   ^   |       |       ^           |   ^   ^   |
-  |   |   |   |       |       |           |   |   |   |
-  |  /     \  |       |        \          |  /     \  |
-  V  |     |  V       V        |          V  |     |  V
-+-----+   +-----+   +-----+   +-----+   +-----+   +-----+
-|  2  |-->|  3  |   |  2  |-->|  3  |   |  2  |   |  3  |
-+-----+   +-----+   +-----+   +-----+   +-----+   +-----+
+        +-----+                   +-----+                   +-----+
+      --|  1  |--               --|  1  |                 --|  1  |--
+     /  +-----+  \             /  +-----+                /  +-----+  \
+    /    ^   ^    \           /        ^                /    ^   ^    \
+    |    |   |    |           |        |                |    |   |    |
+    |   /     \   |           |         \               |   /     \   |
+    V  /       \  V           V          \              V  /       \  V
++-----+         +-----+   +-----+         +-----+   +-----+         +-----+
+|  2  |-------->|  3  |   |  2  |-------->|  3  |   |  2  |         |  3  |
++-----+         +-----+   +-----+         +-----+   +-----+         +-----+
 
-    Graph G1           IK #1 of G1        IK #2 of G1
-                     Also a MEG and       Neither a MEG
-                       a TR of G1         nor a TR of G1
+        Graph G1                IK #1 of G1              IK #2 of G1
+                              Also a MEG and             Neither a MEG
+                                a TR of G1               nor a TR of G1
 ```
 
 Graph `G1` has at least the two different irreducible kernels shown,
@@ -188,20 +222,20 @@ but the one with 4 edges is neither, because it has more than the
 minimum possible number of edges.
 
 ```
-     +-----+             +-----+             +-----+
-   --|  1  |--         --|  1  |             |  1  |--
-  /  +-----+  \       /  +-----+             +-----+  \
-  |   ^   ^   |       |       ^               ^       |
-  |   |   |   |       |       |               |       |
-  |  /     \  |       |        \             /        |
-  V  |     |  V       V        |             |        V
-+-----+   +-----+   +-----+   +-----+   +-----+   +-----+
-|  2  |   |  3  |   |  2  |-->|  3  |   |  2  |<--|  3  |
-+-----+   +-----+   +-----+   +-----+   +-----+   +-----+
+        +-----+                   +-----+                   +-----+
+      --|  1  |--               --|  1  |                   |  1  |--
+     /  +-----+  \             /  +-----+                   +-----+  \
+    /    ^   ^    \           /        ^                     ^        \
+    |    |   |    |           |        |                     |        |
+    |   /     \   |           |         \                   /         |
+    V  /       \  V           V          \                 /          V
++-----+         +-----+   +-----+         +-----+   +-----+         +-----+
+|  2  |         |  3  |   |  2  |-------->|  3  |   |  2  |<--------|  3  |
++-----+         +-----+   +-----+         +-----+   +-----+         +-----+
 
-     Graph G2          TR #1 of G1         TR #2 of G1
-  Also the only
-  IK and MEG of G2
+        Graph G2               TR #1 of G1                TR #2 of G1
+     Also the only
+     IK and MEG of G2
 ```
 
 Graph `G2` has only one irreducible kernel and one minimum equivalent
