@@ -5,10 +5,22 @@ graph algorithms, perhaps the Ubergraph repository.  I am creating it
 here for now, just to have a place to put it.
 
 
-## Definitions
+# Definitions
 
 
-### Transitive closure
+## Graph terminology
+
+Wikipedia descriptions of:
+
++ [Directed graph](https://en.wikipedia.org/wiki/Directed_graph)
++ [path](https://en.wikipedia.org/wiki/Path_(graph_theory)) in a graph
++ [cycle](https://en.wikipedia.org/wiki/Cycle_graph#Directed_cycle_graph)
+  in a graph
++ [Directed acyclic
+  graph](https://en.wikipedia.org/wiki/Directed_acyclic_graph)
+
+
+## Transitive closure
 
 The _transitive closure_ of a directed graph `G=(V,E)` is the unique
 graph `tc(G)=(V,E*)` with the same set of vertices as `G`, and an edge
@@ -22,7 +34,7 @@ there is a directed path from `u` to `v` in `G`.  This is true if and
 only if `tc(H)=tc(G)`.
 
 
-### Irreducible kernel
+## Irreducible kernel
 
 An _irreducible kernel_ of a directed graph `G=(V,E)` is any graph
 `H=(V,F)` where all of the following are true:
@@ -40,14 +52,14 @@ with different number of edges from each other.  See section ["Graphs
 with cycles"](#graphs-with-cycles) for an example.
 
 
-### Minimum equivalent graph
+## Minimum equivalent graph
 
 A _minimum equivalent graph_ of a directed graph `G=(V,E)` is an
 irreducible kernel of `G` that has the minimum number of edges among
 all irreducible kernels of `G`.
 
 
-### Transitive reduction
+## Transitive reduction
 
 A _transitive reduction_ of a directed graph `G=V(,E)` is any graph
 `H=(V,F)` where all of the following are true:
@@ -59,7 +71,7 @@ A _transitive reduction_ of a directed graph `G=V(,E)` is any graph
   number of edges possible.
 
 
-### Self loops
+## Self loops
 
 This is a fairly minor detail, but seems worth mentioning explicitly
 somewhere.  A self loop is an edge from a vertex to itself, e.g. an
@@ -87,7 +99,7 @@ a minor detail for those being very precise in checking the wording of
 some proofs.
 
 
-### Multigraphs, or parallel edges
+## Multigraphs, or parallel edges
 
 For most of this, I will consider a directed graph not to contain any
 parallel edges, i.e. for any pair of vertices `u` and `v` in a graph,
@@ -101,7 +113,7 @@ those statements about some graphs being unique need to be amended,
 but only slightly.
 
 
-### Directed acyclic graphs (DAG)
+# Directed acyclic graphs (DAG)
 
 Aho, Garey, and Ullman's 1972 paper [2] is quite short, and is packed
 with a some very useful proofs about transitive reductions and
@@ -130,6 +142,9 @@ all of these things:
 So while those three things can be different for a graph `G` with
 cycles (see below for examples), they are all the same for a DAG.
 
+
+## Computing the transitive reduction of a DAG
+
 TBD: Give description and proof of algorithm to find the transitive
 reduction of a DAG in `O(N*e)` time, where `e` is the number of edges
 in the transitive reduction (which is guaranteed to be at most the
@@ -137,7 +152,7 @@ number of edges in the input graph), and for some input graphs can be
 much smaller.
 
 
-### Graphs with cycles
+# Graphs with cycles
 
 The concepts of irreducible kernel, minimum equivalent graph, and
 transitive reduction can be different from each other for graphs with
@@ -221,6 +236,33 @@ a transitive reduction.  Some cyclic graphs have transitive reductions
 containing edges not in the original graph.
 
 
+## Computing the transitive reduction of a graph with cycles
+
+TBD: Describe how to take any algorithm for finding the transitive
+reduction for a DAG, and extend it to find the transitive reduction
+for an arbitrary directed graph.  Originally described by Aho, Garey,
+and Ullman [2].  They call the acyclic graph constructed from an
+arbitrary directed graph the "equivalent acyclic graph".  The
+[Wikipedia article on strongly connected
+components](https://en.wikipedia.org/wiki/Strongly_connected_component)
+calls this a "condensation" of directed graph G.
+
+
+## Computing the minimum equivalent graph of a graph with cycles
+
+The restriction that a minimum equivalent graph must only have edges
+that appear in the original graph not only means that they can have
+more edges than a transitive reduction, it turns out that it makes the
+problem computationally more difficult.
+
+Finding a minimum equivalent graph is an NP complete problem, as
+proved by Sartaj Sahni [3].  Khuller, Raghavachari, and Young prove
+that there is a polynomial time algorithm that can guarantee finding a
+solution that contains at most about 1.64 times more edges than the
+minimum possible, and an algorithm that takes only slightly longer
+than linear time that guarantees finding a solution with at most 1.75
+times more edges than the minimum possible.
+
 
 # References
 
@@ -228,4 +270,14 @@ containing edges not in the original graph.
 
 [2] A. V. Aho, M. R. Garey, and J. D. Ullman, "The transitive
     reduction of a directed graph", SIAM J. Computing, Vol. 1, No. 2,
-    June 1972 https://doi.org/10.1137%2F0201008
+    June 1972, https://doi.org/10.1137/0201008
+
+[3] Sartaj Sahni, "Computationally related problems", SIAM
+    J. Computing, Vol. 3, No. 4, December 1974,
+    https://doi.org/10.1137/0203021
+    https://www.cise.ufl.edu/~sahni/papers/computationallyRelatedProblems.pdf
+
+[4] S, Khuller, B. Raghavachari, and Neal Young, "Approximating the
+    minimum equivalent graph digraph", SIAM J. Computing, Vol. 24,
+    No. 4, 1995, also 2002 version on arXiv.org:
+    https://arxiv.org/abs/cs/0205040
