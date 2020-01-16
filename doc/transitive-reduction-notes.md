@@ -150,20 +150,20 @@ Abbreviations:
 + TR - transitive reduction
 
 ```
-     +---+              +---+              +---+        
-   --| 1 |--          --| 1 |            --| 1 |--      
-  /  +---+  \        /  +---+           /  +---+  \     
- |   ^   ^   |      |       ^          |   ^   ^   |            
- |   |   |   |      |       |          |   |   |   |            
- |  /     \  |      |        \         |  /     \  |            
- V  |      | V      V         |        V  |      | V            
-+---+      +---+   +---+      +---+   +---+      +---+
-| 2 |----->| 3 |   | 2 |----->| 3 |   | 2 |      | 3 |
-+---+      +---+   +---+      +---+   +---+      +---+
+     +-----+             +-----+             +-----+
+   --|  1  |--         --|  1  |           --|  1  |--
+  /  +-----+  \       /  +-----+          /  +-----+  \
+  |   ^   ^   |       |       ^           |   ^   ^   |
+  |   |   |   |       |       |           |   |   |   |
+  |  /    \   |       |       \           |  /    \   |
+  V  |     |  V       V        |          V  |     |  V
++-----+   +-----+   +-----+   +-----+   +-----+   +-----+
+|  2  |-->|  3  |   |  2  |-->|  3  |   |  2  |   |  3  |
++-----+   +-----+   +-----+   +-----+   +-----+   +-----+
 
-    Graph G1         IK #1 of G1        IK #2 of G1
-                   Also a MEG and       Neither a MEG
-                     a TR of G1         nor a TR of G1
+    Graph G1           IK #1 of G1        IK #2 of G1
+                     Also a MEG and       Neither a MEG
+                       a TR of G1         nor a TR of G1
 ```
 
 For graph `G1`, it has at least the two different irreducible kernels
@@ -173,20 +173,20 @@ edges is also a minimum equivalent graph and a transitive reduction of
 the minimum possible number of edges.
 
 ```
-     +---+              +---+              +---+       
-   --| 1 |--          --| 1 |              | 1 |--     
-  /  +---+  \        /  +---+              +---+  \    
- |   ^   ^   |      |       ^              ^       |   
- |   |   |   |      |       |              |       |   
- |  /     \  |      |        \            /        |   
- V  |      | V      V         |           |        V   
-+---+      +---+   +---+      +---+   +---+      +---+ 
-| 2 |      | 3 |   | 2 |----->| 3 |   | 2 |<-----| 3 | 
-+---+      +---+   +---+      +---+   +---+      +---+ 
+     +-----+             +-----+             +-----+
+   --|  1  |--         --|  1  |             |  1  |--
+  /  +-----+  \       /  +-----+             +-----+  \
+  |   ^   ^   |       |       ^               ^       |
+  |   |   |   |       |       |               |       |
+  |  /    \   |       |       \              /        |
+  V  |     |  V       V        |             |        V
++-----+   +-----+   +-----+   +-----+   +-----+   +-----+
+|  2  |   |  3  |   |  2  |-->|  3  |   |  2  |<--|  3  |
++-----+   +-----+   +-----+   +-----+   +-----+   +-----+
 
-    Graph G2         TR #1 of G1         TR #2 of G1
- Also the only
- IK and MEG of G2
+     Graph G2          TR #1 of G1         TR #2 of G1
+  Also the only
+  IK and MEG of G2
 ```
 
 For graph `G2`, it has only one irreducible kernel and minimum
