@@ -95,7 +95,7 @@ all irreducible kernels of `G`.
 
 ## Transitive reduction
 
-A _transitive reduction_ of a directed graph `G=V(,E)` is any graph
+A _transitive reduction_ of a directed graph `G=(V,E)` is any graph
 `H=(V,F)` where all of the following are true:
 
 + It has the same set of vertices as `G`.
