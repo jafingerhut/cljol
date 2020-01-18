@@ -19,6 +19,11 @@ Wikipedia descriptions of:
 + [Directed acyclic
   graph](https://en.wikipedia.org/wiki/Directed_acyclic_graph)
 
+Definition: Given a graph `G=(V,E)` and `V'` a subset of the vertices
+`V`, the _induced subgraph_ of `G` on `V'`, denoted `G[V']`, is
+`G[V']=(V',E')`, where `E'` contains all edges of `E` that are between
+two vertices in `V'`.
+
 
 ## Reachability
 
@@ -135,16 +140,46 @@ some proofs.
 
 ## Multigraphs, or parallel edges
 
-For most of this, I will consider a directed graph not to contain any
-parallel edges, i.e. for any pair of vertices `u` and `v` in a graph,
-either there is exactly one edge `(u,v)`, or there is no such edge.
+For most of this article, I will consider a directed graph not to
+contain any parallel edges, i.e. for any pair of vertices `u` and `v`
+in a graph, either there is exactly one edge `(u,v)`, or there is no
+such edge.
 
 This is an important restriction for some of the discussion below
 about a directed acyclic graph having a unique transitive reduction,
-for example.  If an input graph can have parallel edges, and one
-considers these parallel edges to be different from each other, then
-those statements about some graphs being unique need to be amended,
-but only slightly.
+for example.  If an input graph can have parallel edges, then those
+statements about some graphs being unique need to be amended, but only
+slightly.  For example, this graph:
+
+```
+                   e3
+    --------------------------------
+   /                                \
+   |                                |
+   |                                V
++-----+   e1     +-----+   e2    +-----+
+|  1  |--------->|  2  |-------->|  3  |
++-----+          +-----+         +-----+
+```
+has a unique minimum equivalent graph, containing only the edges `e1`
+and `e2`.  The graph below is the same as the one above, except it has
+two parallel edges from vertex 1 to 2, `e1` and `e4`.
+```
+                   e3
+    --------------------------------
+   /                                \
+   |    -----                       |
+   |   /  e1 \                      V
++-----+       -->+-----+   e2    +-----+
+|  1  |          |  2  |-------->|  3  |
++-----+       -->+-----+         +-----+
+       \  e4 /
+        -----
+```
+The second graph has two different minimum equivalent graphs, one
+containing only edges `e1` and `e2`, the other containing only edges
+`e4` and `e2`.  In general, the only difference between such minimum
+equivalent graphs will be which of several parallel edges are chosen.
 
 
 # Directed acyclic graphs (DAG)
@@ -178,6 +213,188 @@ cycles (see below for examples), they are all the same for a DAG.
 
 
 ## Computing the transitive reduction of a DAG
+
+As mentioned in the previous section, a DAG `G` always has the same
+transitive reduction, minimum equivalent graph, and irreducible
+kernel, and all of them are unique for any DAG.  So any algorithm for
+computing one computes them all.
+
+Also according to the proofs mentioned in the previous section,
+Algorithm A is a correct high level algorithm.
+```
+Input: DAG G=(V,E)
+
+E2 = E
+for edge (u,v) in E2 do
+    if there is a path from u to v in G=(V,E2) that does not use edge (u,v) then
+        E2 <- E2 - (u,v)   // remove edge (u,v) from E2
+    end if
+end for
+
+Output: G2=(V,E2) is the transitive reduction of G
+
+Algorithm A
+```
+
+It is straightforward to implement the `if` condition "there is a path
+from `u` to `v` ..." in linear time, i.e. `O(V+E2)` time -- where
+inside of the "big O" I will use the name of a set to denote its size
+-- using any linear time graph traversal algorithm like breadth-first
+search or depth-first search.
+
+Since that is repeated once for each edge, the total running time of
+algorithm A is `O(E*(V+E))`.  We will give a faster algorithm below,
+but Algorithm A does have the advantage of being very simple to
+implement, and for small enough input graphs its run time may be
+perfectly acceptable.  Algorithm A is also useful to compare its
+output against the output of an implementation of a more complex
+algorithm, to test that the more complex implementation is correct.
+
+Note that at all times during the execution of Algorithm A, `G=(V,E2)`
+has the same reachability as `G=(V,E)`, so it is correct to check for
+paths in either `E2` or `E`.  In general, searching for a path in a
+smaller set of edges should be faster than in a larger set of edges.
+
+
+### Algorithm B for computing the transitive reduction of a DAG
+
+To achieve a faster run time, we will take advantage of the fact that
+the input graph is a DAG.  For any DAG, we can calculate a
+[topological
+ordering](https://en.wikipedia.org/wiki/Topological_sorting) of the
+vertices in linear time, i.e. `O(V+E)` time.
+
+A topological ordering is a sequence `T` of the vertices `V` of a DAG
+`G=(V,E)` such that for every edge `(u,v)` in `E`, `u` is before `v`
+in `T`.  More visually, if you draw the graph `G` with the vertices
+ordered left to right in topological order, all edges will be directed
+from left to right -- none of them will be directed from right to
+left.
+
+One property we will take advantage of is:
+
++ Property (P1): When determining whether there is a path from `u` to
+  `v` in some set of edges `E` (or any subset of `E`), the only
+  vertices that can be in such a path must lie between `u` and `v` in
+  the topological ordering `T`.
+
+There can be no vertex before `u` in `T` in such a path, because that
+would require an edge from a later vertex to an earlier one, and there
+are none.  Similarly there can be no vertex after `v` in `T` in such a
+path, because there is no way to get from "after `v`" to `v`.
+
+First, let us refine algorithm A a little bit by specifying an order
+that we will consider the edges.  Do not worry if it is not yet clear
+why we are picking this order -- the primary reason is that there is
+an efficient way to determine whether an edge is redundant when we
+consider edges in this order, given in more detail later.
+
+```
+Input: DAG G=(V,E)
+
+T = topological ordering of V in G
+// Now T[0] is the first node of T, T[n-1] is the last
+
+E2 = {}   // empty set of edges
+for i in 0 up to n-1 do
+    for each edge (T[j], T[i]) in E do
+        if _not_ (there is a path from T[j] to T[i] in G=(V,E) that does not use edge (T[j], T[i])) then
+            E2 <- E2 + (T[j], T[i])   // add edge to E2
+        end if
+    end for
+
+    // Invariant: Let V'={T[0], ..., T[i]}.  At this time, G=(V',E2)
+    // is the transitive reduction of the graph G[V'].
+
+end for
+
+Output: G2=(V,E2) is the transitive reduction of G
+
+Algorithm B
+```
+
+Algorithm B achieves the same result as Algorithm A in a slightly
+different way.  It starts with an empty set of edges, and only adds
+edges from E to the result if they should be in the output.
+
+Note that while we would like to make checking for paths from `T[j]`
+to `T[i]` faster by checking for them in the (often) smaller set of
+edges `E2`, that would not work here.  Because this algorithm starts
+with `E2` empty and builds up from there, a search for any path to
+`T[i]` in `E2` would always fail to find a path, since there are no
+edges into `T[i]` in `E2` yet.
+
+Algorithm C below enables us to do the checks for paths to `T[i]` in
+`G=(V,E2)`, by considering the edges into `T[i]` by the from vertex
+`T[j]`, from largest `j` down to smallest, i.e. reverse topological
+order.
+
+```
+Input: DAG G=(V,E)
+
+T = topological ordering of V in G
+// Now T[0] is the first node of T, T[n-1] is the last
+
+E2 = {}   // empty set of edges
+for i in 0 up to n-1 do
+    for j in i-1 down to 0 do
+        if there is an edge (T[j], T[i]) in E then
+            if _not_ (there is a path from T[j] to T[i] in G=(V,E2) that does not use edge (T[j], T[i])) then
+                E2 <- E2 + (T[j], T[i])   // add edge to E2
+            end if
+        end if
+    end for
+
+    // Invariant: Let V'={T[0], ..., T[i]}.  At this time, G=(V',E2)
+    // is the transitive reduction of the graph G[V'].
+
+end for
+
+Output: G2=(V,E2) is the transitive reduction of G
+
+Algorithm C
+```
+
+
+
+This calls into question "why can we check for paths only among the
+edges of `E2` in the `if` condition, and still be correct?".  It is
+definitely correct to check for such a path in the original set of
+edges `E`, but a motivation for checking in `E2` (if it is correct) is
+that `E2` may have far fewer edges than `E`, and so we might be able
+to make that check more quickly by checking in `E2`.
+
+That check will always give the same result if `E2` preserves
+reachability with `E`, at least among the set of vertices that the
+path might lie within, which is restricted to `{T[0], ..., T[i]}`.
+
+```
+Input: DAG G=(V,E)
+
+T = topological ordering of V in G
+// Now T[0] is the first node of T, T[n-1] is the last
+
+E2 = {}   // empty set of edges
+for i in 0 up to n-1 do
+    for j in i-1 down to 0 do
+        if there is an edge (T[j], T[i]) in E then
+            if _not_ (there is a path from T[j] to T[i] in G=(V,E2) that does not use edge (T[j], T[i])) then
+                E2 <- E2 + (T[j], T[i])   // add edge to E2
+            end if
+        end if
+    end for
+
+    // Invariant: Let V'={T[0], ..., T[i]}.  At this time, G=(V',E2)
+    // is the transitive reduction of the graph G[V'].
+
+end for
+
+Output: G2=(V,E2) is the transitive reduction of G
+
+Algorithm D
+```
+
+
 
 TBD: Give description and proof of algorithm to find the transitive
 reduction of a DAG in `O(N*e)` time, where `e` is the number of edges
@@ -315,3 +532,81 @@ times more edges than the minimum possible.
     minimum equivalent graph digraph", SIAM J. Computing, Vol. 24,
     No. 4, 1995, also 2002 version on arXiv.org:
     https://arxiv.org/abs/cs/0205040
+
+
+
+# Gory details on run time for very sparse DAGs
+
+`n` is the number of nodes in the input graph, and `m` the number of
+edges.  `e` is the number of edges in the transitive reduction output
+by the algorithm.
+
+Suppose an algorithm runs on a weakly connected DAG in `O(n*(n+e))`
+time.  If we ran that algorithm on a DAG with many small weakly
+connected components, where `e` is much smaller than `n`, is it
+possible that `O(n*(n+e))` could be larger than `O(n*e)`?
+
+If we first determine all weakly connected components of the input
+DAG, we can do do that in `O(n+m)` time.  The result could be a list
+of sets of nodes in each weakly connected component, where each node
+set could be represented by a list.
+
+Now run the `O(n*(n+e))` algorithm on each weakly connected component,
+sequentially, in some arbitrary order of the weakly connected
+components.
+
+The total run time would then be:
+
+```
+[Eqn 1]    n_0 + n_1 * (n_1 + e_1) + ... + n_j * (n_j + e_j)
+```
+
+where `j` is the number of weakly connected components with at least
+one edge, `n_i` is the number of nodes in weakly connected component
+`i`, and `e_i` is the number of edges in the output for the weakly
+connected component `i`.  I have introduced `n_0` as the number of
+"isolated nodes", i.e. those with no edges at all.  Each of those can
+be handled in constant time, so the total time to handle them all is
+`O(n_0)`.
+
+We know `e_i >= n_1 - 1`, because it requires at least that many edges
+to connect a weakly connected component.  We can also express this as
+`n_i <= e_i + 1`.  Thus starting with [Eqn 1] we can get this upper
+bound on the run time:
+
+```
+           [Eqn 1]
+         = n_0 + n_1 * (n_1 + e_1)   + ... + n_j * (n_j + e_j)
+        <= n_0 + n_1 * (2 * e_1 + 1) + ... + n_j * (2 * e_j + 1)
+         = (n_0 + n_1 + ... + n_j) + 2 * (n_1 * e_1 + ... + n_j * e_j)
+         = n + 2 * (n_1 * e_1 + ... + n_j * e_j)
+        <= n + 2 * (n * e_1 + ... + n * e_j)
+         = n + 2 * n * (e_1 + ... + e_j)
+         = n + 2*n*e
+         = O(n*e + n)
+         = O(n*e)
+```
+
+It requires `O(n+m)` time, where `m` is the number of edges in the
+input graph, to determine the weakly connected components, and to do
+the topological sorting, so at first it seems that the most accurate
+way to describe the run time is `O(n*e + m)`.
+
+But note that in each weakly conncted component, `e >= n-1`, and `m <=
+n*(n-1)/2` (ignoring graphs with parallel edges), so `m <= n*e/2`.
+That can be summed up across all weakly connected components similarly
+to what is shown above, with the result that `m` is `O(n*e)` for the
+entire graph.  Thus `O(n*e + m)` is `O(n*e)`.
+
+Note:
+
+If we do _not_ first determine the weakly connected components, and
+run the `O(n*(n+e))` algorithm independently on each one, but instead
+run the algorithm on the entire input graph all at once, it depends
+upon the details of the algorithm, but without further proof it is at
+least possible that the run time `O(n*(n+e))` is strictly slower than
+`O(n*e)`.
+
+For example, if, `e = n^c` for `0 < c < 1`, then `O(n*e) =
+O(n^(1+c))`, strictly less than `O(n^2)`, but `O(n*(n+e))` is `O(n^2 +
+n^(1+c)) = O(n^2)`.
