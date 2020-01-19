@@ -24,6 +24,15 @@ Definition: Given a graph `G=(V,E)` and `V'` a subset of the vertices
 `G[V']=(V',E')`, where `E'` contains all edges of `E` that are between
 two vertices in `V'`.
 
+Definition: Suppose `T` is an ordering of `n` values, where the
+sequence of individual values is denoted `T[0], T[1], ... T[n-1]`.
+Define `T[i,j]` where `0 <= i <= j < n` to be the set of values
+`{T[i], ..., T[j]}`.
+
+Definition: If we have two graphs `G1=(V1,E1)` and `G2=(V2,E2)`, let
+their union, denoted `G1+G2`, be the graph that is the union `V1+V2`
+of their vertex sets, and the union `E1+E2` of their edge sets.
+
 
 ## Reachability
 
@@ -220,14 +229,14 @@ kernel, and all of them are unique for any DAG.  So any algorithm for
 computing one computes them all.
 
 Also according to the proofs mentioned in the previous section,
-Algorithm A is a correct high level algorithm.
+Algorithm A is a correct.
 ```
 Input: DAG G=(V,E)
 
 E2 = E
 for edge (u,v) in E2 do
     if there is a path from u to v in G=(V,E2) that does not use edge (u,v) then
-        E2 <- E2 - (u,v)   // remove edge (u,v) from E2
+        E2 = E2 - {(u,v)}   // remove edge (u,v) from E2
     end if
 end for
 
@@ -248,7 +257,7 @@ but Algorithm A does have the advantage of being very simple to
 implement, and for small enough input graphs its run time may be
 perfectly acceptable.  Algorithm A is also useful to compare its
 output against the output of an implementation of a more complex
-algorithm, to test that the more complex implementation is correct.
+algorithm, for testing the more complex implementation.
 
 Note that at all times during the execution of Algorithm A, `G=(V,E2)`
 has the same reachability as `G=(V,E)`, so it is correct to check for
@@ -256,7 +265,7 @@ paths in either `E2` or `E`.  In general, searching for a path in a
 smaller set of edges should be faster than in a larger set of edges.
 
 
-### Algorithm B for computing the transitive reduction of a DAG
+### Step B in refining an algorithm to find the transitive reduction of a DAG
 
 To achieve a faster run time, we will take advantage of the fact that
 the input graph is a DAG.  For any DAG, we can calculate a
@@ -296,15 +305,15 @@ T = topological ordering of V in G
 // Now T[0] is the first node of T, T[n-1] is the last
 
 E2 = {}   // empty set of edges
-for i in 0 up to n-1 do
+for i in 1 up to n-1 do
     for each edge (T[j], T[i]) in E do
         if _not_ (there is a path from T[j] to T[i] in G=(V,E) that does not use edge (T[j], T[i])) then
-            E2 <- E2 + (T[j], T[i])   // add edge to E2
+            E2 = E2 + {(T[j], T[i])}   // add edge to E2
         end if
     end for
 
-    // Invariant: Let V'={T[0], ..., T[i]}.  At this time, G=(V',E2)
-    // is the transitive reduction of the graph G[V'].
+    // Invariant: At this time, G2=(T[0,i],E2) is the transitive
+    // reduction of the graph G[T[0,i]].
 
 end for
 
@@ -319,15 +328,45 @@ edges from E to the result if they should be in the output.
 
 Note that while we would like to make checking for paths from `T[j]`
 to `T[i]` faster by checking for them in the (often) smaller set of
-edges `E2`, that would not work here.  Because this algorithm starts
-with `E2` empty and builds up from there, a search for any path to
-`T[i]` in `E2` would always fail to find a path, since there are no
-edges into `T[i]` in `E2` yet.
+edges `E2`, that would not work here.
+
+Example:
+
+Suppose there are two edges into `T[7]` in a graph, `(T[1], T[7])` and
+`(T[6], T[7])`, and there is at least one path from `T[1]` to `T[7]`
+in `E`, but they all go through edge `(T[6], T[7])`.  Because there is
+another path in `E` from `T[1]` to `T[7]`, edge `(T[1], T[7])` should
+not be in the transitive reduction.
+
+If the algorithm examines edge `(T[1], T[7])` first, it would not find
+any path from `T[1]` to `T[7]` in edge set `E2` at that time, because
+at that time there are no edges into `T[7]` yet.  Thus the algorithm
+would add edge `(T[1], T[7])` to the edge set `E2` when it should not.
+
+If we examined the edges in the opposite order, we would add edge
+`(T[6], T[7])` to `E2`, and then when examining edge `(T[1], T[7])`,
+find a path from `T[1]` to `T[7]` going through edge `(T[6], T[7])` in
+`E2`, and not add edge `(T[1], T[7])` to `E2`.
+
+The basic idea of the next refinement is to guarantee that we examine
+the edges into `T[i]` in a particular order, such that we get the
+correct answer, even though we only search for paths in the
+(sometimes) smaller edge set `E2`.
+
+
+### Step C in refining an algorithm to find the transitive reduction of a DAG
 
 Algorithm C below enables us to do the checks for paths to `T[i]` in
-`G=(V,E2)`, by considering the edges into `T[i]` by the from vertex
-`T[j]`, from largest `j` down to smallest, i.e. reverse topological
-order.
+`G=(V,E2)`, by considering the edges into `T[i]` in a particular
+order.  The edges `(T[j], T[i])` are considered from largest `j` down
+to smallest, i.e. reverse topological order.
+
+Note that rather than the `if` condition `there is a path from T[j] to
+T[i] in G=(V,E2) that does not use edge (T[j], T[i]))`, we can leave
+off the `that does not use edge (T[j], T[i])` because we know that set
+`E2` does not yet contain edge `(T[j], T[i])` (if there are no
+parallel edges -- even if there are parallel edges in `E`, this is
+correct because we want to keep only one of them).
 
 ```
 Input: DAG G=(V,E)
@@ -336,17 +375,21 @@ T = topological ordering of V in G
 // Now T[0] is the first node of T, T[n-1] is the last
 
 E2 = {}   // empty set of edges
-for i in 0 up to n-1 do
+for i in 1 up to n-1 do
     for j in i-1 down to 0 do
         if there is an edge (T[j], T[i]) in E then
-            if _not_ (there is a path from T[j] to T[i] in G=(V,E2) that does not use edge (T[j], T[i])) then
-                E2 <- E2 + (T[j], T[i])   // add edge to E2
+            if _not_ (there is a path from T[j] to T[i] in G=(V,E2)) then
+                E2 = E2 + {(T[j], T[i])}   // add edge to E2
             end if
         end if
+
+        // Invariant: G2=(T[0,i],E2) is the transitive reduction of
+        // the graph G(T[0,i-1]) + G(T[j,i])
+
     end for
 
-    // Invariant: Let V'={T[0], ..., T[i]}.  At this time, G=(V',E2)
-    // is the transitive reduction of the graph G[V'].
+    // Invariant: At this time, G2=(T[0,i],E2) is the transitive
+    // reduction of the graph G[T[0,i]].
 
 end for
 
@@ -355,18 +398,60 @@ Output: G2=(V,E2) is the transitive reduction of G
 Algorithm C
 ```
 
+So why is it correct to only look for paths from `T[j]` to `T[i]` in
+`G=(V,E2)` here, if it was incorrect in Algorithm B?
+
+Suppose there are `k` edges into `T[i]`.
+
+As a special case, if `k=0`, then the inner loop will not add any
+edges into `T[i]` to `E2`, and then go on to the next iteration of the
+outer loop.
+
+The first edge of `k >= 1` edges `(T[j], T[i])` considered will have
+the largest `j` among all such edges.  It is guaranteed that there are
+no other paths from `T[j]` to `T[i]`, neither in `E2` nor in `E`.  If
+there were another path, that path's last edge would be into `T[i]`,
+and its source vertex be later than `T[j]` in the topological order.
+Thus the edge `(T[j], T[i])` is always in the transitive reduction,
+and Algorithm C will correctly add it to `E2`.
+
+Before adding edge `(T[j], T[i])` to `E2`, we had `E2` containing the
+edges of the transitive reduction of graph `G[T[0,i-1]]`.  After
+adding that edge to `E2`, it is now the transitive reduction of the
+slightly larger graph `G[T[0,i-1]] + G[T[j,i]]`.
+
+The second edge `(T[j2], T[i])`, among `k >= 2` edges will always be
+considered after the first edge `(T[j1], T[i])` into `T[i]` was added
+to edge set `E2`.  Because both of the nodes `T[j1]` and `T[j1]` are
+in `G(T[0,i-1])`, by the outer loop invariant `E2` already contains a
+path from `T[j2]` to `T[j1]` if and only if the input graph did.  Thus
+if there is a path from `T[j2]` to `T[i]` in the input graph, it will
+also exist in `E2` now.
+
+Before considering the edge `(T[j2], T[i])` to `E2`, we had `E2`
+containing the edges of the transitive reduction of graph `G[T[0,i-1]]
++ G[T[j1,i]]`.  After considering that edge, and adding it to `E2` if
+there was no other path from `T[j2]` to `T[i]`, `E2` is now the
+transitive reduction of the slightly larger graph `G[T[0,i-1]] +
+G[T[j2,i]]`.
+
+In general, after every step of the inner loop, after considering
+whether to add an edge to `E2`, we enlarge the graph `G[T[0,i-1]] +
+G[T[j,i]]` that `E2` is the transitive reduction for, until at the end
+of the inner loop, `E2` is the transitive reduction for `G[T[0,i-1]] +
+G[T[0,i]]`, which is the same as graph `G[T[0,i]]`.
+
+Note: The above is not so much a formal proof, as it is an attempt to
+provide the understanding of how the algorithm is proceeding, and what
+can be proved at each step.
 
 
-This calls into question "why can we check for paths only among the
-edges of `E2` in the `if` condition, and still be correct?".  It is
-definitely correct to check for such a path in the original set of
-edges `E`, but a motivation for checking in `E2` (if it is correct) is
-that `E2` may have far fewer edges than `E`, and so we might be able
-to make that check more quickly by checking in `E2`.
+### Step D in refining an algorithm to find the transitive reduction of a DAG
 
-That check will always give the same result if `E2` preserves
-reachability with `E`, at least among the set of vertices that the
-path might lie within, which is restricted to `{T[0], ..., T[i]}`.
+Now we get to a version of the algorithm that is detailed enough that
+we can prove a faster run time for it, versus Algorithm A, and yet
+hopefully see that it is just a more detailed version of Algorithm C,
+which is a more detailed version of Algorithm B, etc.
 
 ```
 Input: DAG G=(V,E)
@@ -376,16 +461,33 @@ T = topological ordering of V in G
 
 E2 = {}   // empty set of edges
 for i in 0 up to n-1 do
+
+    // mark[j] will be assigned true if and only if we can prove there
+    // is a path from T[j] to T[i] in the input graph G.  Initialize
+    // it to false for all nodes T[0] up to T[i-1].
+    for j in 0 up to i-1 do
+        mark[j] = false
+    done
+
     for j in i-1 down to 0 do
         if there is an edge (T[j], T[i]) in E then
-            if _not_ (there is a path from T[j] to T[i] in G=(V,E2) that does not use edge (T[j], T[i])) then
-                E2 <- E2 + (T[j], T[i])   // add edge to E2
+            if not mark[j] then
+                E2 = E2 + {(T[j], T[i])}   // add edge to E2
+                mark[j] = true
             end if
+        end if
+
+        // If T[j] can reach T[i], then any node with an edge into
+        // T[j] can also reach T[i], so mark them, too.
+        if mark[j] then
+            for every edge (u, T[j]) in E2 do
+                mark[u] = true
+            end for
         end if
     end for
 
-    // Invariant: Let V'={T[0], ..., T[i]}.  At this time, G=(V',E2)
-    // is the transitive reduction of the graph G[V'].
+    // Invariant: At this time, G=(T[0,i],E2) is the transitive
+    // reduction of the graph G[T[0,i]].
 
 end for
 
@@ -394,6 +496,26 @@ Output: G2=(V,E2) is the transitive reduction of G
 Algorithm D
 ```
 
+The run time of the first inner loop that initializes `mark` is
+`O(n)`.
+
+Assuming for the moment that the `there is an edge (T[j], T[i]) in E`
+check can be done in constant time (but see below), and that `E2` is
+maintained as a graph with all of the nodes of `G`, plus lists of
+edges adjacent to each vertex, the second inner loop can be
+implemented in `O(n+e)` time, where `e` is the number of edges in
+`E2`.
+
+While calculating the topological order `T`, we can construct new
+adjacency lists of all edges into vertex `v`, such that the edges are
+in the order that we want to consider them in the second inner loop of
+the algorithm.  This enables performing the check `there is an edge
+(T[j], T[i]) in E` in constant time, at least in the context of the
+inner loop of the algorithm, because we can maintain a "pointer" to
+the next edge of the list of vertices into `T[i]`, and check in `O(1)`
+time each time through the loop whether `j` is equal to number of the
+next `(T[j], T[i])` edge, or not.  See section ["tbd"](#tbd) for
+details.
 
 
 TBD: Give description and proof of algorithm to find the transitive
@@ -533,6 +655,98 @@ times more edges than the minimum possible.
     No. 4, 1995, also 2002 version on arXiv.org:
     https://arxiv.org/abs/cs/0205040
 
+
+
+# Constructing sorted lists of edges during topological sorting
+
+In particular, the goal is to take as input a directed graph `G=(V,E)`
+represented using adjacency lists of the edges out of (and/or into)
+each vertex `v`, and construct a topological order `T[0], ..., T[n-1]`
+in `O(V+E)` time.  While doing this, also construct a list of edges
+into each vertex `v`, sorted so that if edge `(T[j1], T[i])` is before
+edge `(T[j2], T[i])` in the list of edges into vertex `T[i]`, then `j1
+> j2`, i.e. the source vertices are in reverse topological order.
+
+We could do this by calculating a topological order using any
+algorithm at all, then sorting the list of edges into each vertex,
+using any `O(n log n)` run time sorting algorithm.  However, this
+could require up to `O(V log V + E)` time for the topological ordering
+plus the sorting.
+
+We would prefer to do it in `O(V+E)` time total, and this is possible
+if we construct the sorted lists of edges while calculating the
+topological order.
+
+```
+Input: DAG G=(V,E)
+
+// i2v and v2i represent a numbering in the range 0 up to n-1 of the
+// vertices of V.  This is an arbitrary numbering that has nothing to
+// do with the topological ordering.  It is temporary, lasting only
+// while this code runs, and is discarded before returning.
+
+// We create this numbering so that we can use arrays instead of
+// dictionaries/hash-maps for several data structures that we need for
+// maintaining a value per vertex in G.
+
+i = 0
+for vertex v in V do
+    i2v[i] = v
+    v2i[v] = i
+    sorted_in_edges_temp[i] = []   // empty list
+    in_degree_temp[i] = 0
+    i = i + 1
+end for
+
+for edge (u,v) in E do
+    i = v2i[v]
+    in_degree_temp[i] = in_degree_temp[i] + 1
+end for
+
+// {} is the empty set.  candidates may be implemented as an ordered
+// sequence/list of some kind.  The algorithm is correct regardless of
+// the order of elements.
+candidates = {}
+for i in 0 up to n-1 do
+    if (in_degree_temp[i] = 0) then
+        candidates = candidates + {i}     // add i to candidates
+    end if
+end for
+
+t = 0
+while (candidates is not empty) do
+    i = arbitrary element of candidates
+    candidates = candidates - {i}       // remove i from candidates
+    T[t] = i2v[i]
+    t2i[t] = i
+    t = t + 1
+    for edge (i, v) in E do
+        j = v2i[v]
+        in_degree_temp[j] = in_degree_temp[j] - 1
+        if (in_degree_temp[j] = 0) then
+            candidates = candidates + {j}     // add j to candidates
+        end if
+        // put edge (i, v) at beginning of list sorted_in_edges_temp[j]
+        sorted_in_edges_temp[j] = [(i, v)] + sorted_in_edges_temp[j]
+    end for
+end while
+
+if (t < size of V) then
+    there is a cycle in G.  No topological ordering exists
+end if
+
+for t in 0 up to n-1 do
+    i = t2i[t]
+    sorted_in_edges[t] = sorted_in_edges_temp[i]
+end for
+
+Output:
+T[0], ..., T[n-1] is a topological ordering of the vertices V
+
+For all i in 0, ..., n-1, sorted_in_edges[i] is a list of edges into
+vertex T[i] that is sorted in reverse topological order by the source
+vertex.
+```
 
 
 # Gory details on run time for very sparse DAGs
