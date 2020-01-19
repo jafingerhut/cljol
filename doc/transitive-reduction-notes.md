@@ -229,7 +229,7 @@ kernel, and all of them are unique for any DAG.  So any algorithm for
 computing one computes them all.
 
 Also according to the proofs mentioned in the previous section,
-Algorithm A is a correct.
+Algorithm A is correct.
 ```
 Input: DAG G=(V,E)
 
@@ -429,11 +429,11 @@ if there is a path from `T[j2]` to `T[i]` in the input graph, it will
 also exist in `E2` now.
 
 Before considering the edge `(T[j2], T[i])` to `E2`, we had `E2`
-containing the edges of the transitive reduction of graph `G[T[0,i-1]]
-+ G[T[j1,i]]`.  After considering that edge, and adding it to `E2` if
-there was no other path from `T[j2]` to `T[i]`, `E2` is now the
-transitive reduction of the slightly larger graph `G[T[0,i-1]] +
-G[T[j2,i]]`.
+containing the edges of the transitive reduction of graph
+`G[T[0,i-1]] + G[T[j1,i]]`.
+After considering that edge, and adding it to `E2` if there was no
+other path from `T[j2]` to `T[i]`, `E2` is now the transitive
+reduction of the slightly larger graph `G[T[0,i-1]] + G[T[j2,i]]`.
 
 In general, after every step of the inner loop, after considering
 whether to add an edge to `E2`, we enlarge the graph `G[T[0,i-1]] +
