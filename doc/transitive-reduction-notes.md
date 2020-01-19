@@ -459,8 +459,13 @@ Input: DAG G=(V,E)
 T = topological ordering of V in G
 // Now T[0] is the first node of T, T[n-1] is the last
 
+for t in 0 up to n-1 do
+    v = T[t]
+    vertex2t[v] = i
+end for
+
 E2 = {}   // empty set of edges
-for i in 0 up to n-1 do
+for i in 1 up to n-1 do
 
     // mark[j] will be assigned true if and only if we can prove there
     // is a path from T[j] to T[i] in the input graph G.  Initialize
@@ -481,7 +486,8 @@ for i in 0 up to n-1 do
         // T[j] can also reach T[i], so mark them, too.
         if mark[j] then
             for every edge (u, T[j]) in E2 do
-                mark[u] = true
+                k = vertex2t[u]
+                mark[k] = true
             end for
         end if
     end for
@@ -497,32 +503,35 @@ Algorithm D
 ```
 
 The run time of the first inner loop that initializes `mark` is
-`O(n)`.
+`O(V)`.
 
-Assuming for the moment that the `there is an edge (T[j], T[i]) in E`
-check can be done in constant time (but see below), and that `E2` is
-maintained as a graph with all of the nodes of `G`, plus lists of
-edges adjacent to each vertex, the second inner loop can be
-implemented in `O(n+e)` time, where `e` is the number of edges in
-`E2`.
+Assuming for the moment that the condition "there is an edge
+`(T[j], T[i])` in `E`" can be performed in constant time (see below),
+and that `E2` is maintained as a graph with all of the nodes of `G`,
+plus lists of edges adjacent to each vertex, the second inner loop can
+be implemented in `O(V+E2)` time.
 
 While calculating the topological order `T`, we can construct new
 adjacency lists of all edges into vertex `v`, such that the edges are
 in the order that we want to consider them in the second inner loop of
-the algorithm.  This enables performing the check `there is an edge
-(T[j], T[i]) in E` in constant time, at least in the context of the
-inner loop of the algorithm, because we can maintain a "pointer" to
-the next edge of the list of vertices into `T[i]`, and check in `O(1)`
-time each time through the loop whether `j` is equal to number of the
-next `(T[j], T[i])` edge, or not.  See section ["tbd"](#tbd) for
+the algorithm.  This enables performing the check "there is an edge
+`(T[j], T[i])` in `E`" in constant time, at least in the context of
+the inner loop of the algorithm, because we can maintain a "pointer"
+to the next edge of the list of vertices into `T[i]`, and check in
+`O(1)` time each time through the loop whether `j` is equal to the `j`
+of the next edge `(T[j], T[i])`, or not.  See section ["Constructing
+sorted lists of edges during topological
+sorting"](#constructing-sorted-lists-of-edges-during-topological-sorting)
+for details.
+
+Thus the main loop can be performed in `O(V+E2)` time per iteration,
+and the number of iterations is `O(V)`, so the total time is
+`O(V*(V+E2))`.  It turns out that as long as this algorithm is run
+independently on each weakly connected component of the input graph
+`G`, the total run time is then `O(V*E2)`.  See ["Gory details on run
+time for very sparse
+DAGs"](#gory-details-on-run-time-for-very-sparse-dags) for the
 details.
-
-
-TBD: Give description and proof of algorithm to find the transitive
-reduction of a DAG in `O(N*e)` time, where `e` is the number of edges
-in the transitive reduction (which is guaranteed to be at most the
-number of edges in the input graph), and for some input graphs can be
-much smaller.
 
 
 # Graphs with cycles
@@ -664,8 +673,8 @@ represented using adjacency lists of the edges out of (and/or into)
 each vertex `v`, and construct a topological order `T[0], ..., T[n-1]`
 in `O(V+E)` time.  While doing this, also construct a list of edges
 into each vertex `v`, sorted so that if edge `(T[j1], T[i])` is before
-edge `(T[j2], T[i])` in the list of edges into vertex `T[i]`, then `j1
-> j2`, i.e. the source vertices are in reverse topological order.
+edge `(T[j2], T[i])` in the list of edges into vertex `T[i]`, then
+`j1 > j2`, i.e. the source vertices are in reverse topological order.
 
 We could do this by calculating a topological order using any
 algorithm at all, then sorting the list of edges into each vertex,
