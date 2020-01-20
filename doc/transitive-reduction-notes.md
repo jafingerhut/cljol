@@ -334,9 +334,9 @@ Example:
 
 Suppose there are two edges into `T[7]` in a graph, `(T[1], T[7])` and
 `(T[6], T[7])`, and there is at least one path from `T[1]` to `T[7]`
-in `E`, but they all go through edge `(T[6], T[7])`.  Because there is
-another path in `E` from `T[1]` to `T[7]`, edge `(T[1], T[7])` should
-not be in the transitive reduction.
+in `E - (T[1], T[7])`, but they all go through edge `(T[6], T[7])`.
+Because there is another path in `E` from `T[1]` to `T[7]`, edge
+`(T[1], T[7])` should not be in the transitive reduction.
 
 If the algorithm examines edge `(T[1], T[7])` first, it would not find
 any path from `T[1]` to `T[7]` in edge set `E2` at that time, because
@@ -422,11 +422,11 @@ slightly larger graph `G[T[0,i-1]] + G[T[j,i]]`.
 
 The second edge `(T[j2], T[i])`, among `k >= 2` edges will always be
 considered after the first edge `(T[j1], T[i])` into `T[i]` was added
-to edge set `E2`.  Because both of the nodes `T[j1]` and `T[j1]` are
+to edge set `E2`.  Because both of the nodes `T[j1]` and `T[j2]` are
 in `G(T[0,i-1])`, by the outer loop invariant `E2` already contains a
 path from `T[j2]` to `T[j1]` if and only if the input graph did.  Thus
-if there is a path from `T[j2]` to `T[i]` in the input graph, it will
-also exist in `E2` now.
+if there is a path from `T[j2]` to `T[i]` in the input graph that does
+not go through edge `(T[j2], T[i])`, it will also exist in `E2` now.
 
 Before considering the edge `(T[j2], T[i])` to `E2`, we had `E2`
 containing the edges of the transitive reduction of graph
@@ -458,18 +458,16 @@ Input: DAG G=(V,E)
 
 T = topological ordering of V in G
 // Now T[0] is the first node of T, T[n-1] is the last
-
 for t in 0 up to n-1 do
     v = T[t]
-    vertex2t[v] = i
+    vertex2t[v] = t
 end for
 
 E2 = {}   // empty set of edges
 for i in 1 up to n-1 do
-
-    // mark[j] will be assigned true if and only if we can prove there
-    // is a path from T[j] to T[i] in the input graph G.  Initialize
-    // it to false for all nodes T[0] up to T[i-1].
+    // mark[j] will be assigned true if we find there is a path from
+    // T[j] to T[i] in the input graph G.  Initialize it to false for
+    // all nodes T[0] up to T[i-1].
     for j in 0 up to i-1 do
         mark[j] = false
     done
@@ -486,15 +484,12 @@ for i in 1 up to n-1 do
         // T[j] can also reach T[i], so mark them, too.
         if mark[j] then
             for every edge (u, T[j]) in E2 do
-                k = vertex2t[u]
-                mark[k] = true
+                mark[vertex2t[u]] = true
             end for
         end if
     end for
-
     // Invariant: At this time, G=(T[0,i],E2) is the transitive
     // reduction of the graph G[T[0,i]].
-
 end for
 
 Output: G2=(V,E2) is the transitive reduction of G
@@ -638,12 +633,18 @@ more edges than a transitive reduction, it turns out that it makes the
 problem computationally more difficult.
 
 Finding a minimum equivalent graph is an NP complete problem, as
-proved by Sartaj Sahni [3].  Khuller, Raghavachari, and Young prove
-that there is a polynomial time algorithm that can guarantee finding a
-solution that contains at most about 1.64 times more edges than the
-minimum possible, and an algorithm that takes only slightly longer
-than linear time that guarantees finding a solution with at most 1.75
-times more edges than the minimum possible.
+proved by Sartaj Sahni [3].  Basically, determining whether the
+minimum equivalent graph of a directed graph has at most `|V|` edges
+is the same as finding whether the graph has a Hamiltonian cycle,
+i.e. a cycle that includes each node exactly once, which is another
+known NP complete problem.
+
+Khuller, Raghavachari, and Young prove that there is a polynomial time
+algorithm that guarantees finding a solution that contains at most
+about 1.64 times more edges than the minimum possible, and an
+algorithm that takes only slightly longer than linear time that
+guarantees finding a solution with at most 1.75 times more edges than
+the minimum possible.
 
 
 # References
@@ -652,17 +653,17 @@ times more edges than the minimum possible.
 
 [2] A. V. Aho, M. R. Garey, and J. D. Ullman, "The transitive
     reduction of a directed graph", SIAM J. Computing, Vol. 1, No. 2,
-    June 1972, https://doi.org/10.1137/0201008
+    June 1972, [https://doi.org/10.1137/0201008]
 
 [3] Sartaj Sahni, "Computationally related problems", SIAM
     J. Computing, Vol. 3, No. 4, December 1974,
-    https://doi.org/10.1137/0203021
-    https://www.cise.ufl.edu/~sahni/papers/computationallyRelatedProblems.pdf
+    [https://doi.org/10.1137/0203021]
+    [https://www.cise.ufl.edu/~sahni/papers/computationallyRelatedProblems.pdf]
 
 [4] S, Khuller, B. Raghavachari, and Neal Young, "Approximating the
     minimum equivalent graph digraph", SIAM J. Computing, Vol. 24,
     No. 4, 1995, also 2002 version on arXiv.org:
-    https://arxiv.org/abs/cs/0205040
+    [https://arxiv.org/abs/cs/0205040]
 
 
 
@@ -672,9 +673,9 @@ In particular, the goal is to take as input a directed graph `G=(V,E)`
 represented using adjacency lists of the edges out of (and/or into)
 each vertex `v`, and construct a topological order `T[0], ..., T[n-1]`
 in `O(V+E)` time.  While doing this, also construct a list of edges
-into each vertex `v`, sorted so that if edge `(T[j1], T[i])` is before
-edge `(T[j2], T[i])` in the list of edges into vertex `T[i]`, then
-`j1 > j2`, i.e. the source vertices are in reverse topological order.
+into each vertex `v`, sorted so that if `j1 < j2`, then edge `(T[j1],
+T[i])` is after edge `(T[j2], T[i])` in the list of edges into vertex
+`T[i]`, i.e. the source vertices are in reverse topological order.
 
 We could do this by calculating a topological order using any
 algorithm at all, then sorting the list of edges into each vertex,
@@ -691,25 +692,23 @@ Input: DAG G=(V,E)
 
 // i2v and v2i represent a numbering in the range 0 up to n-1 of the
 // vertices of V.  This is an arbitrary numbering that has nothing to
-// do with the topological ordering.  It is temporary, lasting only
-// while this code runs, and is discarded before returning.
-
-// We create this numbering so that we can use arrays instead of
-// dictionaries/hash-maps for several data structures that we need for
-// maintaining a value per vertex in G.
+// do with the topological ordering.  It is temporary, discarded
+// before returning.  We create this numbering so that we can use
+// arrays instead of dictionaries/hash-maps for several data
+// structures that we need for maintaining a value per vertex in G.
 
 i = 0
 for vertex v in V do
     i2v[i] = v
     v2i[v] = i
     sorted_in_edges_temp[i] = []   // empty list
-    in_degree_temp[i] = 0
+    in_degree[i] = 0
     i = i + 1
 end for
 
 for edge (u,v) in E do
     i = v2i[v]
-    in_degree_temp[i] = in_degree_temp[i] + 1
+    in_degree[i] = in_degree[i] + 1
 end for
 
 // {} is the empty set.  candidates may be implemented as an ordered
@@ -717,7 +716,7 @@ end for
 // the order of elements.
 candidates = {}
 for i in 0 up to n-1 do
-    if (in_degree_temp[i] = 0) then
+    if (in_degree[i] = 0) then
         candidates = candidates + {i}     // add i to candidates
     end if
 end for
@@ -726,17 +725,18 @@ t = 0
 while (candidates is not empty) do
     i = arbitrary element of candidates
     candidates = candidates - {i}       // remove i from candidates
-    T[t] = i2v[i]
+    u = i2v[i]
+    T[t] = u
     t2i[t] = i
     t = t + 1
-    for edge (i, v) in E do
+    for edge (u, v) in E do
         j = v2i[v]
-        in_degree_temp[j] = in_degree_temp[j] - 1
-        if (in_degree_temp[j] = 0) then
+        in_degree[j] = in_degree[j] - 1
+        if (in_degree[j] = 0) then
             candidates = candidates + {j}     // add j to candidates
         end if
-        // put edge (i, v) at beginning of list sorted_in_edges_temp[j]
-        sorted_in_edges_temp[j] = [(i, v)] + sorted_in_edges_temp[j]
+        // put edge (u, v) at beginning of list sorted_in_edges_temp[j]
+        sorted_in_edges_temp[j] = [(u, v)] + sorted_in_edges_temp[j]
     end for
 end while
 
@@ -769,22 +769,19 @@ time.  If we ran that algorithm on a DAG with many small weakly
 connected components, where `e` is much smaller than `n`, is it
 possible that `O(n*(n+e))` could be larger than `O(n*e)`?
 
-If we first determine all weakly connected components of the input
-DAG, we can do do that in `O(n+m)` time.  The result could be a list
-of sets of nodes in each weakly connected component, where each node
-set could be represented by a list.
+Determining all weakly connected components of a directed graph can be
+done in `O(n+m)` time.  The result could be a list of sets of nodes in
+each weakly connected component, where each node set could also be
+represented by a list.
 
-Now run the `O(n*(n+e))` algorithm on each weakly connected component,
-sequentially, in some arbitrary order of the weakly connected
-components.
-
+Now run the `O(n*(n+e))` algorithm on each weakly connected component.
 The total run time would then be:
 
 ```
-[Eqn 1]    n_0 + n_1 * (n_1 + e_1) + ... + n_j * (n_j + e_j)
+[Eqn 1]    n_0 + n_1 * (n_1 + e_1) + ... + n_c * (n_c + e_c)
 ```
 
-where `j` is the number of weakly connected components with at least
+where `c` is the number of weakly connected components with at least
 one edge, `n_i` is the number of nodes in weakly connected component
 `i`, and `e_i` is the number of edges in the output for the weakly
 connected component `i`.  I have introduced `n_0` as the number of
@@ -799,12 +796,12 @@ bound on the run time:
 
 ```
            [Eqn 1]
-         = n_0 + n_1 * (n_1 + e_1)   + ... + n_j * (n_j + e_j)
-        <= n_0 + n_1 * (2 * e_1 + 1) + ... + n_j * (2 * e_j + 1)
-         = (n_0 + n_1 + ... + n_j) + 2 * (n_1 * e_1 + ... + n_j * e_j)
-         = n + 2 * (n_1 * e_1 + ... + n_j * e_j)
-        <= n + 2 * (n * e_1 + ... + n * e_j)
-         = n + 2 * n * (e_1 + ... + e_j)
+         = n_0 + n_1 * (n_1 + e_1)   + ... + n_c * (n_c + e_c)
+        <= n_0 + n_1 * (2 * e_1 + 1) + ... + n_c * (2 * e_c + 1)
+         = (n_0 + n_1 + ... + n_c) + 2 * (n_1 * e_1 + ... + n_c * e_c)
+         = n + 2 * (n_1 * e_1 + ... + n_c * e_c)
+        <= n + 2 * (n * e_1 + ... + n * e_c)
+         = n + 2 * n * (e_1 + ... + e_c)
          = n + 2*n*e
          = O(n*e + n)
          = O(n*e)
@@ -830,6 +827,6 @@ upon the details of the algorithm, but without further proof it is at
 least possible that the run time `O(n*(n+e))` is strictly slower than
 `O(n*e)`.
 
-For example, if, `e = n^c` for `0 < c < 1`, then `O(n*e) =
-O(n^(1+c))`, strictly less than `O(n^2)`, but `O(n*(n+e))` is `O(n^2 +
-n^(1+c)) = O(n^2)`.
+For example, if, `e = n^a` for `0 < a < 1`, then `O(n*e) =
+O(n^(1+a))`, strictly less than `O(n^2)`, but `O(n*(n+e))` is `O(n^2 +
+n^(1+a)) = O(n^2)`.
