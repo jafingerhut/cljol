@@ -766,8 +766,9 @@ by the algorithm.
 
 Suppose an algorithm runs on a weakly connected DAG in `O(n*(n+e))`
 time.  If we ran that algorithm on a DAG with many small weakly
-connected components, where `e` is much smaller than `n`, is it
-possible that `O(n*(n+e))` could be larger than `O(n*e)`?
+connected components, where `e` is much smaller than `n`, it is
+possible that `O(n*(n+e))` could be larger than `O(n*e)` (see note at
+end of this section).
 
 Determining all weakly connected components of a directed graph can be
 done in `O(n+m)` time.  The result could be a list of sets of nodes in
@@ -791,17 +792,23 @@ be handled in constant time, so the total time to handle them all is
 
 We know `e_i >= n_1 - 1`, because it requires at least that many edges
 to connect a weakly connected component.  We can also express this as
-`n_i <= e_i + 1`.  Thus starting with [Eqn 1] we can get this upper
-bound on the run time:
+`n_i <= e_i + 1`.  Thus starting with [Eqn 1] we can get the following
+upper bound on the run time:
 
 ```
            [Eqn 1]
          = n_0 + n_1 * (n_1 + e_1)   + ... + n_c * (n_c + e_c)
+           { n_i <= e_i + 1 for all i }
         <= n_0 + n_1 * (2 * e_1 + 1) + ... + n_c * (2 * e_c + 1)
+           { algebra }
          = (n_0 + n_1 + ... + n_c) + 2 * (n_1 * e_1 + ... + n_c * e_c)
+           { n_0 + n_1 + ... + n_c = n }
          = n + 2 * (n_1 * e_1 + ... + n_c * e_c)
+           { n_i <= n for all i }
         <= n + 2 * (n * e_1 + ... + n * e_c)
+           { algebra }
          = n + 2 * n * (e_1 + ... + e_c)
+           { e_1 + ... + e_c = e }
          = n + 2*n*e
          = O(n*e + n)
          = O(n*e)
@@ -824,7 +831,7 @@ If we do _not_ first determine the weakly connected components, and
 run the `O(n*(n+e))` algorithm independently on each one, but instead
 run the algorithm on the entire input graph all at once, it depends
 upon the details of the algorithm, but without further proof it is at
-least possible that the run time `O(n*(n+e))` is strictly slower than
+least possible that the run time `O(n*(n+e))` is strictly larger than
 `O(n*e)`.
 
 For example, if, `e = n^a` for `0 < a < 1`, then `O(n*e) =
