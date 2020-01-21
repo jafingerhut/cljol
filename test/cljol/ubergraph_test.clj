@@ -6,8 +6,18 @@
             [medley.core :as med]
             [ubergraph.core :as uber]
             [ubergraph.alg :as ualg]
+            [ubergraph.invariants :as uberi]
             [cljol.performance :as perf]
             [cljol.ubergraph-extras :as ubere]))
+
+
+(defn satisfies-invariants [g]
+  (let [{ret :ret :as p} (perf/my-time (uberi/check-invariants g))]
+    (print "Invariants" (if (:error ret) "VIOLATED" "ok")
+           "on graph with" (count (uber/nodes g)) "nodes"
+           (count (uber/edges g)) "edges in: ")
+    (perf/print-perf-stats p)
+    (is (= false (:error ret)))))
 
 
 (defn sh-out [& args]
@@ -214,6 +224,9 @@
         gbig (ubere/read-ubergraph-as-edges
               "resources/dimultigraph-129k-nodes-272k-edges.edn")
         gbigcondensation (:scc-graph (ubere/scc-graph2 gbig))]
+
+    (doseq [g [g1 g2 g3 g4 g5 gbig gbigcondensation]]
+      (satisfies-invariants g))
 
     ;; graphs where cycles should be detected, and no topological
     ;; ordering returned:
