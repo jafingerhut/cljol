@@ -6,7 +6,7 @@
             [ubergraph.core :as uber]
             [cljol.performance :as perf]
             [cljol.graph :as gr]
-            [cljol.ubergraph-extras :as gre]
+            [cljol.ubergraph-extras :as ubere]
             [cljol.dig9 :refer :all]))
 
 (def ref-array (object-array 5))
@@ -42,13 +42,13 @@
                              [1 4]
                              [4 2]
                              [4 2])]
-    (is (uber/successors g 1))
+    (is (= false (nil? (seq (uber/successors g 1)))))
     (is (= #{2 3 4} (set (uber/successors g 1))))
-    (is (apply distinct? (uber/successors g 1)))
+    (is (= true (apply distinct? (uber/successors g 1))))
     (is (= false (apply distinct? (map uber/dest (uber/out-edges g 1)))))
-    (is (uber/predecessors g 2))
+    (is (= false (nil? (seq (uber/predecessors g 2)))))
     (is (= #{1 4} (set (uber/predecessors g 2))))
-    (is (apply distinct? (uber/predecessors g 2)))
+    (is (= true (apply distinct? (uber/predecessors g 2))))
     (is (= false (apply distinct? (map uber/src (uber/in-edges g 2)))))))
 
 
@@ -59,7 +59,7 @@
   (let [{loom-scc :ret :as p} (perf/my-time (lalg/scc g))
         _ (do (print "Using loom.alg/scc, found" (count loom-scc) "SCCs in: ")
               (perf/print-perf-stats p))
-        {scc-data :ret :as p} (perf/my-time (gre/scc-tarjan g))
+        {scc-data :ret :as p} (perf/my-time (ubere/scc-tarjan g))
         _ (do (print "Using cljol.graph/scc-tarjan, found"
                      (count (:components scc-data)) "SCCs in: ")
               (perf/print-perf-stats p))]
@@ -99,20 +99,8 @@
 	    [4 10]
 	    [4 1])
         fname2 "resources/dimultigraph-129k-nodes-272k-edges.edn"
-        {edges :ret :as p} (perf/my-time
-                            (with-open [rdr (java.io.PushbackReader.
-                                             (io/reader fname2))]
-                              (edn/read rdr)))
-        _ (do (print "Read" (count edges) "in: ")
-              (perf/print-perf-stats p))
-        {g2 :ret :as p} (perf/my-time
-                         (-> (uber/multidigraph)
-                             (uber/add-edges* edges)))
-        _ (do (print "Created graph with" (uber/count-nodes g2) "nodes,"
-                     (uber/count-edges g2)" edges in: ")
-              (perf/print-perf-stats p))
-        ]
+        g2 (ubere/read-ubergraph-as-edges fname2)]
     (is (= (set (map set (lalg/scc g1)))
-           (set (:components (gre/scc-tarjan g1)))))
+           (set (:components (ubere/scc-tarjan g1)))))
     (compare-sccs-with-perf g1)
     (compare-sccs-with-perf g2)))
