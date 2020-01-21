@@ -1,8 +1,37 @@
 (ns cljol.ubergraph-extras
   (:require [clojure.set :as set]
+            [clojure.edn :as edn]
+            [clojure.java.io :as io]
             [ubergraph.core :as uber]
-            [ubergraph.alg :as ualg]))
+            [ubergraph.alg :as ualg]
+            [cljol.performance :as perf]))
 
+(set! *warn-on-reflection* true)
+(set! *unchecked-math* :warn-on-boxed)
+
+
+(defn read-ubergraph-as-edges
+  "Given a `readable` thing, i.e. something that can be passed to
+  clojure.java.io/reader and return a reader, such a string containing
+  a file name on a local file system, read it and return an ubergraph
+  value constructed from it.  The contents of the readable thing
+  should be a Clojure vector, where every element is itself a vector
+  of 2 elements, each 2-element vector representing an edge in a
+  graph, [from to]."
+  [readable]
+  (let [{edges :ret :as p} (perf/my-time
+                            (with-open [rdr (java.io.PushbackReader.
+                                             (io/reader readable))]
+                              (edn/read rdr)))
+        _ (do (print "Read" (count edges) "edges in:")
+              (perf/print-perf-stats p))
+        {g :ret :as p} (perf/my-time
+                         (-> (uber/multidigraph)
+                             (uber/add-edges* edges)))]
+    (print "Created graph with" (uber/count-nodes g) "nodes,"
+           (uber/count-edges g) "edges in:")
+    (perf/print-perf-stats p)
+    g))
 
 
 ;; Unlike the function loom.alg-generic/pre-traverse in the Loom
@@ -108,20 +137,20 @@
 
 
 (defn dense-integer-node-labels
-  "Returns a map.
+  "Given an ubergraph g, returns a map.
 
   Keys in returned map: :node->int :int->node
 
   :node->int
 
-  The associated value is a map with the nodes of g as keys, and
-  distinct integers in the range [0, n-1] where n is the number of
-  nodes.
+  The associated value is a map with the nodes of g as keys, each node
+  associated with a distinct integer in the range [0, n-1] where n is
+  the number of nodes.
 
   :int->node
 
-  The associated value is a Java object array indexed from [0, n-1],
-  and is the reverse mapping of the :node->int map."
+  The associated value is a (mutable) array of objects indexed
+  from [0, n-1], and is the reverse mapping of the :node->int map."
   [g]
   (let [int->node (object-array (uber/count-nodes g))]
     (loop [i 0
@@ -183,8 +212,8 @@
 
 
 (deftype DoubleStackImpl [^ints items ^long n
-                          ^:unsynchronized-mutable fp  ;; front stack pointer
-                          ^:unsynchronized-mutable bp  ;; back stack pointer
+                          ^:unsynchronized-mutable ^long fp  ;; front stack pointer
+                          ^:unsynchronized-mutable ^long bp  ;; back stack pointer
                           ]
   cljol.ubergraph_extras.DoubleStack
   (isEmptyFront [this]
@@ -303,7 +332,7 @@
   recursive, and attempting to use only as much additional memory as
   the Java implementation would allocate."
   [g]
-  (let [n (uber/count-nodes g)
+  (let [n (int (uber/count-nodes g))
         _ (assert (< n Integer/MAX_VALUE))
         {:keys [^objects int->node edges] :as m} (edge-vectors g)]
     (with-local-vars [;; from constructor Base()
@@ -320,11 +349,12 @@
             ;; method Imperative.beginVisiting(int v)
             beginVisiting (fn [v]
                             ;; First time this node encountered
-                            (pushFront vS v)
-                            (pushFront iS 0)
-                            (aset root v true)
-                            (aset rindex v (int @index))
-                            (var-set index (inc @index)))
+                            (let [idx (int @index)]
+                              (pushFront vS v)
+                              (pushFront iS 0)
+                              (aset root v true)
+                              (aset rindex v idx)
+                              (var-set index (inc idx))))
 
             ;; method Imperative.finishVisiting(int v)
             finishVisiting (fn [v]
@@ -334,15 +364,15 @@
                              ;; Update component information
                              (if (aget root v)
                                (do
-                                 (var-set index (dec @index))
+                                 (var-set index (dec (int @index)))
                                  (while (and (not (isEmptyBack vS))
                                              (<= (aget rindex v)
                                                  (aget rindex (topBack vS))))
                                    (let [w (popBack vS)]
                                      (aset rindex w (int @c))
-                                     (var-set index (dec @index))))
+                                     (var-set index (dec (int @index)))))
                                  (aset rindex v (int @c))
-                                 (var-set c (dec @c)))
+                                 (var-set c (dec (int @c))))
                                ;; else
                                (pushBack vS v)))
 
@@ -353,7 +383,7 @@
                           (if (zero? (aget rindex w))
                             (do
                               (popFront iS)
-                              (pushFront iS (inc k))
+                              (pushFront iS (inc (int k)))
                               (beginVisiting w)
                               true)
                             ;; else
@@ -373,18 +403,18 @@
                         (let [v (topFront vS)
                               i (atom (topFront iS))
                               g-edges (edges v)
-                              num-edges (count g-edges)]
+                              num-edges (int (count g-edges))]
                           ;; Continue traversing out-edges until none left.
                           (let [return-early
                                 (loop []
-                                  (if (<= @i num-edges)
+                                  (if (<= (int @i) num-edges)
                                     (do
                                       ;; Continuation
-                                      (if (> @i 0)
+                                      (if (> (int @i) 0)
                                         ;; Update status for previously
                                         ;; traversed out-edge
-                                        (finishEdge v (dec @i)))
-                                      (if (and (< @i num-edges)
+                                        (finishEdge v (dec (int @i))))
+                                      (if (and (< (int @i) num-edges)
                                                (beginEdge v @i))
                                         true  ;; return early
                                         (do
@@ -410,8 +440,8 @@
                 (if (zero? (aget rindex i))
                   (visit i)))
               ;; now, post process to produce component sets
-              (let [num-components (- n 1 @c)
-                    delta (inc @c)
+              (let [num-components (- n 1 (int @c))
+                    delta (inc (int @c))
                     comps (let [x (object-array num-components)]
                             (dotimes [i num-components]
                               (aset x i (transient #{})))
@@ -419,7 +449,7 @@
                     components (loop [i 0]
                                  (if (< i n)
                                    ;; See Note 1
-                                   (let [cindex (- (aget rindex i) delta)]
+                                   (let [cindex (- (aget rindex (int i)) delta)]
                                      (aset comps cindex
                                            (conj! (aget comps cindex)
                                                   (aget int->node i)))
@@ -610,3 +640,135 @@
           (for [[scc-set reachable-sccs] reachable-scc-sets
                 :let [reachable-nodes (apply set/union reachable-sccs)]]
             [scc-set reachable-nodes]))))
+
+
+;; topsort2 is unabashedly written in an imperative style with mutable
+;; arrays and transients.  This is done in an attempt to achieve the
+;; highest performance possible, while being written in Clojure.  I
+;; have not checked how close the performance would be if this was
+;; written using only immutable data.
+
+;; All mutable values are temporary, being live (i.e. not garbage)
+;; only during the execution of topsort2.  Only immutable values are
+;; returned.
+
+;; Note 1: The conditional check here is intended to skip updates to
+;; sorted-in-edges-temp, if the caller indicates they were not
+;; interested in it.  The goal is to maximize performance for the case
+;; where the caller does not want this value.
+
+(defn topsort2
+  "Given a graph, return a topological ordering of the vertices if
+  there are no cycles in the graph, or return TBD if there is a cycle.
+
+  https://en.wikipedia.org/wiki/Topological_sorting
+
+  The return value is a map, where the keys depend upon the options
+  given, and whether the graph contains a cycle.
+
+  :has-cycle? - boolean
+
+  This key is always present in the returned map.  It is true if a
+  cycle was found in the graph, otherwise false.  The cycle found is
+  not returned, only the fact that one exists.
+
+  :topological-order - vector of nodes of `graph`
+
+  If no cycle was found, this key is always present, and its value is
+  a vector whose elements are the nodes of `graph`, in a topologically
+  sorted order, each node appearing exactly once.
+
+  :sorted-in-edges - vector of edge lists
+
+  This key is only present in the returned map if the `opts` map is
+  provided with key :sorted-in-edges with a logical true value, and no
+  cycle is found in the graph.  When it is present, its associated
+  value is a vector.  Let T be the vector that is the value associated
+  with the :topological-order key.  Element i of the vector is a list
+  of all edges into node (nth T i), where the edges are sorted by
+  their source nodes, and those nodes are in reverse topological
+  order.
+
+  topsort2 implements Kahn's algorithm.  Pseudocode for Kahn's
+  algorithm is given on the Wikipedia page.
+
+  Runs in O((n+m)*C) time, where n is the number of nodes, m is the
+  number of edges, and C is the time to do a single lookup or addition
+  to a Clojure map, set, or vector of size max(m,n).  C is often
+  described as 'effectively constant'.  TBD: Link to details on C.
+
+  Graphs with multiple parallel edges from one node u to another node
+  v are supported.
+
+  If a graph has 'self loops', i.e. an edge from a node to itself,
+  that is considered a cycle.  Undirected graphs with an edge between
+  node u and node v are treated as having directed edges from u to v
+  and from v to u, and thus have a cycle."
+  ([graph]
+   (topsort2 graph {}))
+  ([graph opts]
+   (let [n (count (uber/nodes graph))
+         {^objects i2n :int->node, ^ints n2i :node->int} (dense-integer-node-labels graph)
+         sorted-in-edges-temp (if (get opts :sorted-in-edges)
+                                (object-array n))
+         [^ints in-degree candidates]
+         (let [^ints tmp (int-array n)]
+           (let [n (long n)]
+             (loop [i 0
+                    candidates ()]
+               (if (< i n)
+                 (let [d (int (uber/in-degree
+                               graph (aget n2i i)))]
+                   (aset tmp i d)
+                   (recur (inc i) (if (zero? d)
+                                    (cons i candidates)
+                                    candidates)))
+                 [tmp candidates]))))
+         t2i (int-array n)
+
+         [final-t T]
+         (loop [t 0
+                T (transient [])
+                candidates candidates]
+           (if-let [candidates (seq candidates)]
+             (let [i (int (first candidates))
+                   u (aget i2n i)]
+               (aset t2i t i)
+               (let [next-candidates
+                     (loop [out-edges (uber/out-edges graph u)
+                            cand (next candidates)]
+                       (if-let [out-edges (seq out-edges)]
+                         (let [e (first out-edges)
+                               v (uber/dest e)
+                               j (int (n2i v))
+                               new-d (dec (aget in-degree j))]
+                           (when sorted-in-edges-temp  ;; Note 1
+                             (aset sorted-in-edges-temp
+                                   j (cons e (aget sorted-in-edges-temp j))))
+                           (aset in-degree j new-d)
+                           (recur (next out-edges) (if (zero? new-d)
+                                                     (cons j cand)
+                                                     cand)))
+                         ;; else return updated list of candidates
+                         cand))]
+                 (recur (inc t) (conj! T u) next-candidates)))
+             ;; else
+             [t (persistent! T)]))]
+
+     (if (< (int final-t) n)
+       ;; there is a cycle in the graph, so no topological ordering
+       ;; exists.
+       {:has-cycle? true}
+       (let [sorted-in-edges
+             (when sorted-in-edges-temp
+               (loop [t 0
+                      sorted-in-edges (transient [])]
+                 (if (< t n)
+                   (let [i (aget t2i t)]
+                     (recur (inc t) (conj! sorted-in-edges
+                                           (aget sorted-in-edges-temp i))))
+                   (persistent! sorted-in-edges))))
+             ret {:has-cycle? false, :topological-order T}]
+         (if sorted-in-edges
+           (assoc ret :sorted-in-edges sorted-in-edges)
+           ret))))))
