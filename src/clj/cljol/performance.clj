@@ -18,8 +18,9 @@
 
 (defn print-perf-stats [perf-stats]
   (let [{:keys [time-nsec gc-stats]} perf-stats
-        {:keys [gc-collection-count gc-collection-time-msec]} gc-stats]
-    (println (/ time-nsec 1000000.0) "msec,"
+        {:keys [gc-collection-count gc-collection-time-msec]} gc-stats
+        time-msec (/ time-nsec 1000000.0)]
+    (println (if (< time-msec 1) (str time-msec) (format "%.1f" time-msec)) "msec,"
              gc-collection-count "gc-count,"
              gc-collection-time-msec "gc-time-msec")))
 
