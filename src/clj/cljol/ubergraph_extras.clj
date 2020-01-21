@@ -717,8 +717,7 @@
              (loop [i 0
                     candidates ()]
                (if (< i n)
-                 (let [d (int (uber/in-degree
-                               graph (aget n2i i)))]
+                 (let [d (int (uber/in-degree graph (aget i2n i)))]
                    (aset tmp i d)
                    (recur (inc i) (if (zero? d)
                                     (cons i candidates)

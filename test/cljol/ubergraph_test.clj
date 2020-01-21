@@ -4,8 +4,10 @@
             [clojure.java.shell :as sh]
             [clojure.java.io :as io]
             [medley.core :as med]
-            [cljol.ubergraph-extras :as ubere]
-            [ubergraph.core :as uber]))
+            [ubergraph.core :as uber]
+            [ubergraph.alg :as ualg]
+            [cljol.performance :as perf]
+            [cljol.ubergraph-extras :as ubere]))
 
 
 (defn sh-out [& args]
@@ -174,6 +176,72 @@
 )
 
 
+(deftest topological-ordering-tests
+  (let [g1 (uber/multidigraph [1 {:label "x"}]
+                              [2 {:label "y"}]
+                              [1 2 {:label "foo"}])
+        ;; g2 is a DAG
+        g2 (uber/multidigraph [1 {:label "n1"}]
+                              [2 {:label "n2"}]
+                              [3 {:label "n3"}]
+                              [1 2 {:label "e1->2"}]
+                              [1 3 {:label "e1->3"}]
+                              [2 3 {:label "e2->3"}])
+        ;; g3 contains a self loop edge on node 1
+        g3 (uber/multidigraph [1 {:label "n1"}]
+                              [2 {:label "n2"}]
+                              [3 {:label "n3"}]
+                              [1 1 {:label "e1->1"}]
+                              [1 2 {:label "e1->2"}]
+                              [1 3 {:label "e1->3"}]
+                              [2 3 {:label "e2->3"}])
+        ;; g4 contains a cycle of 3 edges, but no shorter cycle
+        g4 (uber/multidigraph [1 {:label "n1"}]
+                              [2 {:label "n2"}]
+                              [3 {:label "n3"}]
+                              [1 2 {:label "e1->2"}]
+                              [3 1 {:label "e3->1"}]
+                              [2 3 {:label "e2->3"}])
+        ;; g5 is a DAG with parallel edges between some vertices
+        g5 (uber/multidigraph [1 {:label "n1"}]
+                              [2 {:label "n2"}]
+                              [3 {:label "n3"}]
+                              [1 2 {:label "e1->2"}]
+                              [1 3 {:label "e1->3"}]
+                              [1 2 {:label "e1->2b"}]
+                              [1 2 {:label "e1->2c"}]
+                              [2 3 {:label "e2->3"}])
+        gbig (ubere/read-ubergraph-as-edges
+              "resources/dimultigraph-129k-nodes-272k-edges.edn")
+        gbigcondensation (:scc-graph (ubere/scc-graph2 gbig))]
+
+    ;; graphs where cycles should be detected, and no topological
+    ;; ordering returned:
+    (doseq [g [g3 g4 gbig]]
+      (is (= nil (ualg/topsort g)))
+      (is (= true (:has-cycle? (ubere/topsort2 g)))))
+
+    ;; acyclic graphs, so topological orderings should be returned:
+    (doseq [g [g1 g2 g5]]
+      (let [ret (ualg/topsort g)]
+        (is (= {:pass true} (correct-topo-order g ret))))
+      (let [ret (ubere/topsort2 g)]
+        (is (= false (:has-cycle? ret)))
+        (is (= {:pass true} (correct-topo-order g (:topological-order ret))))))
+
+    (let [g gbigcondensation
+          {topsort-ret :ret :as ptopsort} (perf/my-time (ualg/topsort g))
+          _ (do (print "Using ubergraph.alg/topsort, found topo order in: ")
+                (perf/print-perf-stats ptopsort))
+          {topsort2-ret :ret :as ptopsort2} (perf/my-time (ubere/topsort2 g))
+          _ (do (print "Using cljol.ubergraph-extras/topsort2, found topo order in: ")
+                (perf/print-perf-stats ptopsort2))]
+      (is (= {:pass true} (correct-topo-order g topsort-ret)))
+      (is (= false (:has-cycle? topsort2-ret)))
+      (is (= {:pass true}
+             (correct-topo-order g (:topological-order topsort2-ret)))))))
+
+
 (comment
 
 (require '[medley.core :as med]
@@ -264,6 +332,19 @@
 (class tbigc)
 (count tbigc)
 (correct-topo-order gbigcondensation tbigc)
+;; {:pass true}
+
+(ubere/topsort2 g1)
+(ubere/topsort2 g2)
+(ubere/topsort2 g3)
+(ubere/topsort2 g4)
+(ubere/topsort2 g5)
+(def tbig2 (ubere/topsort2 gbig))
+tbig2
+;; {:has-cycle? true}
+(def tbigc (ubere/topsort2 gbigcondensation))
+(keys tbigc)
+(correct-topo-order gbigcondensation (:topological-order tbigc))
 ;; {:pass true}
 
 )
