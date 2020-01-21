@@ -8,7 +8,8 @@
                  [com.fingerhutpress.cljol_jvm_support/cljol_jvm_support "1.0"]
                  [ubergraph "0.8.2"
                   :exclusions [tailrecursion/cljs-priority-map]]]
-  :profiles {:uberlocal {:dependencies [[ubergraph "0.5.4-andy-mods"]]}
+  :profiles {:test {:dependencies [[medley "1.2.0"]]}
+             :uberlocal {:dependencies [[ubergraph "0.5.4-andy-mods"]]}
              :master {:dependencies [[org.clojure/clojure "1.11.0-master-SNAPSHOT"]]}
             }
   :jvm-opts ^:replace [
