@@ -659,7 +659,8 @@
 
 (defn topsort2
   "Given a graph, return a topological ordering of the vertices if
-  there are no cycles in the graph, or return TBD if there is a cycle.
+  there are no cycles in the graph, or return a map with value true
+  for the key :has-cycle? if there is a cycle.
 
   https://en.wikipedia.org/wiki/Topological_sorting
 
