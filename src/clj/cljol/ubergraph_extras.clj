@@ -772,3 +772,119 @@
          (if sorted-in-edges
            (assoc ret :sorted-in-edges sorted-in-edges)
            ret))))))
+
+
+(defn remove-loops-and-parallel-edges
+  "Given an Ubergraph, return one that has the same nodes and edges,
+  except all self loop edges will be removed, and for all pairs of
+  nodes that have multiple parallel edges between them, all but one of
+  them will be removed.  The one that remains will be chosen
+  arbitrarily."
+  [graph]
+  (let [g (reduce (fn remove-self-loop [g node]
+                    (apply uber/remove-edges g (uber/find-edges g node node)))
+                  graph (uber/nodes graph))]
+    (reduce (fn trim-from-node [g src]
+              (reduce (fn trim-from-src-to-dest [g dest]
+                        (apply uber/remove-edges
+                               g (rest (uber/find-edges g src dest))))
+                      g (uber/successors g src)))
+            g (uber/nodes g))))
+
+
+;; Note that dag-transitive-reduction-slow does not actually check
+;; whether the input graph is a DAG, but it has been written so that
+;; it will give the correct result if the input graph is given a DAG.
+;; If not, it might return a graph that is not a transitive reduction
+;; of the input graph.
+
+(defn dag-transitive-reduction-slow
+  [graph]
+  (let [g (remove-loops-and-parallel-edges graph)]
+    (reduce (fn remove-edge-if-redundant [g edge]
+              (let [src (uber/src edge)
+                    dest (uber/dest edge)
+                    dest? #(= % dest)
+                    ;; Pass pre-traverse* a successors function that
+                    ;; allows any edge of g to be traversed in the
+                    ;; search for a path from src to dest, _except_
+                    ;; the one edge directly from src to dest.
+                    succ (fn successors-except-by-edge [node]
+                           (if (= node src)
+                             (remove dest? (uber/successors g node))
+                             (uber/successors g node)))
+                    reachable-from-src (pre-traverse* succ src)]
+                (if (some dest? reachable-from-src)
+                  ;; We found a longer way to reach dest from src, so
+                  ;; remove the direct edge.
+                  (uber/remove-edges g edge)
+                  g)))
+            g (uber/edges g))))
+
+(defn check-same-reachability-slow
+  "Given two graphs g1 and g2 that have nodes node-set in common with
+  each other, check whether among all ordered pairs of nodes (n1, n2)
+  in node-set that there is a path from n1 to n2 in g1 if, and only
+  if, there is a path from n1 to n2 in g2.
+
+  If you do not specify a node-set, it is assumed that both graphs
+  have the same set of nodes, and reachability will be compared for
+  all pairs of nodes.
+
+  Note: This function assumes the two graphs both have all nodes in
+  node-set in common with each other.  It might behave in an
+  undocumented fashion (e.g. return wrong answers, throw an exception)
+  if they do not.
+
+  '-slow' is in the name because by design, this function performs its
+  task in as simple a way as possible, taking O(n^3 + m*n^2) time,
+  where n is the number of nodes in node-set, and m is the maximum
+  number of edges between the two graphs.  It is designed not to be
+  fast, but to be 'obviously correct', as an aid in checking the
+  results of other faster algorithms, such as those that compute a
+  minimum equivalent graph, transitive reduction, or transitive
+  closure.
+
+  Return a map that always contains the key :pass with an associated
+  boolean value.
+
+  If they have the same reachability, the value associated with the
+  key :pass is true, otherwise false.
+
+  If they have different reachability, also include the following keys
+  in the map returned, describing one difference in reachability found
+  between g1 and g2.
+
+  :from-node - value is one node in node-set
+
+  :to-node - value is one node in node-set
+
+  :g1-reaches - boolean value that is true if a path was found
+  from (:from-node ret) to (:to-node ret) in graph g1.
+
+  :g2-reaches - boolean value that is true if a path was found
+  from (:from-node ret) to (:to-node ret) in graph g2.
+
+  The boolean values associated with keys :g1-reaches and :g2-reaches
+  will be different."
+  ([g1 g2]
+   (check-same-reachability-slow g1 g2 (uber/nodes g1)))
+  ([g1 g2 node-set]
+   (let [ret (first
+              (for [n1 node-set
+                    n2 node-set
+                    :when (not= n1 n2)
+                    :let [n2? #(= % n2)
+                          g-reaches? (fn [g]
+                                       (some n2?
+                                             (pre-traverse*
+                                              #(uber/successors g %) n1)))
+                          g1-reaches? (g-reaches? g1)
+                          g2-reaches? (g-reaches? g2)]
+                    :when (not= g1-reaches? g2-reaches?)]
+                {:pass false
+                 :from-node n1
+                 :to-node n2
+                 :g1-reaches g1-reaches?
+                 :g2-reaches g2-reaches?}))]
+     (or ret {:pass true}))))

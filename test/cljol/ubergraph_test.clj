@@ -261,17 +261,52 @@
          '[loom.graph :as lg]
          '[ubergraph.core :as uber]
          '[ubergraph.alg :as ualg]
-         '[cljol.ubergraph-extras :as ubere])
+         '[cljol.ubergraph-extras :as ubere]
+         '[cljol.performance :as perf]
+         '[cljol.dig9 :as d])
 
 (require '[cljol.ubergraph-extras :as ubere] :reload)
 
 (pprint (into (sorted-map) (ns-publics 'ubergraph.core)))
+(pprint (into (sorted-map) (ns-publics 'cljol.dig9)))
+
+(d/view [g2])
+(doc d/view-graph)
+(doc d/write-drawing-file)
+(doc d/view)
+(d/write-drawing-file [g2] "g2.pdf" :pdf)
+(class g2)
+(pprint (supers (class g2)))
+(class (:node-map g2))
+(pprint (:node-map g2))
+(doc uber/out-degree)
+(doc uber/successors)
+
+(defn might-be-transitive-reduction? [g-orig g-tr]
+  (if (not= (set (uber/nodes g-orig)) (set (uber/nodes g-tr)))
+    {:pass false
+     :error :different-node-sets
+     :description "g-orig and g-tr have different sets of nodes"}
+    (let [ret (check-same-reachability-slow g-orig g-tr)]
+      (if (:pass ret)
+        ret
+        (assoc ret
+               :error :different-reachability
+               :description "g-orig and g-tr have different reachability")))))
+
+(defn tr-slow-plus-check [g]
+  (let [gtr (dag-transitive-reduction-slow g)
+        ret (might-be-transitive-reduction?  g gtr)]
+    {:transitive-reduction gtr
+     :is-transitive-reduction? ret}))
 
 (do
 ;; g1 is a DAG
 (def g1 (uber/multidigraph [1 {:label "x"}]
                            [2 {:label "y"}]
                            [1 2 {:label "foo"}]))
+;(pprint (uber/edges g1))
+;(pprint (uber/edges (ubere/dag-transitive-reduction-slow g1)))
 ;; g2 is a DAG
 (def g2 (uber/multidigraph [1 {:label "n1"}]
                            [2 {:label "n2"}]
@@ -279,6 +314,8 @@
                            [1 2 {:label "e1->2"}]
                            [1 3 {:label "e1->3"}]
                            [2 3 {:label "e2->3"}]))
+;(pprint (uber/edges g2))
+;(pprint (uber/edges (ubere/dag-transitive-reduction-slow g2)))
 ;; g3 contains a self loop edge on node 1
 (def g3 (uber/multidigraph [1 {:label "n1"}]
                            [2 {:label "n2"}]
@@ -287,6 +324,15 @@
                            [1 2 {:label "e1->2"}]
                            [1 3 {:label "e1->3"}]
                            [2 3 {:label "e2->3"}]))
+;(pprint (uber/edges g3))
+;(pprint (uber/edges (remove-loops-and-parallel-edges g3)))
+;(pprint (uber/edges (ubere/dag-transitive-reduction-slow g3)))
+;(uber/find-edges g3 1 1)
+;(pprint (uber/edges g3))
+;(pprint (uber/edges (apply uber/remove-edges g3 (uber/find-edges g3 1 1))))
+;(uber/out-degree g3 1)
+;(uber/successors g3 1)
+;(uber/predecessors g3 1)
 ;; g4 contains a cycle of 3 edges, but no shorter cycle
 (def g4 (uber/multidigraph [1 {:label "n1"}]
                            [2 {:label "n2"}]
@@ -294,6 +340,8 @@
                            [1 2 {:label "e1->2"}]
                            [3 1 {:label "e3->1"}]
                            [2 3 {:label "e2->3"}]))
+;(pprint (uber/edges g4))
+;(pprint (uber/edges (ubere/dag-transitive-reduction-slow g4)))
 ;; g5 is a DAG with parallel edges between some vertices
 (def g5 (uber/multidigraph [1 {:label "n1"}]
                            [2 {:label "n2"}]
@@ -303,12 +351,32 @@
                            [1 2 {:label "e1->2b"}]
                            [1 2 {:label "e1->2c"}]
                            [2 3 {:label "e2->3"}]))
+;(pprint (uber/find-edges g5 1 2))
+;(pprint (uber/edges g5))
+;(pprint (uber/edges (remove-loops-and-parallel-edges g5)))
+;(pprint (uber/edges (ubere/dag-transitive-reduction-slow g5)))
+;(uber/out-degree g5 1)
+;(uber/out-edges g5 1)
+;(uber/successors g5 1)
+;(class (uber/predecessors g5 2))
 (def gbig (ubere/read-ubergraph-as-edges "resources/dimultigraph-129k-nodes-272k-edges.edn"))
 )
 (def gbigcondensation (:scc-graph (ubere/scc-graph2 gbig)))
-(count (uber/nodes gbig))
-(count (uber/nodes gbigcondensation))
-(uber/in-degree g5 2)
+
+(count (uber/edges gbigcondensation))
+(def gbigc-tr
+  (let [{g :ret :as p} (perf/my-time (ubere/dag-transitive-reduction-slow
+                                      gbigcondensation))]
+    (perf/print-perf-stats p)
+    g))
+(count (uber/edges gbigc-tr))
+(/ 143664.0 178576)
+
+;(pprint (uber/edges (ubere/dag-transitive-reduction-slow g4)))
+
+;(count (uber/nodes gbig))
+;(count (uber/nodes gbigcondensation))
+;(uber/in-degree g5 2)
 ;; 3  -- seems to be the number of edges, if there are multiple parallel edges, not the number of predecessor nodes as the doc string currently suggests
 (pprint (uber/in-edges g5 2))
 ;; returns 3 parallel edges

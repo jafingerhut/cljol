@@ -53,5 +53,5 @@
   }
  :paths ["src/clj" "test"]
  :deps {com.fingerhutpress.cljol_jvm_support/cljol_jvm_support {:mvn/version "1.0"}
-        ubergraph {:mvn/version "0.6.1"
+        ubergraph {:mvn/version "0.8.2"
                    :exclusions [tailrecursion/cljs-priority-map]}}}
