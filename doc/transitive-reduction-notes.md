@@ -529,6 +529,102 @@ DAGs"](#gory-details-on-run-time-for-very-sparse-dags) for the
 details.
 
 
+### Step E in refining an algorithm to find the transitive reduction of a DAG
+
+The refinements in this section do not improve the running time of
+Algorithm D in terms of having a smaller function in the "big O"
+notation.  They are simply some improvements that can be made to
+Algorithm D to avoid some wasted work in some cases.
+
+Among all edges `(T[j], T[i])` into node `T[i]` considered in the
+inner loop starting with the line `for j in i-1 down to 0 do`, let
+`j_max` be the largest value of `j` among those edges, and `j_min` be
+the smallest.
+
+First, notice that the inner loop does not mark any node as reachable
+until it gets to `j=j_max`.  Thus we can start that loop with
+`j=j_max` rather than `j=i-1`, with no change in the final result.
+
+Similarly, after we have done the first `if` statement of the loop
+iteration with `j=j_min`, and added that edge to `E2` (or not), no
+more changes to `E2` will be made in any future iterations of the loop
+for `j < j_min`, so we can exit that loop then.  The `mark` array
+values will be discarded, so there is no need to calculate them for
+any values of `j < j_min`.
+
+The pseudocode below incorporates the improvements mentioned above.
+`break` and `continue` are used with the same meaning they have in C,
+C++, Java and several other programming languages.
+
+```
+Input: DAG G=(V,E)
+
+T = topological ordering of V in G
+// Now T[0] is the first node of T, T[n-1] is the last
+for t in 0 up to n-1 do
+    v = T[t]
+    vertex2t[v] = t
+end for
+
+E2 = {}   // empty set of edges
+for i in 1 up to n-1 do
+    if there are no edges into T[i] then
+        continue
+    end if
+    // mark[j] will be assigned true if we find there is a path from
+    // T[j] to T[i] in the input graph G.  Initialize it to false for
+    // all nodes T[0] up to T[i-1].
+    for j in 0 up to i-1 do
+        mark[j] = false
+    done
+
+    // We can calculate j_max in O(1) time if all edges of E into
+    // T[i] have been sorted from largest j to smallest j.
+    j_max = maximum j such that (T[j], T[i]) is an edge in E
+    for j in j_max down to 0 do
+        if there is an edge (T[j], T[i]) in E then
+            if not mark[j] then
+                E2 = E2 + {(T[j], T[i])}   // add edge to E2
+                mark[j] = true
+            end if
+            if (T[j], T[i]) is the last edge into T[i] then
+                break
+            end if
+        end if
+
+        // If T[j] can reach T[i], then any node with an edge into
+        // T[j] can also reach T[i], so mark them, too.
+        if mark[j] then
+            for every edge (u, T[j]) in E2 do
+                mark[vertex2t[u]] = true
+            end for
+        end if
+    end for
+    // Invariant: At this time, G=(T[0,i],E2) is the transitive
+    // reduction of the graph G[T[0,i]].
+end for
+
+Output: G2=(V,E2) is the transitive reduction of G
+
+Algorithm E
+```
+
+Here is one more possible speedup that might be achievable in some
+cases, but it would require some measurements on a particular target
+processor to know how effective it is.
+
+We could, each time through the outer loop, count the number of nodes
+`M` that we assign `mark[j]` to true.  If by the time we finish that
+iteration of the outer loop, the number of such nodes is a small
+fraction of `i`, it might be faster to simply do a traversal of the
+graph edges in `E2`, starting at node `T[i]` and following edges in
+the reverse direction, and change only nodes we find with
+`mark[j]=true` back to false.  For some maximum value of `M` --
+perhaps some formula like `0.05*i` -- this should be faster in
+practice than assigning `mark[j]` to false for all `j` from 0 up to
+`i-1`.
+
+
 # Graphs with cycles
 
 The concepts of irreducible kernel, minimum equivalent graph, and
