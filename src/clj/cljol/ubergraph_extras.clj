@@ -150,7 +150,47 @@
   :int->node
 
   The associated value is a (mutable) array of objects indexed
-  from [0, n-1], and is the reverse mapping of the :node->int map."
+  from [0, n-1], and is the reverse mapping of the :node->int map.
+
+  Runs in O(n) time, where n is the number of nodes in the graph.
+
+  This is a very simple function, but it is sometimes useful as a step
+  before running a more complex algorithm on a graph.  Having a
+  contiguous range of integers from [0, n-1] for each node is useful
+  for creating an array of values associated with each node, and
+  storing them in a vector or Java array separate from the graph data
+  structure itself.  If these extra values are no longer needed when
+  the algorithm completes, it can be faster to do it this way, versus
+  using Ubergraph node attributes.
+
+  Example:
+
+  user=> (require '[ubergraph.core :as uber]
+                  '[cljol.ubergraph-extras :as ubere])
+  nil
+  user=> (def g7 (uber/multidigraph
+                  ;; nodes
+                  [:node-a {:label \"node a\"}]  :node-b  :node-d  :node-c
+                  ;; edges
+                  [:node-a :node-b]  [:node-a :node-d]
+                  [:node-b :node-d]  [:node-b :node-c]))
+  #'user/g7
+
+  user=> (uber/nodes g7)
+  (:node-a :node-b :node-d :node-c)
+
+  user=> (def x (ubere/dense-integer-node-labels g7))
+  #'user/x
+
+  ;; Demonstration of default way Java array object is shown in REPL
+  user=> x
+  {:node->int {:node-a 0, :node-b 1, :node-d 2, :node-c 3},
+   :int->node #object[\"[Ljava.lang.Object;\" 0x6707382a \"[Ljava.lang.Object;@6707382a\"]}
+
+  ;; Converting Java array contents into a Clojure vector is one way
+  ;; to see its contents in the REPL
+  user=> (vec (:int->node x))
+  [:node-a :node-b :node-d :node-c]"
   [g]
   (let [int->node (object-array (uber/count-nodes g))]
     (loop [i 0
@@ -180,13 +220,46 @@
 
   :edges
 
-  The associated value is a vector of vectors of integers.  Using the
-  integer node labels assigned in the :node->int map, suppose node n
-  in the graph g has the integer label A in the map.  Then (edge A) is
-  a vector, one per successor node of node n in g.  The vector
-  contains all of the integer labels of those successor nodes of n.
-  There are no duplicates in this vector, even if g has multiple
-  parallel edges between two nodes in the graph."
+  The associated value is a vector, where each element is a vector of
+  integers.  If we call this vector `edges`, and we call the map
+  associated with the key :node->int `n2i`, then for any node u in
+  graph g, (edges (n2i u)) is a vector of distinct integers, one
+  integer (n2i v) for each node v that is a successor of node u in the
+  graph.  (n2i v) appears at most once in this vector, even if there
+  are multiple parallel edges from u to v in g.
+
+  Runs in O(n+m') time, where n is the number of nodes in the graph,
+  and m' is the number of edges after all parallel edges between pairs
+  of nodes are replaced with a single edge.
+
+  Example:
+
+  user=> (require '[ubergraph.core :as uber]
+                  '[cljol.ubergraph-extras :as ubere])
+  nil
+  user=> (def g8 (uber/multidigraph
+                  ;; nodes
+                  :node-a  :node-b  :node-d  :node-c
+                  ;; edges
+                  [:node-a :node-b]  [:node-a :node-b]  [:node-a :node-c]
+                  [:node-b :node-d]  [:node-b :node-c]))
+  #'user/g8
+
+  user=> (uber/nodes g8)
+  (:node-a :node-b :node-d :node-c)
+
+  user=> (def x (ubere/edge-vectors g8))
+  #'user/x
+
+  user=> (:node->int x)
+  {:node-a 0, :node-b 1, :node-d 2, :node-c 3}
+
+  user=> (:edges x)
+  [[1 3] [2 3] [] []]
+
+  Note that :node-a has two parallel edges to :node-b in the graph,
+  but in vector number 0 that represents the edges out of :node-a, [1
+  3], it contains the number 1 for :node-b only once."
   [g]
   (let [n (uber/count-nodes g)
         {:keys [node->int int->node] :as m} (dense-integer-node-labels g)]
@@ -254,9 +327,9 @@
 (defn scc-tarjan
   "Calculate the strongly connected components of a graph using
   Pearce's algorithm, which is a variant of Tarjan's algorithm that
-  uses a little bit less extra memory.  Both run in linear time in the
-  size of the graph, meaning the sum of the number of nodes plus
-  number of edges.
+  uses a little bit less memory than Tarjan's algorithm does.  Both
+  run in linear time in the size of the graph, i.e. O(n+m) time where
+  n is the number of nodes and m is the number of edges.
 
   This implementation is limited to Integer/MAX_VALUE = (2^31 - 1)
   nodes in the graph, because part of its implementation uses signed
@@ -285,9 +358,6 @@
 
   https://en.wikipedia.org/wiki/Depth-first_search#Applications
 
-  TBD: It would be nice to implement several of these other graph
-  algorithms listed at that reference.
-
   :root
 
   A Java array of booleans, used as part of the implementation.
@@ -312,6 +382,11 @@
   PeaFindScc2.Recursive
   PeaFindScc2.Imperative
 
+  This implementation is a translation of the PeaFindScc2.Imperative
+  code into Clojure, maintaining the property that it is not
+  recursive, and attempting to use only as much additional memory as
+  the Java implementation would allocate.
+
   The two with Recursive in their names can cause the call stack to
   grow up to the number of nodes in the graph, which is not a good fit
   for large graphs and default maximum JVM stack sizes.
@@ -325,12 +400,7 @@
   and above the graph data structure than the PeaFindScc2 versions.  I
   believe the PeaFindScc1 versions were written as a reference in
   order to compare the results of the PeaFindScc2 implementations
-  against them.
-
-  This implementation is a translation of the PeaFindScc2.Imperative
-  code into Clojure, maintaining the property that it is not
-  recursive, and attempting to use only as much additional memory as
-  the Java implementation would allocate."
+  against them."
   [g]
   (let [n (int (uber/count-nodes g))
         _ (assert (< n Integer/MAX_VALUE))
