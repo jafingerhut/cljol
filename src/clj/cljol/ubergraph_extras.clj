@@ -136,6 +136,11 @@
       (induced-subgraph-by-removing-nodes g node-set))))
 
 
+;; Note: dense-integer-node-labels behaves as documented for all
+;; Ubergraphs, regardless of whether are edges are directed,
+;; undirected, parallel, or self loop, because it ignores the edges of
+;; g completely.
+
 (defn dense-integer-node-labels
   "Given an ubergraph g, returns a map.
 
@@ -152,7 +157,8 @@
   The associated value is a (mutable) array of objects indexed
   from [0, n-1], and is the reverse mapping of the :node->int map.
 
-  Runs in O(n) time, where n is the number of nodes in the graph.
+  Runs in effectively O(n) time, where n is the number of nodes in the
+  graph.
 
   This is a very simple function, but it is sometimes useful as a step
   before running a more complex algorithm on a graph.  Having a
@@ -206,11 +212,21 @@
          :int->node int->node}))))
 
 
-;; Note 2:
+;; Note: edge-vectors behaves as documented for all Ubergraphs,
+;; regardless of whether its edges are directed, undirected, parallel,
+;; or self loop, because it only calls dense-integer-node-labels,
+;; uber/count-nodes, and uber/successors.  uber/successors behaves in
+;; a reasonable way for all such graphs, including returning each
+;; successor node exactly once in all cases.
 
-;; This code is written assuming that uber/successors returns each
-;; successor node at most once, which at least for ubergraph version
-;; 0.5.3 is true.
+;; Note: It definitely take less memory if each of the vectors of
+;; integer in the returned :edges vector was a Clojure primitive
+;; vector as returned by (vector-of :int ...).  However, I strongly
+;; suspect this would make the implementation slower, since as of
+;; Clojure 1.10.1, primitive vectors do not implement transients.  It
+;; might be worth changing the implementation of edge-vectors to
+;; return those if/when there is such a primitive vector
+;; implementation.
 
 (defn edge-vectors
   "Given an ubergraph g, return a map.
@@ -220,17 +236,23 @@
 
   :edges
 
-  The associated value is a vector, where each element is a vector of
-  integers.  If we call this vector `edges`, and we call the map
-  associated with the key :node->int `n2i`, then for any node u in
-  graph g, (edges (n2i u)) is a vector of distinct integers, one
-  integer (n2i v) for each node v that is a successor of node u in the
-  graph.  (n2i v) appears at most once in this vector, even if there
-  are multiple parallel edges from u to v in g.
+  The associated value is a vector, which we will call `edges`.  We
+  will use the name `n2i` as a name for the map that is the value
+  associated with the key :node->int in the return value of function
+  dense-integer-node-labels.  Use `n` to denote the number of nodes in
+  g.
 
-  Runs in O(n+m') time, where n is the number of nodes in the graph,
-  and m' is the number of edges after all parallel edges between pairs
-  of nodes are replaced with a single edge.
+  For any node u in graph g, (n2i u) is an integer in the range [0,
+  n-1], and (edges (n2i u)) is a vector of distinct integers,
+  containing the integer (n2i v) for each node v that is a successor
+  of node u in the graph.  (n2i v) appears at most once in this
+  vector, even if there are multiple parallel edges from u to v in g.
+
+  (edges (n2i u)) will contain (n2i u) if there are any self loop
+  edges from node u to itself.
+
+  Runs in effectively O(n+m') time, where n is the number of nodes in
+  the graph, and m' is the total size of all vectors in edges.
 
   Example:
 
@@ -266,10 +288,71 @@
     (assoc m :edges
            (mapv (fn [node-int]
                    (mapv #(node->int %)
-                         ;; Note 2
                          (uber/successors g (aget ^objects int->node
                                                   node-int))))
                  (range n)))))
+
+(defn edge-arrays
+  "Given an ubergraph g, return a map.
+
+  Keys in returned map: :edges plus those returned by the function
+  dense-integer-node-labels
+
+  :edges
+
+  The associated value is an array , where each element is an array of
+  Java ints.  If we call this array `edges`, and we call the map
+  associated with the key :node->int `n2i`, then for any node u in
+  graph g, (aget edges (n2i u)) is an array of distinct integers, one
+  integer (n2i v) for each node v that is a successor of node u in the
+  graph.  (n2i v) appears at most once in this vector, even if there
+  are multiple parallel edges from u to v in g.
+
+  Runs in O(n+m') time, where n is the number of nodes in the graph,
+  and m' is the number of edges after all parallel edges between pairs
+  of nodes are replaced with a single edge.
+
+  Example:
+
+  user=> (require '[ubergraph.core :as uber]
+                  '[cljol.ubergraph-extras :as ubere])
+  nil
+  user=> (def g8 (uber/multidigraph
+                  ;; nodes
+                  :node-a  :node-b  :node-d  :node-c
+                  ;; edges
+                  [:node-a :node-b]  [:node-a :node-b]  [:node-a :node-c]
+                  [:node-b :node-d]  [:node-b :node-c]))
+  #'user/g8
+
+  user=> (uber/nodes g8)
+  (:node-a :node-b :node-d :node-c)
+
+  ;; TBD: update the rest of the example
+
+  user=> (def x (ubere/edge-vectors g8))
+  #'user/x
+
+  user=> (:node->int x)
+  {:node-a 0, :node-b 1, :node-d 2, :node-c 3}
+
+  user=> (:edges x)
+  [[1 3] [2 3] [] []]
+
+  Note that :node-a has two parallel edges to :node-b in the graph,
+  but in vector number 0 that represents the edges out of :node-a, [1
+  3], it contains the number 1 for :node-b only once."
+  [g]
+  (let [n (uber/count-nodes g)
+        {:keys [node->int int->node] :as m} (dense-integer-node-labels g)]
+    (assoc m :edges
+           (object-array
+            (map (fn [node-int]
+                   (int-array
+                    (map #(node->int %)
+                         (uber/successors g (aget ^objects int->node
+                                                  node-int)))))
+                 (range n))))))
 
 
 (defprotocol DoubleStack
@@ -324,6 +407,56 @@
 )
 
 
+;; Performance notes for scc-tarjan:
+
+;; The scc-tarjan implementation does currently allocate a separate
+;; vector for each node when calling edge-vectors.
+
+;; I can imagine a data representation of the edges of a graph that
+;; would avoid allocating this memory, e.g. a PersistentList of edges
+;; for each node, implemented like a list of Common Lisp cons cells in
+;; memory, where a single mutable pointer could advance down this
+;; linked list allocating no memory, once the mutable pointer was
+;; allocated.  However, that is not how Ubergraph represents edges of
+;; a node.  Even if it were, I am not sure it would be faster, because
+;; of all of the bouncing around cache lines that linked lists often
+;; lead to.
+
+;; I could implement a mutable Java-style iterator object for a node
+;; that points at the current position in the list of edges of an
+;; Ubergraph, to avoid allocating seq objects, but that seems like a
+;; significant development effort for only a possible gain in
+;; performance.
+
+;; Once the edge-vectors allocates its memory, this algorithm
+;; maintains one integer index into each of those vectors, stored in
+;; mutable Java arrays, so no new memory needs to be allocated after
+;; edge-vectors is finished, and after scc-tarjan allocates its arrays
+;; near the beginning.  This seems like a pretty decent point in the
+;; design space for performance.
+
+;; I did try out a variation with a function edge-arrays that is
+;; similar to edge-vectors, but returns mutable Java arrays of ints,
+;; instead of Clojure vectors of integers.  It took at least 98% as
+;; much time as this implementation, from the measurements I took, so
+;; not as good of an improvement as I was hoping for.
+
+;; Note: scc-tarjan behaves as documented for all Ubergraphs,
+;; regardless of whether its edges are directed, undirected, parallel,
+;; or self loop (but see below), because it operates upon the
+;; representation of edges returned by function edge-vectors, which
+;; eliminates all parallel edges, and treats all undirected edges the
+;; same as a pair of directed edges, one in each direction between the
+;; pair of nodes involved, which is exactly what we want, i.e. those
+;; two nodes are reachable from each other, and should be in the same
+;; strongly connected component with each other.
+
+;; TBD: The only open question in my mind is whether the core of
+;; scc-tarjan cleanly handles self loop edges.  We could modify
+;; edge-vectors never to return them, which would eliminate that open
+;; question, but if we can determine that scc-tarjan handles them
+;; cleanly, then all is well with scc-tarjan.
+
 (defn scc-tarjan
   "Calculate the strongly connected components of a graph using
   Pearce's algorithm, which is a variant of Tarjan's algorithm that
@@ -343,11 +476,14 @@
   :components
 
   The associated value is a vector, where each vector element is a set
-  of nodes of the graph g.  Each set represents all of the nodes in
-  one strongly connected component of g.  The vector is ordered such
-  that they are in a topological ordering of the components,
-  i.e. there might be edges from set i to set j if i < j, but there
-  are guaranteed to be no edges from set j to set i.
+  of nodes of the graph g.  These sets are a partition of the nodes of
+  g, i.e., every node of g is in exactly one of the sets, and no set
+  is empty.  Each set represents all of the nodes in one strongly
+  connected component of g.  The vector is ordered such that they are
+  in a topological ordering of the components, i.e. there might be
+  edges in g from a node in set i to a node in set j if i < j, but
+  there are guaranteed to be no edges from a node in set j to a node
+  in set i.
 
   :rindex
 
@@ -890,6 +1026,41 @@
                   (uber/remove-edges g edge)
                   g)))
             g (uber/edges g))))
+
+
+;; Steps to find transitive reduction of an arbitrary graph:
+
+;; There are multiple choices here, so let us just work out one way to
+;; do it that seems reasonably efficient.
+
+;; Start with finding a condensation C of the input graph G.  If G
+;; contains cycles, C will have fewer nodes and edges than G, which
+;; should make later steps take less time.
+
+;; Find the weakly connected components of C.
+
+;; For each weakly connected component, run Algorithm E from my notes
+;; on it, starting with finding a topological ordering of the nodes,
+;; and sorting all edges into each node in reverse topological order
+;; by source node.  TBD: Can this be done _while_ finding the
+;; condensation C?  The topological ordering definitely can, but can
+;; the sorting of edges also be done at the same time?
+
+;; In case that sorting of edges is not easy to merge into the
+;; condensation code, is it straightforward to do the edge sorting
+;; starting with the topological sorting of nodes in C?
+
+#_(defn dag-transitive-reduction
+  [graph]
+  (let [{:keys [has-cycle? topological-order sorted-in-edges]}
+        (topsort2 graph {:sorted-in-edges true})
+        T topological-order
+        _ (assert (not has-cycle?))
+        ;; tbd: create node->int map vertex2t, inverse mapping of T
+        ]
+
+
+    ))
 
 (defn check-same-reachability-slow
   "Given two graphs g1 and g2 that have nodes node-set in common with
