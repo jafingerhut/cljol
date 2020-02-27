@@ -9,8 +9,23 @@
             [ubergraph.alg :as ualg]
             [ubergraph.invariants :as uberi]
             [cljol.performance :as perf]
+            [criterium.core :as crit]
             [cljol.ubergraph-extras :as ubere]))
 
+
+(def criterium-opts {:warmup-jit-period 10,
+                     :target-execution-time 20})
+
+(def gbig
+  (delay
+   (let [g (ubere/read-ubergraph-as-edges
+            "resources/dimultigraph-129k-nodes-272k-edges.edn")]
+     g)))
+
+(def gbigcondensation
+  (delay
+   (let [g (:scc-graph (ubere/scc-graph2 @gbig))]
+     g)))
 
 (defn satisfies-invariants [g]
   (let [{ret :ret :as p} (perf/my-time (uberi/check-invariants g))]
@@ -221,17 +236,14 @@
                               [1 3 {:label "e1->3"}]
                               [1 2 {:label "e1->2b"}]
                               [1 2 {:label "e1->2c"}]
-                              [2 3 {:label "e2->3"}])
-        gbig (ubere/read-ubergraph-as-edges
-              "resources/dimultigraph-129k-nodes-272k-edges.edn")
-        gbigcondensation (:scc-graph (ubere/scc-graph2 gbig))]
+                              [2 3 {:label "e2->3"}])]
 
-    (doseq [g [g1 g2 g3 g4 g5 gbig gbigcondensation]]
+    (doseq [g [g1 g2 g3 g4 g5 @gbig @gbigcondensation]]
       (satisfies-invariants g))
 
     ;; graphs where cycles should be detected, and no topological
     ;; ordering returned:
-    (doseq [g [g3 g4 gbig]]
+    (doseq [g [g3 g4 @gbig]]
       (is (= nil (ualg/topsort g)))
       (is (= true (:has-cycle? (ubere/topsort2 g)))))
 
@@ -243,17 +255,100 @@
         (is (= false (:has-cycle? ret)))
         (is (= {:pass true} (correct-topo-order g (:topological-order ret))))))
 
-    (let [g gbigcondensation
+    (println "
+------------------------------------------------------------
+Performance comparison of ubergraph.alg/topsort
+versus cljol.ubergraph-extras/topsort2
+------------------------------------------------------------")
+    (let [g @gbigcondensation
           {topsort-ret :ret :as ptopsort} (perf/my-time (ualg/topsort g))
-          _ (do (print "Using ubergraph.alg/topsort, found topo order in: ")
-                (perf/print-perf-stats ptopsort))
+          _ (do
+              (println "Using ubergraph.alg/topsort, found topo order in:")
+              (perf/print-perf-stats ptopsort))
           {topsort2-ret :ret :as ptopsort2} (perf/my-time (ubere/topsort2 g))
-          _ (do (print "Using cljol.ubergraph-extras/topsort2, found topo order in: ")
-                (perf/print-perf-stats ptopsort2))]
+          _ (do
+              (println "Using cljol.ubergraph-extras/topsort2, found topo order in:")
+              (perf/print-perf-stats ptopsort2))]
+      (println "------------------------------------------------------------")
       (is (= {:pass true} (correct-topo-order g topsort-ret)))
       (is (= false (:has-cycle? topsort2-ret)))
       (is (= {:pass true}
              (correct-topo-order g (:topological-order topsort2-ret)))))))
+
+(deftest ^:perf-focus pre-traverse-tests
+  (let [_ (println "
+------------------------------------------------------------
+Performance comparison between:
+loom: ubergraph.alg/pre-traverse (same as loom.alg/pre-traverse)
+versus:
+extras: cljol.ubergraph-extras/pre-traverse
+------------------------------------------------------------")
+        {g :ret :as g-pt} (perf/my-time @gbig)
+        _ (do
+            (println "Time to deref @gbig:")
+            (perf/print-perf-stats g-pt))
+        start-node 29000736752
+
+        {loom-pt-ret :ret :as ploom-pt}
+        (perf/my-time (ualg/pre-traverse g start-node))
+
+        {loom-pt-all-ret :ret :as ploom-pt-all}
+        (perf/my-time (doall loom-pt-ret))
+
+        _ (do
+            (println)
+            (println "loom, fn returned in:")
+            (perf/print-perf-stats ploom-pt)
+            (println "    (class ret-val)=" (class loom-pt-ret))
+            (println "full sequence with" (count loom-pt-all-ret) "nodes consumed in:")
+            (perf/print-perf-stats ploom-pt-all))
+        
+        {extras-pt-ret :ret :as pextras-pt}
+        (perf/my-time (ubere/pre-traverse g start-node))
+
+        {extras-pt-all-ret :ret :as pextras-pt-all}
+        (perf/my-time (doall extras-pt-ret))
+
+        _ (do
+            (println)
+            (println "extras, fn returned in:")
+            (perf/print-perf-stats pextras-pt)
+            (println "    (class ret-val)=" (class extras-pt-ret))
+            (println "full sequence with" (count extras-pt-all-ret) "nodes consumed in:")
+            (perf/print-perf-stats pextras-pt-all))
+
+        _ (do
+            (println)
+            (println "Using criterium to do more careful performance measurements...")
+            (println))
+
+        _ (println "loom: full sequence with" (count loom-pt-all-ret) "nodes consumed in:")
+        loom-crit-result
+        (crit/with-progress-reporting
+          (crit/benchmark
+           (let [{ret :ret :as p}
+                 (perf/my-time (doall (ualg/pre-traverse g start-node)))]
+             (perf/print-perf-stats p))
+           criterium-opts))
+    
+        _ (println "extras: full sequence with" (count loom-pt-all-ret) "nodes consumed in:")
+        extras-crit-result
+        (crit/with-progress-reporting
+          (crit/benchmark
+           (let [{ret :ret :as p}
+                 (perf/my-time (doall (ubere/pre-traverse g start-node)))]
+             (perf/print-perf-stats p))
+           criterium-opts))
+        ]
+
+    (println "loom: full sequence with" (count loom-pt-all-ret) "nodes consumed in:")
+    (crit/report-result loom-crit-result)
+    (println "extras: full sequence with" (count loom-pt-all-ret) "nodes consumed in:")
+    (crit/report-result extras-crit-result)
+
+    (println "
+------------------------------------------------------------")
+    ))
 
 
 (defn uedge-info

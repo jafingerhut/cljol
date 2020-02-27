@@ -23,13 +23,13 @@
                             (with-open [rdr (java.io.PushbackReader.
                                              (io/reader readable))]
                               (edn/read rdr)))
-        _ (do (print "Read" (count edges) "edges in:")
+        _ (do (println "Read" (count edges) "edges in:")
               (perf/print-perf-stats p))
         {g :ret :as p} (perf/my-time
                          (-> (uber/multidigraph)
                              (uber/add-edges* edges)))]
-    (print "Created graph with" (uber/count-nodes g) "nodes,"
-           (uber/count-edges g) "edges in:")
+    (println "Created graph with" (uber/count-nodes g) "nodes,"
+             (uber/count-edges g) "edges in:")
     (perf/print-perf-stats p)
     g))
 
