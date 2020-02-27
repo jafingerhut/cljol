@@ -1,4 +1,8 @@
-{:aliases
+{:paths ["src/clj" "test"]
+ :deps {com.fingerhutpress.cljol_jvm_support/cljol_jvm_support {:mvn/version "1.0"}
+        ubergraph {:mvn/version "0.8.2"
+                   :exclusions [tailrecursion/cljs-priority-map]}}
+ :aliases
  {;; pull in specific versions of Clojure:
   ;; cljol uses Ubergraph, which uses Loom, and at least in the
   ;; current versions of those projects that cljol depends upon, Loom
@@ -51,7 +55,4 @@
   :disablecompressedoops {:jvm-opts ["-XX:-UseCompressedOops"]}
   :jvm {:jvm-opts ["-XX:-OmitStackTraceInFastThrow"]}
   }
- :paths ["src/clj" "test"]
- :deps {com.fingerhutpress.cljol_jvm_support/cljol_jvm_support {:mvn/version "1.0"}
-        ubergraph {:mvn/version "0.8.2"
-                   :exclusions [tailrecursion/cljs-priority-map]}}}
+ }
