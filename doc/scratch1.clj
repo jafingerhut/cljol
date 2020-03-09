@@ -6,7 +6,7 @@
          '[loom.alg-generic :as lag]
          '[loom.alg :as lalg]
          '[cljol.object-walk :as ow :refer [ClassData->map]]
-         '[cljol.performance :as perf :refer [my-time print-perf-stats]]
+         '[cljol.performance :as perf :refer [time print-perf-stats]]
 	 '[ubergraph.core :as uber]
 	 '[ubergraph.alg :as ualg])
 (def opts
@@ -37,6 +37,9 @@
    })
 (def v1 (vector 2))
 )
+
+(require '[cljol.ubergraph-test :as ut])
+(ut/pre-traverse-tests)
 
 (def g (d/sum [v1] opts))
 (uber/check-ubergraph-implementation-invariants g)
@@ -956,7 +959,7 @@ g2
 
 (defn compare1 [obj-coll opts stop-fn]
   (let [objmaps (d/consistent-reachable-objmaps obj-coll opts)
-        {ihm :ret :as p} (my-time (ow/parse-instance-ids stop-fn obj-coll))
+        {ihm :ret :as p} (time (ow/parse-instance-ids stop-fn obj-coll))
         diffs (ihm-key-diffs (objmaps->ihm objmaps) (:objects-found ihm))]
     (merge diffs
            {:objmaps objmaps

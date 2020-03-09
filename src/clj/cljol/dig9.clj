@@ -1,4 +1,5 @@
 (ns cljol.dig9
+  (:refer-clojure :exclude [time])
   (:import (java.lang.reflect Field Method Modifier))
   (:import (org.openjdk.jol.info ClassLayout ClassData FieldData))
   (:import (org.openjdk.jol.vm VM))
@@ -13,7 +14,7 @@
             [cljol.object-walk :as ow :refer [ClassData->map]]
             [cljol.graph :as gr]
             [cljol.ubergraph-extras :as ubere]
-            [cljol.performance :as perf :refer [my-time print-perf-stats]]))
+            [cljol.performance :as perf :refer [time print-perf-stats]]))
 
 
 (set! *warn-on-reflection* true)
@@ -263,8 +264,8 @@
                        stop-at-references? stop-fn
                        :else nil)
         {^GraphLayout2 parsed-inst :ret :as p}
-        (my-time (GraphLayout2/parseInstanceIds stop-walk-fn
-                                                (object-array obj-coll)))
+        (time (GraphLayout2/parseInstanceIds stop-walk-fn
+                                             (object-array obj-coll)))
         num-objects-found (. parsed-inst totalCount)
         _ (when (>= debug-level 1)
             (print "reachable-objmaps-helper found" num-objects-found
@@ -276,7 +277,7 @@
         parsed-inst
         (if (< attempts max-attempts)
           (let [{success :ret :as p}
-                (my-time (. parsed-inst createAddressSnapshot 1))]
+                (time (. parsed-inst createAddressSnapshot 1))]
             (when (>= debug-level 1)
               (print "Tried to get consistent address for" num-objects-found
                      "objects. " (if success "Succeeded!" "failed") ": ")
@@ -318,7 +319,7 @@
   [obj-coll opts]
   (let [debug-level (get opts :consistent-reachable-objects-debuglevel 0)
         {^GraphLayout2 parsed-inst :ret :as p}
-        (my-time (reachable-objmaps-helper obj-coll opts))
+        (time (reachable-objmaps-helper obj-coll opts))
         obj->gpr (.objectsFound parsed-inst)
         gprs (. obj->gpr values)]
     (when (>= debug-level 1)
@@ -1014,13 +1015,13 @@ thread."
       (println "reachable-objmaps try 1")
       (pp/pprint (perf/gc-collection-stats))
       (println))
-    (loop [{obj-graph :ret :as p} (my-time (reachable-objmaps obj-coll opts))
+    (loop [{obj-graph :ret :as p} (time (reachable-objmaps obj-coll opts))
            num-tries 1]
       (when (>= debug-level 1)
         (print "found" (count obj-graph) "objects on try" num-tries
                "of reachable-objmaps: ")
         (print-perf-stats p))
-      (let [{errs :ret :as p} (my-time (object-graph-errors obj-graph))]
+      (let [{errs :ret :as p} (time (object-graph-errors obj-graph))]
         (when (>= debug-level 1)
           (print "checked for errors on try" num-tries ": ")
           (print-perf-stats p)
@@ -1030,11 +1031,11 @@ thread."
         (if errs
           (if (< num-tries max-tries)
             (do
-              (let [p (my-time (System/gc))]
+              (let [p (time (System/gc))]
                 (when (>= debug-level 1)
                   (print "ran GC: ")
                   (print-perf-stats p)))
-              (recur (my-time (reachable-objmaps obj-coll opts))
+              (recur (time (reachable-objmaps obj-coll opts))
                      (inc num-tries)))
             (throw
              (ex-info
@@ -1113,7 +1114,7 @@ thread."
                                   default-node-count-min-limit)
         total-size-min-limit (get opts :total-size-min-limit
                                   default-total-size-min-limit)
-        {scc-data :ret :as scc-perf} (my-time (ubere/scc-graph g))
+        {scc-data :ret :as scc-perf} (time (ubere/scc-graph g))
         {:keys [scc-graph components]} scc-data
         _ (when (>= debug-level 1)
             (print "The scc-graph has" (uber/count-nodes scc-graph) "nodes and"
@@ -1136,7 +1137,7 @@ thread."
                    [sccg-node orig-start-nodes]))
 
         {[scc-node-stats-trans nodes-reached-trans counts-trans] :ret :as p}
-        (my-time
+        (time
          (reduce (fn [[acc nodes-reached counts] n]
                    (let [start-node? (contains? sccg->orig-start-node n)
                          [node-count-ml total-size-ml]
@@ -1254,12 +1255,11 @@ thread."
 (defn graph-of-reachable-objects [obj-coll opts]
   (let [debug-level (get opts :graph-of-reachable-objects-debuglevel 0)
         calc-tot-size (get opts :calculate-total-size-node-attribute :bounded)
-        {objmaps :ret :as p} (my-time (consistent-reachable-objmaps obj-coll
-                                                                    opts))
+        {objmaps :ret :as p} (time (consistent-reachable-objmaps obj-coll opts))
         _ (when (>= debug-level 1)
             (print "Found" (count objmaps) " objects with consistent set of addresses: ")
             (print-perf-stats p))
-        {g :ret :as p} (my-time (object-graph->ubergraph objmaps opts))
+        {g :ret :as p} (time (object-graph->ubergraph objmaps opts))
         _ (when (>= debug-level 1)
             (print "converted" (count objmaps) "objmaps into ubergraph with"
                    (uber/count-edges g) "edges: ")
@@ -1267,7 +1267,7 @@ thread."
         g (if (contains? #{:complete :bounded :bounded2}
                          calc-tot-size)
             (let [{g :ret :as p}
-                  (my-time
+                  (time
                    (case calc-tot-size
                      :complete (add-complete-total-size-bytes-node-attr g)
                      :bounded (add-bounded-total-size-bytes-node-attr g opts)
@@ -1279,7 +1279,7 @@ thread."
               g)
             (do (println "skipping calculation of total size")
                 g))
-        {g :ret :as p} (my-time (add-viz-attributes g opts))
+        {g :ret :as p} (time (add-viz-attributes g opts))
         _ (when (>= debug-level 1)
             (print "added graphviz attributes: ")
             (print-perf-stats p))]
@@ -1345,7 +1345,7 @@ thread."
             ;; happens.  For now, make sets out of them to eliminate
             ;; those.
             {weakly-connected-components :ret
-             :as wcc-perf} (my-time (map set (ualg/connected-components g)))]
+             :as wcc-perf} (time (map set (ualg/connected-components g)))]
         (print (count weakly-connected-components) "weakly connected components"
                "found in: ")
         (print-perf-stats wcc-perf)
@@ -1353,7 +1353,7 @@ thread."
         (println "from most to fewest nodes:")
         (println (sort > (map count weakly-connected-components)))))
     (when (some #{:all :scc-details} (opts :summary-options))
-      (let [{scc-data :ret :as scc-perf} (my-time (ubere/scc-graph g))
+      (let [{scc-data :ret :as scc-perf} (time (ubere/scc-graph g))
             {:keys [scc-graph node->scc-set]} scc-data
             scc-components (set (vals node->scc-set))
             scc-component-sizes-sorted (sort > (map count scc-components))]

@@ -1,8 +1,9 @@
 (ns cljol.graph
+  (:refer-clojure :exclude [time])
   (:require [clojure.pprint :as pp]
             [ubergraph.core :as uber]
             [cljol.ubergraph-extras :as ubere]
-            [cljol.performance :as perf :refer [my-time print-perf-stats]]))
+            [cljol.performance :as perf :refer [time print-perf-stats]]))
 
 (set! *warn-on-reflection* true)
 
@@ -211,7 +212,7 @@
   TBD"
   [g node-size-fn opts]
   (let [debug-level (get opts :bounded-reachable-node-stats2-debuglevel 0)
-        {scc-data :ret :as scc-perf} (my-time (ubere/scc-graph g))
+        {scc-data :ret :as scc-perf} (time (ubere/scc-graph g))
         {:keys [scc-graph node->scc-set components]} scc-data
         _ (when (>= debug-level 1)
             (print "The scc-graph has" (uber/count-nodes scc-graph) "nodes and"

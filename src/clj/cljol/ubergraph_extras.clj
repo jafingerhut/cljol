@@ -19,13 +19,13 @@
   of 2 elements, each 2-element vector representing an edge in a
   graph, [from to]."
   [readable]
-  (let [{edges :ret :as p} (perf/my-time
+  (let [{edges :ret :as p} (perf/time
                             (with-open [rdr (java.io.PushbackReader.
                                              (io/reader readable))]
                               (edn/read rdr)))
         _ (do (println "Read" (count edges) "edges in:")
               (perf/print-perf-stats p))
-        {g :ret :as p} (perf/my-time
+        {g :ret :as p} (perf/time
                          (-> (uber/multidigraph)
                              (uber/add-edges* edges)))]
     (println "Created graph with" (uber/count-nodes g) "nodes,"

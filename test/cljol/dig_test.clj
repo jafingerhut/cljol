@@ -56,10 +56,10 @@
   (println "Comparing SCCs found multiple ways for graph with"
            (uber/count-nodes g) "nodes,"
            (uber/count-edges g) "edges")
-  (let [{loom-scc :ret :as p} (perf/my-time (lalg/scc g))
+  (let [{loom-scc :ret :as p} (perf/time (lalg/scc g))
         _ (do (print "Using loom.alg/scc, found" (count loom-scc) "SCCs in: ")
               (perf/print-perf-stats p))
-        {scc-data :ret :as p} (perf/my-time (ubere/scc-tarjan g))
+        {scc-data :ret :as p} (perf/time (ubere/scc-tarjan g))
         _ (do (print "Using cljol.graph/scc-tarjan, found"
                      (count (:components scc-data)) "SCCs in: ")
               (perf/print-perf-stats p))]

@@ -13,8 +13,9 @@
             [cljol.ubergraph-extras :as ubere]))
 
 
-(def criterium-opts {:warmup-jit-period 10,
-                     :target-execution-time 20})
+(def criterium-opts {:warmup-jit-period (* 10 crit/s-to-ns),
+                     :samples 30
+                     :target-execution-time (* 1 crit/s-to-ns)})
 
 (def gbig
   (delay
@@ -28,7 +29,7 @@
      g)))
 
 (defn satisfies-invariants [g]
-  (let [{ret :ret :as p} (perf/my-time (uberi/check-invariants g))]
+  (let [{ret :ret :as p} (perf/time (uberi/check-invariants g))]
     (print "Invariants" (if (:error ret) "VIOLATED" "ok")
            "on graph with" (count (uber/nodes g)) "nodes"
            (count (uber/edges g)) "edges in: ")
@@ -261,11 +262,11 @@ Performance comparison of ubergraph.alg/topsort
 versus cljol.ubergraph-extras/topsort2
 ------------------------------------------------------------")
     (let [g @gbigcondensation
-          {topsort-ret :ret :as ptopsort} (perf/my-time (ualg/topsort g))
+          {topsort-ret :ret :as ptopsort} (perf/time (ualg/topsort g))
           _ (do
               (println "Using ubergraph.alg/topsort, found topo order in:")
               (perf/print-perf-stats ptopsort))
-          {topsort2-ret :ret :as ptopsort2} (perf/my-time (ubere/topsort2 g))
+          {topsort2-ret :ret :as ptopsort2} (perf/time (ubere/topsort2 g))
           _ (do
               (println "Using cljol.ubergraph-extras/topsort2, found topo order in:")
               (perf/print-perf-stats ptopsort2))]
@@ -278,73 +279,98 @@ versus cljol.ubergraph-extras/topsort2
 (deftest ^:perf-focus pre-traverse-tests
   (let [_ (println "
 ------------------------------------------------------------
+Forcing criterium to estimate overhead now, before later benchmarking
+runs.
+------------------------------------------------------------")
+        _ (perf/print-perf-stats (perf/time (crit/estimated-overhead!)))
+        _ (println "
+------------------------------------------------------------
 Performance comparison between:
 loom: ubergraph.alg/pre-traverse (same as loom.alg/pre-traverse)
 versus:
 extras: cljol.ubergraph-extras/pre-traverse
 ------------------------------------------------------------")
-        {g :ret :as g-pt} (perf/my-time @gbig)
+        {g :ret :as g-pt} (perf/time @gbig)
         _ (do
             (println "Time to deref @gbig:")
             (perf/print-perf-stats g-pt))
+        ;; I found through experimentation that using this start-node
+        ;; causes the graph traversal to visit every node.
         start-node 29000736752
 
         {loom-pt-ret :ret :as ploom-pt}
-        (perf/my-time (ualg/pre-traverse g start-node))
+        (perf/time (ualg/pre-traverse g start-node))
 
         {loom-pt-all-ret :ret :as ploom-pt-all}
-        (perf/my-time (doall loom-pt-ret))
+        (perf/time (doall loom-pt-ret))
+
+        n (count loom-pt-all-ret)
 
         _ (do
             (println)
             (println "loom, fn returned in:")
             (perf/print-perf-stats ploom-pt)
             (println "    (class ret-val)=" (class loom-pt-ret))
-            (println "full sequence with" (count loom-pt-all-ret) "nodes consumed in:")
+            (println "full sequence with" n "nodes consumed in:")
             (perf/print-perf-stats ploom-pt-all))
         
         {extras-pt-ret :ret :as pextras-pt}
-        (perf/my-time (ubere/pre-traverse g start-node))
+        (perf/time (ubere/pre-traverse g start-node))
 
         {extras-pt-all-ret :ret :as pextras-pt-all}
-        (perf/my-time (doall extras-pt-ret))
+        (perf/time (doall extras-pt-ret))
 
         _ (do
             (println)
             (println "extras, fn returned in:")
             (perf/print-perf-stats pextras-pt)
             (println "    (class ret-val)=" (class extras-pt-ret))
-            (println "full sequence with" (count extras-pt-all-ret) "nodes consumed in:")
+            (println "full sequence with" (count extras-pt-all-ret)
+                     "nodes consumed in:")
             (perf/print-perf-stats pextras-pt-all))
 
         _ (do
             (println)
-            (println "Using criterium to do more careful performance measurements...")
+            (println "Using criterium to do more careful measurements...")
             (println))
 
-        _ (println "loom: full sequence with" (count loom-pt-all-ret) "nodes consumed in:")
-        loom-crit-result
-        (crit/with-progress-reporting
-          (crit/benchmark
-           (let [{ret :ret :as p}
-                 (perf/my-time (doall (ualg/pre-traverse g start-node)))]
-             (perf/print-perf-stats p))
-           criterium-opts))
+        _ (println "loom: full sequence with" n "nodes:")
+        {loom-bench-stats :benchmark-stats
+         loom-perf :total-benchmark-perf
+         loom-times :expression-perfs
+         loom-tot-times :total-expression-perf}
+        (perf/benchmark-more-stats (doall (ualg/pre-traverse g start-node))
+                                   criterium-opts)
     
-        _ (println "extras: full sequence with" (count loom-pt-all-ret) "nodes consumed in:")
-        extras-crit-result
-        (crit/with-progress-reporting
-          (crit/benchmark
-           (let [{ret :ret :as p}
-                 (perf/my-time (doall (ubere/pre-traverse g start-node)))]
-             (perf/print-perf-stats p))
-           criterium-opts))
+        _ (println "extras: full sequence with" n "nodes:")
+        {extras-bench-stats :benchmark-stats
+         extras-perf :total-benchmark-perf
+         extras-times :expression-perfs
+         extras-tot-times :total-expression-perf}
+        (perf/benchmark-more-stats (doall (ubere/pre-traverse g start-node))
+                                   criterium-opts)
         ]
 
-    (println "loom: full sequence with" (count loom-pt-all-ret) "nodes consumed in:")
-    (crit/report-result loom-crit-result)
-    (println "extras: full sequence with" (count loom-pt-all-ret) "nodes consumed in:")
-    (crit/report-result extras-crit-result)
+    (println "loom: full sequence with" n "nodes consumed in:")
+    (crit/report-result loom-bench-stats)
+    (println "    total time for crit/benchmark run:")
+    (perf/print-perf-stats loom-perf)
+    (println "    total of" (count loom-times)
+             "separate time calls for each expression execution:")
+    (perf/print-perf-stats loom-tot-times)
+    (println "    difference of previous two:")
+    (perf/print-perf-stats (perf/subtract-times loom-perf loom-tot-times))
+    
+    (println)
+    (println "extras: full sequence with" n "nodes consumed in:")
+    (crit/report-result extras-bench-stats)
+    (println "    total time for crit/benchmark run:")
+    (perf/print-perf-stats extras-perf)
+    (println "    total of" (count extras-times)
+             "separate time calls for each expression execution:")
+    (perf/print-perf-stats extras-tot-times)
+    (println "    difference of previous two:")
+    (perf/print-perf-stats (perf/subtract-times extras-perf extras-tot-times))
 
     (println "
 ------------------------------------------------------------")
@@ -598,6 +624,25 @@ extras: cljol.ubergraph-extras/pre-traverse
          '[cljol.performance :as perf]
          '[cljol.dig9 :as d])
 
+
+;; This Java API I found on this page:
+;; https://stackoverflow.com/questions/35842/how-can-a-java-program-get-its-own-process-id
+;; It was apparently introduced with JDK 9, and does not exist in JDK 8
+
+(def my-pid (. (java.lang.ProcessHandle/current) pid))
+(def my-pid 85421)
+my-pid
+;; Next expression below ...
+;; + works on AdoptOpenJDK 8
+;; + throws exception with ZuluOpenJDK 11, something related to Java modules
+(def pcgcum (org.gridkit.jvmtool.PerfCounterGcCpuUsageMonitor. my-pid))
+
+(class pcgcum)
+(. pcgcum isAvailable)
+;; true
+(. pcgcum getYoungGcCpu)
+(. pcgcum getOldGcCpu)
+
 (require '[cljol.ubergraph-extras :as ubere] :reload)
 
 (pprint (into (sorted-map) (ns-publics 'ubergraph.core)))
@@ -737,12 +782,12 @@ x
 
 (println "tarjan starts here")
 (def gbig-tarj
-  (let [{g :ret :as p} (perf/my-time (ubere/scc-tarjan gbig))]
+  (let [{g :ret :as p} (perf/time (ubere/scc-tarjan gbig))]
     (perf/print-perf-stats p)
     g))
 
 (require '[criterium.core :as crit])
-(crit/bench (let [{g :ret :as p} (perf/my-time (ubere/scc-tarjan gbig))]
+(crit/bench (let [{g :ret :as p} (perf/time (ubere/scc-tarjan gbig))]
               (perf/print-perf-stats p)
               (count (:components g))))
 
@@ -789,7 +834,7 @@ x
 ;;364.0 msec, 0 gc-count, 0 gc-time-msec
 ;;379.8 msec, 0 gc-count, 0 gc-time-msec
 
-(crit/bench (let [{g :ret :as p} (perf/my-time (ubere/scc-tarjan-arrays gbig))]
+(crit/bench (let [{g :ret :as p} (perf/time (ubere/scc-tarjan-arrays gbig))]
               (perf/print-perf-stats p)
               (count (:components g))))
 ;;Evaluation count : 180 in 60 samples of 3 calls.
@@ -857,7 +902,7 @@ x
 
 (count (uber/edges gbigcondensation))
 (def gbigc-tr
-  (let [{g :ret :as p} (perf/my-time (ubere/dag-transitive-reduction-slow
+  (let [{g :ret :as p} (perf/time (ubere/dag-transitive-reduction-slow
                                       gbigcondensation))]
     (perf/print-perf-stats p)
     g))
