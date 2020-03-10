@@ -4,7 +4,16 @@
         ubergraph {:mvn/version "0.8.2"
                    :exclusions [tailrecursion/cljs-priority-map]}}
  :aliases
- {;; pull in specific versions of Clojure:
+ {
+  ;; Common alias to use for all Clojure/Java commands
+  :clj {:jvm-opts ["-XX:-OmitStackTraceInFastThrow"]}
+
+  ;; - start a Clojure/Java Socket REPL on port 50505:
+  :socket
+  {:jvm-opts
+   ["-Dclojure.server.repl={:port,50505,:accept,clojure.core.server/repl}"]}
+
+  ;; pull in specific versions of Clojure:
   ;; cljol uses Ubergraph, which uses Loom, and at least in the
   ;; current versions of those projects that cljol depends upon, Loom
   ;; uses .cljc files, which were new with Clojure 1.7.0.
@@ -36,8 +45,6 @@
   :jollocal {:override-deps {org.openjdk.jol/jol-core {:mvn/version "0.9.1"}}}
   :generate {:extra-paths ["src/generate"]
              :extra-deps {org.clojure/data.int-map {:mvn/version "0.2.4"}}}
-  ;; - start a Socket REPL on port 50505:
-  :socket {:jvm-opts ["-Dclojure.server.repl={:port,50505,:accept,clojure.core.server/repl}"]}
   :priv {:jvm-opts ["-Djdk.attach.allowAttachSelf" "-Djol.tryWithSudo=true"]}
   :priv2 {:jvm-opts ["-Djdk.attach.allowAttachSelf"]}
   :bigmem {:jvm-opts ["-Xms4g" "-Xmx8g"]}
@@ -54,6 +61,5 @@
                      {:mvn/version "0.4.0"}}}
   :printcomp {:jvm-opts ["-XX:+PrintCompilation"]}
   :disablecompressedoops {:jvm-opts ["-XX:-UseCompressedOops"]}
-  :jvm {:jvm-opts ["-XX:-OmitStackTraceInFastThrow"]}
   }
  }
