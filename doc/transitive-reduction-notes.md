@@ -933,3 +933,106 @@ least possible that the run time `O(n*(n+e))` is strictly larger than
 For example, if, `e = n^a` for `0 < a < 1`, then `O(n*e) =
 O(n^(1+a))`, strictly less than `O(n^2)`, but `O(n*(n+e))` is `O(n^2 +
 n^(1+a)) = O(n^2)`.
+
+
+# Finding both weakly and strongly connected components in a single linear time 'pass' of a graph
+
+It is certainly straightforward to execute any kind of a linear time
+traversal of a directed graph to find all weakly connected components.
+
+When traversing the edges out of a node, we should also traverse all
+edges into the node as well, as if they were out edges.  In the first
+traversal starting from an arbitrary node, mark all nodes reached as
+being in weakly connected component 1.  If there are any unreached
+nodes, start another traversal from an arbitrarily selected one, and
+mark all nodes reached from that one as being in weakly connected
+component 2.  Repeat until all nodes have been marked with a weakly
+connected component number.
+
+Performing that, plus a separate linear time algorithm to find all
+strongly connected components is still a total of linear time, so in a
+big O run time sense, there is no need to try to find both weakly and
+strongly connected components in the "same" one traversal of the
+graph.
+
+I am not sure, but I suspect that graphs that do not fit in a certain
+level of caching in a memory hierarchy, traversing them N times would
+often require the data crossing a level of the memory hierarchy N
+times, whereas traversing them only once would keep N down to 1
+(assuming that the any extra data maintained as a result does not
+increasing the working set size too much, which could easily become a
+factor).
+
+So I am curious: can a linear time algorithm for finding strongly
+connected components be augmented in a straightforward manner to also
+find weakly connected components?
+
+Tarjan's algorithm for finding strongly connected components picks an
+arbitrary node n1 to start a DFS traversal from, and when all nodes
+reachable from n1 have been traversed, it checks whether there is
+another node n2 in the graph that has not been reached, and if so,
+starts a DFS traversal from n2.
+
+Let us use R(n1) to name the set of nodes reached from n1 in the DFS
+traversal starting at n1.  Obviously all nodes in R(n1) are in the
+same weakly connected component, but there could be many other nodes
+not in R(n1) that are in the same weakly connected component, too.
+
+We could try picking an arbitrary node n2 outside of R(n1) to start
+the next DFS traversal.  If it ever reaches an edge that leads into
+R(n1), we know that R(n2) and R(n1) are in the same weakly connected
+component.  However, they could be in the same weakly connected
+component even if there are no direct edges between a node in R(n1)
+and a node in R(n2), e.g. there could be a node n3 that has an edge
+into a node of R(n1), and another edge into R(n2), where R(n3) is not
+reached in the DFS traversals of either R(n1) nor R(n2).
+
+TBD: All we would have to do to find one is to follow one edge into a
+node of R(n1) that is from a node outside of R(n1).
+
+Use wcc as an abbreviation for weakly connected component.
+
+I believe this modified version of the algorithm would be correct.
+
+Initialize WCC(n) to 0 for all nodes.  WCC(n)=0 means "this node's wcc
+number has not been determined yet".  At the end of executing the
+algorithm, all nodes will have a value of WCC(n) in the range [1, W],
+where W is the number of wccs in the graph.
+
+Initialize UIE(n) to be false for all nodes.  UIE is an abbreviation
+for "Unexplored In-Edges".  We will change this value to true for a
+node when we reach it in a DFS traversal, and it has at least one
+in-edge.
+
+Initialize UIEset to be an empty set of nodes.  This is a set of
+nodes, with no need to maintain any ordering requirements, but for
+efficiency's sake it is correct to use a list.  The only operations
+needed on UIEset are to add an element, one that is guaranteed not to
+have been added before, and to select and remove an arbitrary element.
+
+Initialize w=1.  This is the current wcc number we will assign to all
+nodes in the first wcc identified.
+
+For the first arbitrary selected node n1 and all nodes it reaches in
+the first DFS traversal starting from n1, assign those nodes WCC(n)=w.
+
+Every time we reach a node n that has at least one in-edge, and
+UIE(n)=false, assign UIE(n)=true and add n to UIEset.
+
+When all nodes reachable from n1 via DFS have been identified, and
+there are no more, the basic idea is that we want to identify if there
+are any edges into R(n1) from outside of R(n1), and if so, start the
+next DFS from one of the nodes with such an edge from it into R(n1).
+That node will be in the same weakly connected component as all in
+R(n1), so we keep w unchanged, and continue marking nodes in the next
+DFS with the same value of w.
+
+The only time we increment w is if we look for an edge from an
+unexplored node to an explored node, and find none.  Then we increment
+w, and look for an arbitrary node that has not been explored yet to
+start the next DFS traversal.
+
+We want this extra work to take a total time that is at most linear in
+the size of the graph.
+
+After finishing a DFS traversal, pick an arbitrary node in UIEset
