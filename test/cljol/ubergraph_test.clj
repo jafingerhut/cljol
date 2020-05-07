@@ -352,7 +352,7 @@ extras: cljol.ubergraph-extras/pre-traverse
         ]
 
     (println "loom: full sequence with" n "nodes consumed in:")
-    (crit/report-result loom-bench-stats)
+    (crit/report-result loom-bench-stats :verbose)
     (println "    total time for crit/benchmark run:")
     (perf/print-perf-stats loom-perf)
     (println "    total of" (count loom-times)
@@ -363,7 +363,7 @@ extras: cljol.ubergraph-extras/pre-traverse
     
     (println)
     (println "extras: full sequence with" n "nodes consumed in:")
-    (crit/report-result extras-bench-stats)
+    (crit/report-result extras-bench-stats :verbose)
     (println "    total time for crit/benchmark run:")
     (perf/print-perf-stats extras-perf)
     (println "    total of" (count extras-times)
@@ -615,6 +615,9 @@ extras: cljol.ubergraph-extras/pre-traverse
 
 
 (comment
+
+(require '[cljol.ubergraph-test :as ut])
+(ut/pre-traverse-tests)
 
 (require '[medley.core :as med]
          '[loom.graph :as lg]
