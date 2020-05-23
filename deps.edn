@@ -2,7 +2,8 @@
  :deps {com.fingerhutpress.cljol_jvm_support/cljol_jvm_support {:mvn/version "1.0"}
         medley {:mvn/version "1.2.0"}
         ubergraph {:mvn/version "0.8.2"
-                   :exclusions [tailrecursion/cljs-priority-map]}}
+                   :exclusions [tailrecursion/cljs-priority-map]}
+        criterium {:mvn/version "0.4.5"}}
  :aliases
  {
   ;; Common alias to use for all Clojure/Java commands
