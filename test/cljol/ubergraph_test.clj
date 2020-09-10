@@ -4,6 +4,7 @@
             [clojure.java.shell :as sh]
             [clojure.java.io :as io]
             [clojure.pprint :as pp]
+            [criterium.core :as crit]
             [medley.core :as med]
             [ubergraph.core :as uber]
             [ubergraph.alg :as ualg]
@@ -64,6 +65,31 @@
   (sh-out "dot" "-Tpdf" (str (base-fname basename opts) "-auto.dot")
           "-o" (str (base-fname basename opts) "-auto.pdf"))
   )
+
+
+(defmacro benchmark-more-stats
+  "Run criterium.core/benchmark on the given expression `expr`, but
+  wrap each execution of the expression in a call of the `time`
+  macro, and wrap the entire call to benchmark in a `time` macro as
+  well.  The goal is to be able to calculate the total time, number of
+  GCs, and whatever else `time` records, for all executions of
+  `expr`, and for `benchmark` as well, then calculate the difference
+  between those, to see how much time is spent in `benchmark` code
+  itself, outside of evaluations of `expr`.
+
+  TBD: Document the return value.
+  "
+  [expr options]
+  `(let [{[benchmark-ret# times#] :ret :as total-perf#}
+         (time (let [times# (atom [])
+                     benchmark-ret# (crit/benchmark
+                                     (perf/time-record-results ~expr times#)
+                                     ~options)]
+                 [benchmark-ret# @times#]))]
+     {:benchmark-stats benchmark-ret#
+      :total-benchmark-perf (dissoc total-perf# :ret)
+      :expression-perfs (mapv #(dissoc % :ret) times#)
+      :total-expression-perf (reduce perf/add-times times#)}))
 
 
 (deftest graphs-with-labels-bad-for-graphviz-dot
@@ -339,16 +365,16 @@ extras: cljol.ubergraph-extras/pre-traverse
          loom-perf :total-benchmark-perf
          loom-times :expression-perfs
          loom-tot-times :total-expression-perf}
-        (perf/benchmark-more-stats (doall (ualg/pre-traverse g start-node))
-                                   criterium-opts)
+        (benchmark-more-stats (doall (ualg/pre-traverse g start-node))
+                              criterium-opts)
     
         _ (println "extras: full sequence with" n "nodes:")
         {extras-bench-stats :benchmark-stats
          extras-perf :total-benchmark-perf
          extras-times :expression-perfs
          extras-tot-times :total-expression-perf}
-        (perf/benchmark-more-stats (doall (ubere/pre-traverse g start-node))
-                                   criterium-opts)
+        (benchmark-more-stats (doall (ubere/pre-traverse g start-node))
+                              criterium-opts)
         ]
 
     (println "loom: full sequence with" n "nodes consumed in:")
