@@ -41,7 +41,7 @@ can clone the repository yourself and create a JAR if you like, or use
 the `clj` / `clojure` commands provided by the Clojure installer.
 
 ```bash
-$ clj -Sdeps '{:deps {cljol {:git/url "https://github.com/jafingerhut/cljol" :sha "390c51877a77eb11dd6afd9662936b2136e5fce6"}}}'
+$ clj -Sdeps '{:deps {cljol/cljol {:git/url "https://github.com/jafingerhut/cljol" :sha "11d4aa72fdd19248bd7600fb7b5cde7189f32938"}}}'
 ```
 
 In the REPL:
@@ -352,4 +352,4 @@ Copyright © 2016-2019 Andy Fingerhut
 
 This program and the accompanying materials are made available under the
 terms of the Eclipse Public License 2.0 which is available at
-http://www.eclipse.org/legal/epl-2.0.
+http://www.eclipse.org/org/documents/epl-v10.html

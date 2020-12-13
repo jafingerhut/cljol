@@ -10,5 +10,6 @@
 # The :priv2 alias is defined this way when I observed this:
 # :priv2 {:jvm-opts ["-Djdk.attach.allowAttachSelf"]}
 
-clojure -A:classgraph:jamm -e "(require,'[cljol.reflection-test-helpers,:as,t]),(t/report)"
+#clojure -A:classgraph:jamm -e "(require,'[cljol.reflection-test-helpers,:as,t]),(t/report)"
+clojure -A:classgraph:jamm:priv -e "(require,'[cljol.reflection-test-helpers,:as,t]),(t/report)"
 #clojure -A:classgraph:jamm:priv2 -e "(require,'[cljol.reflection-test-helpers,:as,t]),(t/report)"
