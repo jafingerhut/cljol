@@ -11,7 +11,7 @@
         ;; of functions to a different namespace, which changes how
         ;; ubergraph needs to call those functions.
         ubergraph/ubergraph {:git/url "https://github.com/jafingerhut/ubergraph"
-                             :sha "d26fac4deb57d9010a190d795c3690aaa5b2e10f"}
+                             :sha "c6d11b42243e930a518a56842e62e8e4996eb4c2"}
         ;; This is the version of ubergraph depended upon by cljol
         ;; before the fix for the dorothy issue described above was
         ;; created.
