@@ -1,8 +1,22 @@
 {:paths ["src/clj" "test"]
  :deps {com.fingerhutpress.cljol_jvm_support/cljol_jvm_support {:mvn/version "1.0"}
         medley/medley {:mvn/version "1.2.0"}
-        ubergraph/ubergraph {:mvn/version "0.8.2"
-                             :exclusions [tailrecursion/cljs-priority-map]}}
+        ;; This forked version of dorothy library has a small fix for
+        ;; this issue: https://github.com/daveray/dorothy/issues/18
+        dorothy/dorothy {:git/url "https://github.com/jafingerhut/dorothy"
+                         :sha "b1e5e70392960931d42fbb19012990f1bb081373"}
+        ;; This forked version of ubergraph library has a small update
+        ;; to enable it to use dorothy version 0.7, which the forked
+        ;; version above is based upon.  dorothy simply moved a couple
+        ;; of functions to a different namespace, which changes how
+        ;; ubergraph needs to call those functions.
+        ubergraph/ubergraph {:git/url "https://github.com/jafingerhut/ubergraph"
+                             :sha "d26fac4deb57d9010a190d795c3690aaa5b2e10f"}
+        ;; This is the version of ubergraph depended upon by cljol
+        ;; before the fix for the dorothy issue described above was
+        ;; created.
+        ;;{:mvn/version "0.8.2" :exclusions [tailrecursion/cljs-priority-map]}
+        }
  :aliases
  {
   ;; Common alias to use for all Clojure/Java commands
