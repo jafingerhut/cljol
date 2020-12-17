@@ -1322,16 +1322,29 @@ thread."
                    :else from-multiple-attrs))))
             g (uber/nodes g))))
 
-
-(defn graph-summary [g opts]
+(defn size-breakdown-stats [g]
   (let [size-bytes-freq (frequencies (map #(uber/attr g % :size)
                                           (uber/nodes g)))
         size-breakdown (->> (for [[size cnt] size-bytes-freq]
                               {:size-bytes size
                                :num-objects cnt
                                :total-size (* size cnt)})
-                            (sort-by :size-bytes))
-        total-size-bytes (reduce + (for [x size-breakdown] (:total-size x)))]
+                            (sort-by :size-bytes))]
+    {:size-breakdown size-breakdown
+     :total-size-bytes (reduce + (for [x size-breakdown] (:total-size x)))}))
+
+(defn object-sizes-by-class [g]
+  (let [class->nodes (group-by #(class (uber/attr g % :obj))
+                               (uber/nodes g))]
+    (->> (for [[cls nodes] class->nodes]
+           {:total-size (reduce + (for [n nodes]
+                                    (uber/attr g n :size)))
+            :num-objects (count nodes)
+            :class (abbreviated-class-name-str (pr-str cls))})
+         (sort-by :total-size))))
+
+(defn graph-summary [g opts]
+  (let [{:keys [size-breakdown total-size-bytes]} (size-breakdown-stats g)]
     (println (uber/count-nodes g) "objects")
     (println (uber/count-edges g) "references between them")
     (println total-size-bytes "bytes total in all objects")
@@ -1367,13 +1380,7 @@ thread."
       (pp/pprint size-breakdown))
     (when (some #{:all :class-breakdown} (opts :summary-options))
       (println "number and size of objects of each class:")
-      (pp/pprint (->> (for [[cls nodes] (group-by #(class (uber/attr g % :obj))
-                                                  (uber/nodes g))]
-                        {:total-size (reduce + (for [n nodes]
-                                                 (uber/attr g n :size)))
-                         :num-objects (count nodes)
-                         :class (abbreviated-class-name-str (pr-str cls))})
-                      (sort-by :total-size)))
+      (pp/pprint (object-sizes-by-class g))
       (println))
     (println (count (filter #(= 0 (uber/out-degree g %)) (uber/nodes g)))
              "leaf objects (no references to other objects)")
