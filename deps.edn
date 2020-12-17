@@ -1,10 +1,10 @@
 {:paths ["src/clj" "test"]
  :deps {com.fingerhutpress.cljol_jvm_support/cljol_jvm_support {:mvn/version "1.0"}
         medley/medley {:mvn/version "1.2.0"}
-        ;; This forked version of dorothy library has a small fix for
+        ;; This version of dorothy library has a small fix for
         ;; this issue: https://github.com/daveray/dorothy/issues/18
-        dorothy/dorothy {:git/url "https://github.com/jafingerhut/dorothy"
-                         :sha "b1e5e70392960931d42fbb19012990f1bb081373"}
+        dorothy/dorothy {:git/url "https://github.com/daveray/dorothy"
+                         :sha "207570804dfda2162a15b9ee55b5e76ec6e1ecfa"}
         ;; This forked version of ubergraph library has a small update
         ;; to enable it to use dorothy version 0.7, which the forked
         ;; version above is based upon.  dorothy simply moved a couple
