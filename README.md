@@ -41,7 +41,7 @@ can clone the repository yourself and create a JAR if you like, or use
 the `clj` / `clojure` commands provided by the Clojure installer.
 
 ```bash
-$ clj -Sdeps '{:deps {cljol/cljol {:git/url "https://github.com/jafingerhut/cljol" :sha "11d4aa72fdd19248bd7600fb7b5cde7189f32938"}}}'
+$ clj -Sdeps '{:deps {cljol/cljol {:git/url "https://github.com/jafingerhut/cljol" :sha "dc17a8e02f5abf7aacf6c1962c627fe7b19993d0"}}}'
 ```
 
 In the REPL:
