@@ -1,5 +1,7 @@
 #! /bin/bash
 
+JDK_INSTALL_DIR="$HOME/p4-docs/jdks"
+
 #opts=1
 #opts=2
 #opts=3
@@ -12,11 +14,17 @@ CLJOL_DEP='{:deps {cljol/cljol {:git/url "https://github.com/jafingerhut/cljol" 
 EVAL_EXPRS1="(require '[cljol.dig9 :as d]) (def my-map {\"a\" 1 \"foobar\" 3.5}) (d/write-dot-file [my-map] \"my-map.dot\") (System/exit 0)"
 EVAL_EXPRS2="(require '[cljol.dig9 :as d]) (def my-map {\"a\" 1 \"foobar\" 3.5 \"b\" (java.util.TreeSet. [])}) (d/write-dot-file [my-map] \"my-map.dot\") (System/exit 0)"
 ADD_OPENS_JAVA_LANG="-J--add-opens -Jjava.base/java.lang=ALL-UNNAMED"
+ADD_OPENS_JAVA_UTIL="-J--add-opens -Jjava.base/java.util=ALL-UNNAMED"
 
 for ver in 11 16 17 18 19 20 21 22 23 24
 do
     echo ""
-    source $HOME/jdks/setup-jdk-${ver}.bash
+    if [ -e ${JDK_INSTALL_DIR}/setup-jdk-${ver}.bash ]
+    then
+	source ${JDK_INSTALL_DIR}/setup-jdk-${ver}.bash
+    else
+	continue
+    fi
     java -version | head -n 1
     case ${opts} in
 	1)
@@ -46,7 +54,7 @@ do
 	    ;;
 	6)
 	    set -x
-	    clojure ${ADD_OPENS_JAVA_LANG} -J--add-opens -Jjava.base/java.util=ALL-UNNAMED "${EVAL_EXPRS2}"
+	    clojure ${ADD_OPENS_JAVA_LANG} ${ADD_OPENS_JAVA_UTIL} -Sdeps "${CLJOL_DEP}" -M --eval "${EVAL_EXPRS2}"
 	    set +x
 	    ;;
 	7)
