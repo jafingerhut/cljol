@@ -1,19 +1,22 @@
 # Introduction
 
-cljol is specific to Clojure on Java.  It uses a JVM library that
+`cljol` is specific to Clojure on Java.  It uses a JVM library that
 knows deep internal details of the JVM, and those parts would need to
 be replaced with something else in order to work on a non-JVM
 platform.
 
-cljol uses the [Java Object
+`cljol` uses the [Java Object
 Layout](https://openjdk.java.net/projects/code-tools/jol) library to
 determine the precise size of a Java object, and all of the objects
 that it references, either directly, or by following a chain of
 references through multiple Java objects.
 
-It can create images of these graphs, either popping up a window using
-the `view` function, or writing to a GraphViz dot file using the
-`write-dot-file` function.
+It can create images of these graphs, either:
+
++ popping up a window using the `view` function.
++ writing to a GraphViz dot file using the `write-dot-file` function.
++ writing to any of several other image file formats using the
+  `write-drawing-file` function.
 
 `cljol` has been tested most with Clojure 1.10.1 so far, but as far as
 I know should work fine with Clojure 1.7.0 or later (it cannot go
