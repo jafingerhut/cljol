@@ -1,35 +1,53 @@
 digraph {
-graph [layout=dot,rankdir=LR];
-"28991406664" ["scc-num-nodes"=1,label="24 bytes
-1 object, 24 bytes reachable
-this object in no reference cycles
-j.l.Long
-16: value (long) 0
-0",shape=box];
-"28991464656" ["scc-num-nodes"=1,label="24 bytes
-1 object, 24 bytes reachable
-this object in no reference cycles
-j.l.Long
-16: value (long) 1
-1",shape=box];
-"32024788488" ["scc-num-nodes"=1,style=filled,label="32 bytes
-4 objects, 104 bytes reachable
+graph [layout="dot",rankdir="LR"];
+"18757450240" ["reachable-only-from"=18757450240,"scc-num-nodes"=1,style="filled","my-unique-total-size"=152,"my-unique-num-reachable-nodes"=6,label="32 bytes
+6 objects, 152 bytes reachable
 this object in no reference cycles
 c.l.LazySeq
 12: _meta (ref) nil
 16: fn (ref) ->
 20: sv (ref) nil
 24: s (ref) nil
-val maybe realizes if str'ed",shape=box];
-"32024788520" ["scc-num-nodes"=1,label="24 bytes
+28: lock (ref) ->
+val maybe realizes if str'ed",shape="box"];
+"18757450688" ["reachable-only-from"=18757450240,"scc-num-nodes"=1,label="16 bytes
+2 objects, 48 bytes reachable
+this object in no reference cycles
+j.u.c.locks.ReentrantLock
+12: sync (ref) ->
+val maybe realizes if str'ed",shape="box"];
+"34349647488" ["reachable-only-from"=18757450240,"scc-num-nodes"=1,label="24 bytes
+1 object, 24 bytes reachable
+this object in no reference cycles
+j.l.Long
+16: value (long) 0
+0",shape="box"];
+"34349647680" ["reachable-only-from"=18757450240,"scc-num-nodes"=1,label="24 bytes
+1 object, 24 bytes reachable
+this object in no reference cycles
+j.l.Long
+16: value (long) 1
+1",shape="box"];
+"18757450496" ["reachable-only-from"=18757450240,"scc-num-nodes"=1,label="24 bytes
 3 objects, 72 bytes reachable
 this object in no reference cycles
-user$fib_fn$fn__7006
+user$fib_fn$fn__10167
 12: __methodImplCache (ref) nil
 16: a (ref) ->
 20: b (ref) ->
-val maybe realizes if str'ed",shape=box];
-"32024788488" -> "32024788520" ["field-name"=fn,label=fn];
-"32024788520" -> "28991406664" ["field-name"=a,label=a];
-"32024788520" -> "28991464656" ["field-name"=b,label=b];
+val maybe realizes if str'ed",shape="box"];
+"18757450816" ["reachable-only-from"=18757450240,"scc-num-nodes"=1,label="32 bytes
+1 object, 32 bytes reachable
+this object in no reference cycles
+j.u.c.locks.ReentrantLock$NonfairSync
+12: exclusiveOwnerThread (ref) nil
+16: state (int) 0
+20: head (ref) nil
+24: tail (ref) nil
+val maybe realizes if str'ed",shape="box"];
+"18757450240" -> "18757450496" ["field-name"="fn",label="fn"];
+"18757450240" -> "18757450688" ["field-name"="lock",label="lock"];
+"18757450688" -> "18757450816" ["field-name"="sync",label="sync"];
+"18757450496" -> "34349647488" ["field-name"="a",label="a"];
+"18757450496" -> "34349647680" ["field-name"="b",label="b"];
 } 

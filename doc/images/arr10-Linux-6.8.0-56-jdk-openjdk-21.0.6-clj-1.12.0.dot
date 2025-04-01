@@ -1,0 +1,9 @@
+digraph {
+graph [layout="dot",rankdir="LR"];
+"18831105472" ["reachable-only-from"=18831105472,"scc-num-nodes"=1,style="filled","my-unique-total-size"=96,"my-unique-num-reachable-nodes"=1,label="96 bytes
+1 object, 96 bytes reachable
+this object in no reference cycles
+array of 10 long
+
+[0 1 2 3 4 5 6 7 8 9]",shape="box"];
+} 

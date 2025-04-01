@@ -1,45 +1,56 @@
 digraph {
-graph [layout=dot,rankdir=LR];
-"28991406664" ["scc-num-nodes"=1,label="24 bytes
-1 object, 24 bytes reachable
-this object in no reference cycles
-j.l.Long
-16: value (long) 0
-0",shape=box];
-"28991464656" ["scc-num-nodes"=1,label="24 bytes
-1 object, 24 bytes reachable
-this object in no reference cycles
-j.l.Long
-16: value (long) 1
-1",shape=box];
-"32024788488" ["scc-num-nodes"=1,style=filled,label="32 bytes
-6 objects, 168 bytes reachable
-this object in no reference cycles
-c.l.LazySeq
-12: _meta (ref) nil
-16: fn (ref) nil
-20: sv (ref) nil
-24: s (ref) ->
-val maybe realizes if str'ed",shape=box];
-"32025552096" ["scc-num-nodes"=1,label="32 bytes
-3 objects, 80 bytes reachable
+graph [layout="dot",rankdir="LR"];
+"17920231808" ["reachable-only-from"=17920231296,"scc-num-nodes"=1,label="32 bytes
+5 objects, 128 bytes reachable
 this object in no reference cycles
 c.l.LazySeq
 12: _meta (ref) nil
 16: fn (ref) ->
 20: sv (ref) nil
 24: s (ref) nil
-val maybe realizes if str'ed",shape=box];
-"32025552128" ["scc-num-nodes"=1,label="24 bytes
+28: lock (ref) ->
+val maybe realizes if str'ed",shape="box"];
+"17920232064" ["reachable-only-from"=17920231296,"scc-num-nodes"=1,label="24 bytes
 2 objects, 48 bytes reachable
 this object in no reference cycles
-user$fib_fn$fn__7006
+user$fib_fn$fn__10167
 12: __methodImplCache (ref) nil
 16: a (ref) ->
 20: b (ref) ->
-val maybe realizes if str'ed",shape=box];
-"32025552152" ["scc-num-nodes"=1,label="32 bytes
-5 objects, 136 bytes reachable
+val maybe realizes if str'ed",shape="box"];
+"17920232256" ["reachable-only-from"=17920231296,"scc-num-nodes"=1,label="16 bytes
+2 objects, 48 bytes reachable
+this object in no reference cycles
+j.u.c.locks.ReentrantLock
+12: sync (ref) ->
+val maybe realizes if str'ed",shape="box"];
+"17920231296" ["reachable-only-from"=17920231296,"scc-num-nodes"=1,style="filled","my-unique-total-size"=216,"my-unique-num-reachable-nodes"=8,label="32 bytes
+8 objects, 216 bytes reachable
+this object in no reference cycles
+c.l.LazySeq
+12: _meta (ref) nil
+16: fn (ref) nil
+20: sv (ref) nil
+24: s (ref) ->
+28: lock (ref) nil
+val maybe realizes if str'ed",shape="box"];
+"17920232384" ["reachable-only-from"=17920231296,"scc-num-nodes"=1,label="32 bytes
+1 object, 32 bytes reachable
+this object in no reference cycles
+j.u.c.locks.ReentrantLock$NonfairSync
+12: exclusiveOwnerThread (ref) nil
+16: state (int) 0
+20: head (ref) nil
+24: tail (ref) nil
+val maybe realizes if str'ed",shape="box"];
+"34349647488" ["reachable-only-from"=17920231296,"scc-num-nodes"=1,label="24 bytes
+1 object, 24 bytes reachable
+this object in no reference cycles
+j.l.Long
+16: value (long) 0
+0",shape="box"];
+"17920231552" ["reachable-only-from"=17920231296,"scc-num-nodes"=1,label="32 bytes
+7 objects, 184 bytes reachable
 this object in no reference cycles
 c.l.Cons
 12: _meta (ref) nil
@@ -47,11 +58,19 @@ c.l.Cons
 20: _hasheq (int) 0
 24: _first (ref) ->
 28: _more (ref) ->
-val maybe realizes if str'ed",shape=box];
-"32024788488" -> "32025552152" ["field-name"=s,label=s];
-"32025552096" -> "32025552128" ["field-name"=fn,label=fn];
-"32025552128" -> "28991464656" ["field-name"=b,label=b];
-"32025552128" -> "28991464656" ["field-name"=a,label=a];
-"32025552152" -> "28991406664" ["field-name"=_first,label=_first];
-"32025552152" -> "32025552096" ["field-name"=_more,label=_more];
+val maybe realizes if str'ed",shape="box"];
+"34349647680" ["reachable-only-from"=17920231296,"scc-num-nodes"=1,label="24 bytes
+1 object, 24 bytes reachable
+this object in no reference cycles
+j.l.Long
+16: value (long) 1
+1",shape="box"];
+"17920231808" -> "17920232064" ["field-name"="fn",label="fn"];
+"17920231808" -> "17920232256" ["field-name"="lock",label="lock"];
+"17920232064" -> "34349647680" ["field-name"="b",label="b"];
+"17920232064" -> "34349647680" ["field-name"="a",label="a"];
+"17920232256" -> "17920232384" ["field-name"="sync",label="sync"];
+"17920231296" -> "17920231552" ["field-name"="s",label="s"];
+"17920231552" -> "34349647488" ["field-name"="_first",label="_first"];
+"17920231552" -> "17920231808" ["field-name"="_more",label="_more"];
 } 

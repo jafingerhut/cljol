@@ -1,0 +1,76 @@
+digraph {
+graph [layout="dot",rankdir="LR"];
+"2345092440" ["reachable-only-from"=2345105016,"scc-num-nodes"=1,label="48 bytes
+1 object, 48 bytes reachable
+this object in no reference cycles
+array of 30 byte
+
+[102 111 111 100 32 104 97 115 32 111 110 108 121  ...",shape="box"];
+"2345105016" ["reachable-only-from"=2345105016,"scc-num-nodes"=1,style="filled","my-unique-total-size"=424,"my-unique-num-reachable-nodes"=9,label="40 bytes
+9 objects, 424 bytes reachable
+this object in no reference cycles
+c.l.PersistentVector
+12: _hash (int) 0
+16: _hasheq (int) 0
+20: cnt (int) 2
+24: shift (int) 5
+28: root (ref) ->
+32: tail (ref) ->
+36: _meta (ref) nil
+[\"food has only 8-bit characters\" \"fሴod has non-8- ...",shape="box"];
+"2345092840" ["reachable-only-from"=2345105016,"scc-num-nodes"=1,label="80 bytes
+1 object, 80 bytes reachable
+this object in no reference cycles
+array of 60 byte
+
+[102 0 52 18 111 0 100 0 32 0 104 0 97 0 115 0 32  ...",shape="box"];
+"2345104992" ["reachable-only-from"=2345105016,"scc-num-nodes"=1,label="24 bytes
+5 objects, 200 bytes reachable
+this object in no reference cycles
+array of 2 j.l.Object
+
+[\"food has only 8-bit characters\" \"fሴod has non-8- ...",shape="box"];
+"2345092816" ["reachable-only-from"=2345105016,"scc-num-nodes"=1,label="24 bytes
+2 objects, 104 bytes reachable
+this object in no reference cycles
+j.l.String
+12: value (ref) ->
+16: hash (int) -938149940
+20: coder (byte) 1
+fሴod has non-8-bit characters!",shape="box"];
+"2220576048" ["reachable-only-from"=2345105016,"scc-num-nodes"=1,label="24 bytes
+3 objects, 184 bytes reachable
+this object in no reference cycles
+c.l.PersistentVector$Node
+12: edit (ref) ->
+16: array (ref) ->
+val maybe realizes if str'ed",shape="box"];
+"2220576072" ["reachable-only-from"=2345105016,"scc-num-nodes"=1,label="16 bytes
+1 object, 16 bytes reachable
+this object in no reference cycles
+j.u.c.atomic.AtomicReference
+12: value (ref) nil
+val maybe realizes if str'ed",shape="box"];
+"2345092416" ["reachable-only-from"=2345105016,"scc-num-nodes"=1,label="24 bytes
+2 objects, 72 bytes reachable
+this object in no reference cycles
+j.l.String
+12: value (ref) ->
+16: hash (int) 511352126
+20: coder (byte) 0
+food has only 8-bit characters",shape="box"];
+"2220576088" ["reachable-only-from"=2345105016,"scc-num-nodes"=1,label="144 bytes
+1 object, 144 bytes reachable
+this object in no reference cycles
+array of 32 j.l.Object
+
+[nil nil nil nil nil nil nil nil nil nil nil nil n ...",shape="box"];
+"2345105016" -> "2220576048" ["field-name"="root",label="root"];
+"2345105016" -> "2345104992" ["field-name"="tail",label="tail"];
+"2345104992" -> "2345092416" ["field-name"="[0]",label="[0]"];
+"2345104992" -> "2345092816" ["field-name"="[1]",label="[1]"];
+"2345092816" -> "2345092840" ["field-name"="value",label="value"];
+"2220576048" -> "2220576072" ["field-name"="edit",label="edit"];
+"2220576048" -> "2220576088" ["field-name"="array",label="array"];
+"2345092416" -> "2345092440" ["field-name"="value",label="value"];
+} 

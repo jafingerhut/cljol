@@ -1,0 +1,43 @@
+digraph {
+graph [layout="dot",rankdir="LR"];
+"17779777088" ["reachable-only-from"=18831109952,"scc-num-nodes"=1,label="144 bytes
+1 object, 144 bytes reachable
+this object in no reference cycles
+array of 32 j.l.Object
+
+[nil nil nil nil nil nil nil nil nil nil nil nil n ...",shape="box"];
+"18831109952" ["reachable-only-from"=18831109952,"scc-num-nodes"=1,style="filled","my-unique-total-size"=320,"my-unique-num-reachable-nodes"=5,label="40 bytes
+5 objects, 320 bytes reachable
+this object in no reference cycles
+clojure.core.Vec
+12: cnt (int) 10
+16: shift (int) 5
+20: am (ref) ->
+24: root (ref) ->
+28: tail (ref) ->
+32: _meta (ref) nil
+clojure.core.Vec@9ebadac6",shape="box"];
+"17785018368" ["reachable-only-from"=18831109952,"scc-num-nodes"=1,label="16 bytes
+1 object, 16 bytes reachable
+this object in no reference cycles
+clojure.core$reify__8419
+12: __meta (ref) nil
+val maybe realizes if str'ed",shape="box"];
+"18831110272" ["reachable-only-from"=18831109952,"scc-num-nodes"=1,label="96 bytes
+1 object, 96 bytes reachable
+this object in no reference cycles
+array of 10 long
+
+[0 1 2 3 4 5 6 7 8 9]",shape="box"];
+"17779776896" ["reachable-only-from"=18831109952,"scc-num-nodes"=1,label="24 bytes
+2 objects, 168 bytes reachable
+this object in no reference cycles
+clojure.core.VecNode
+12: edit (ref) nil
+16: arr (ref) ->
+val maybe realizes if str'ed",shape="box"];
+"18831109952" -> "17785018368" ["field-name"="am",label="am"];
+"18831109952" -> "17779776896" ["field-name"="root",label="root"];
+"18831109952" -> "18831110272" ["field-name"="tail",label="tail"];
+"17779776896" -> "17779777088" ["field-name"="arr",label="arr"];
+} 

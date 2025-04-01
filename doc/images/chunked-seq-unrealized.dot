@@ -1,13 +1,7 @@
 digraph {
-graph [layout=dot,rankdir=LR];
-"31896926152" ["scc-num-nodes"=1,label="16 bytes
-1 object, 16 bytes reachable
-this object in no reference cycles
-user$fn__7029
-12: __methodImplCache (ref) nil
-val maybe realizes if str'ed",shape=box];
-"31896926336" ["scc-num-nodes"=1,label="64 bytes
-2 objects, 88 bytes reachable
+graph [layout="dot",rankdir="LR"];
+"18128863040" ["reachable-only-from"=18128862592,"scc-num-nodes"=1,label="56 bytes
+1 object, 56 bytes reachable
 this object in no reference cycles
 c.l.LongRange
 12: _meta (ref) nil
@@ -16,36 +10,50 @@ c.l.LongRange
 24: start (long) 0
 32: end (long) 1000
 40: step (long) 1
-48: boundsCheck (ref) ->
-52: _chunk (ref) nil
-56: _chunkNext (ref) nil
-60: _next (ref) nil
-val maybe realizes if str'ed",shape=box];
-"31896926400" ["scc-num-nodes"=1,label="24 bytes
-1 object, 24 bytes reachable
-this object in no reference cycles
-c.l.LongRange$1
-16: val$end (long) 1000
-val maybe realizes if str'ed",shape=box];
-"31896926648" ["scc-num-nodes"=1,style=filled,label="32 bytes
-5 objects, 160 bytes reachable
+48: count (int) 1000
+val maybe realizes if str'ed",shape="box"];
+"18128862592" ["reachable-only-from"=18128862592,"scc-num-nodes"=1,style="filled","my-unique-total-size"=176,"my-unique-num-reachable-nodes"=6,label="32 bytes
+6 objects, 176 bytes reachable
 this object in no reference cycles
 c.l.LazySeq
 12: _meta (ref) nil
 16: fn (ref) ->
 20: sv (ref) nil
 24: s (ref) nil
-val maybe realizes if str'ed",shape=box];
-"31896926680" ["scc-num-nodes"=1,label="24 bytes
-4 objects, 128 bytes reachable
+28: lock (ref) ->
+val maybe realizes if str'ed",shape="box"];
+"18128863616" ["reachable-only-from"=18128862592,"scc-num-nodes"=1,label="16 bytes
+2 objects, 48 bytes reachable
 this object in no reference cycles
-clojure.core$map$fn__5866
+j.u.c.locks.ReentrantLock
+12: sync (ref) ->
+val maybe realizes if str'ed",shape="box"];
+"18128862848" ["reachable-only-from"=18128862592,"scc-num-nodes"=1,label="24 bytes
+3 objects, 96 bytes reachable
+this object in no reference cycles
+clojure.core$map$fn__5954
 12: __methodImplCache (ref) nil
-16: f (ref) ->
-20: coll (ref) ->
-val maybe realizes if str'ed",shape=box];
-"31896926336" -> "31896926400" ["field-name"=boundsCheck,label=boundsCheck];
-"31896926648" -> "31896926680" ["field-name"=fn,label=fn];
-"31896926680" -> "31896926152" ["field-name"=f,label=f];
-"31896926680" -> "31896926336" ["field-name"=coll,label=coll];
+16: coll (ref) ->
+20: f (ref) ->
+val maybe realizes if str'ed",shape="box"];
+"18128863488" ["reachable-only-from"=18128862592,"scc-num-nodes"=1,label="16 bytes
+1 object, 16 bytes reachable
+this object in no reference cycles
+user$fn__10278
+12: __methodImplCache (ref) nil
+val maybe realizes if str'ed",shape="box"];
+"18128863744" ["reachable-only-from"=18128862592,"scc-num-nodes"=1,label="32 bytes
+1 object, 32 bytes reachable
+this object in no reference cycles
+j.u.c.locks.ReentrantLock$NonfairSync
+12: exclusiveOwnerThread (ref) nil
+16: state (int) 0
+20: head (ref) nil
+24: tail (ref) nil
+val maybe realizes if str'ed",shape="box"];
+"18128862592" -> "18128862848" ["field-name"="fn",label="fn"];
+"18128862592" -> "18128863616" ["field-name"="lock",label="lock"];
+"18128863616" -> "18128863744" ["field-name"="sync",label="sync"];
+"18128862848" -> "18128863040" ["field-name"="coll",label="coll"];
+"18128862848" -> "18128863488" ["field-name"="f",label="f"];
 } 

@@ -1,17 +1,42 @@
 digraph {
-graph [layout=dot,rankdir=LR];
-"31898530784" ["scc-num-nodes"=1,label="32 bytes
-40 objects, 1128 bytes reachable
+graph [layout="dot",rankdir="LR"];
+"18113330240" ["reachable-only-from"=19212643200,"scc-num-nodes"=1,label="144 bytes
+33 objects, 912 bytes reachable
 this object in no reference cycles
-c.l.ChunkedCons
+array of 32 j.l.Object
+
+[1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 2 ...",shape="box"];
+"18113331392" ["reachable-only-from"=19212643200,"scc-num-nodes"=1,label="32 bytes
+6 objects, 176 bytes reachable
+this object in no reference cycles
+c.l.LazySeq
 12: _meta (ref) nil
-16: _hash (int) 0
-20: _hasheq (int) 0
-24: chunk (ref) ->
-28: _more (ref) ->
-val maybe realizes if str'ed",shape=box];
-"31898491264" ["scc-num-nodes"=1,label="64 bytes
-2 objects, 88 bytes reachable
+16: fn (ref) ->
+20: sv (ref) nil
+24: s (ref) nil
+28: lock (ref) ->
+val maybe realizes if str'ed",shape="box"];
+"18113332288" ["reachable-only-from"=19212643200,"scc-num-nodes"=1,label="16 bytes
+1 object, 16 bytes reachable
+this object in no reference cycles
+user$fn__10278
+12: __methodImplCache (ref) nil
+val maybe realizes if str'ed",shape="box"];
+"19212643008" ["reachable-only-from"=19212643200,"scc-num-nodes"=1,label="24 bytes
+45 objects, 1256 bytes reachable
+this object in no reference cycles
+array of 2 j.l.Object
+
+val maybe realizes if str'ed",shape="box"];
+"17758699968" ["reachable-only-from"=19212643200,"scc-num-nodes"=1,label="24 bytes
+3 objects, 184 bytes reachable
+this object in no reference cycles
+c.l.PersistentVector$Node
+12: edit (ref) ->
+16: array (ref) ->
+val maybe realizes if str'ed",shape="box"];
+"18113331840" ["reachable-only-from"=19212643200,"scc-num-nodes"=1,label="56 bytes
+1 object, 56 bytes reachable
 this object in no reference cycles
 c.l.LongRange
 12: _meta (ref) nil
@@ -20,47 +45,29 @@ c.l.LongRange
 24: start (long) 32
 32: end (long) 1000
 40: step (long) 1
-48: boundsCheck (ref) ->
-52: _chunk (ref) nil
-56: _chunkNext (ref) nil
-60: _next (ref) nil
-val maybe realizes if str'ed",shape=box];
-"31896926152" ["scc-num-nodes"=1,label="16 bytes
-1 object, 16 bytes reachable
-this object in no reference cycles
-user$fn__7029
-12: __methodImplCache (ref) nil
-val maybe realizes if str'ed",shape=box];
-"28992354792" ["scc-num-nodes"=1,label="16 bytes
-1 object, 16 bytes reachable
-this object in no reference cycles
-j.u.c.atomic.AtomicReference
-12: value (ref) nil
-val maybe realizes if str'ed",shape=box];
-"28991038320" ["scc-num-nodes"=1,label="24 bytes
-3 objects, 184 bytes reachable
-this object in no reference cycles
-c.l.PersistentVector$Node
-12: edit (ref) ->
-16: array (ref) ->
-val maybe realizes if str'ed",shape=box];
-"31898530728" ["scc-num-nodes"=1,label="32 bytes
-5 objects, 160 bytes reachable
+48: count (int) 968
+val maybe realizes if str'ed",shape="box"];
+"18113329536" ["reachable-only-from"=19212643200,"scc-num-nodes"=1,label="32 bytes
+42 objects, 1176 bytes reachable
 this object in no reference cycles
 c.l.LazySeq
 12: _meta (ref) nil
-16: fn (ref) ->
+16: fn (ref) nil
 20: sv (ref) nil
-24: s (ref) nil
-val maybe realizes if str'ed",shape=box];
-"31898491384" ["scc-num-nodes"=1,label="144 bytes
-33 objects, 912 bytes reachable
+24: s (ref) ->
+28: lock (ref) nil
+val maybe realizes if str'ed",shape="box"];
+"18113332544" ["reachable-only-from"=19212643200,"scc-num-nodes"=1,label="32 bytes
+1 object, 32 bytes reachable
 this object in no reference cycles
-array of 32 j.l.Object
-
-[1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 2 ...",shape=box];
-"31934096080" ["scc-num-nodes"=1,label="32 bytes
-40 objects, 1128 bytes reachable
+j.u.c.locks.ReentrantLock$NonfairSync
+12: exclusiveOwnerThread (ref) nil
+16: state (int) 0
+20: head (ref) nil
+24: tail (ref) nil
+val maybe realizes if str'ed",shape="box"];
+"19212641920" ["reachable-only-from"=19212643200,"scc-num-nodes"=1,label="32 bytes
+41 objects, 1144 bytes reachable
 this object in no reference cycles
 c.l.ChunkedCons
 12: _meta (ref) nil
@@ -68,54 +75,53 @@ c.l.ChunkedCons
 20: _hasheq (int) 0
 24: chunk (ref) ->
 28: _more (ref) ->
-val maybe realizes if str'ed",shape=box];
-"31896926648" ["scc-num-nodes"=1,label="32 bytes
-41 objects, 1160 bytes reachable
+val maybe realizes if str'ed",shape="box"];
+"18113332416" ["reachable-only-from"=19212643200,"scc-num-nodes"=1,label="16 bytes
+2 objects, 48 bytes reachable
 this object in no reference cycles
-c.l.LazySeq
-12: _meta (ref) nil
-16: fn (ref) nil
-20: sv (ref) nil
-24: s (ref) ->
-val maybe realizes if str'ed",shape=box];
-"31896926400" ["scc-num-nodes"=1,label="24 bytes
-1 object, 24 bytes reachable
+j.u.c.locks.ReentrantLock
+12: sync (ref) ->
+val maybe realizes if str'ed",shape="box"];
+"17758700160" ["reachable-only-from"=19212643200,"scc-num-nodes"=1,label="16 bytes
+1 object, 16 bytes reachable
 this object in no reference cycles
-c.l.LongRange$1
-16: val$end (long) 1000
-val maybe realizes if str'ed",shape=box];
-"31934096712" ["scc-num-nodes"=1,label="24 bytes
-44 objects, 1240 bytes reachable
+j.u.c.atomic.AtomicReference
+12: value (ref) .setAccessible failed
+val maybe realizes if str'ed",shape="box"];
+"18113331648" ["reachable-only-from"=19212643200,"scc-num-nodes"=1,label="24 bytes
+3 objects, 96 bytes reachable
 this object in no reference cycles
-array of 2 j.l.Object
-
-val maybe realizes if str'ed",shape=box];
-"31934096112" ["scc-num-nodes"=1,label="24 bytes
-34 objects, 936 bytes reachable
-this object in no reference cycles
-c.l.ArrayChunk
-12: off (int) 20
-16: end (int) 32
-20: array (ref) ->
-val maybe realizes if str'ed",shape=box];
-"31898530760" ["scc-num-nodes"=1,label="24 bytes
-4 objects, 128 bytes reachable
-this object in no reference cycles
-clojure.core$map$fn__5866
+clojure.core$map$fn__5954
 12: __methodImplCache (ref) nil
-16: f (ref) ->
-20: coll (ref) ->
-val maybe realizes if str'ed",shape=box];
-"31898530704" ["scc-num-nodes"=1,label="24 bytes
+16: coll (ref) ->
+20: f (ref) ->
+val maybe realizes if str'ed",shape="box"];
+"18113329792" ["reachable-only-from"=19212643200,"scc-num-nodes"=1,label="32 bytes
+41 objects, 1144 bytes reachable
+this object in no reference cycles
+c.l.ChunkedCons
+12: _meta (ref) nil
+16: _hash (int) 0
+20: _hasheq (int) 0
+24: chunk (ref) ->
+28: _more (ref) ->
+val maybe realizes if str'ed",shape="box"];
+"17758700288" ["reachable-only-from"=19212643200,"scc-num-nodes"=1,label="144 bytes
+1 object, 144 bytes reachable
+this object in no reference cycles
+array of 32 j.l.Object
+
+[nil nil nil nil nil nil nil nil nil nil nil nil n ...",shape="box"];
+"18113330048" ["reachable-only-from"=19212643200,"scc-num-nodes"=1,label="24 bytes
 34 objects, 936 bytes reachable
 this object in no reference cycles
 c.l.ArrayChunk
 12: off (int) 0
 16: end (int) 32
 20: array (ref) ->
-val maybe realizes if str'ed",shape=box];
-"31934096736" ["scc-num-nodes"=1,style=filled,label="40 bytes
-48 objects, 1464 bytes reachable
+val maybe realizes if str'ed",shape="box"];
+"19212643200" ["reachable-only-from"=19212643200,"scc-num-nodes"=1,style="filled","my-unique-total-size"=1480,"my-unique-num-reachable-nodes"=49,label="40 bytes
+49 objects, 1480 bytes reachable
 this object in no reference cycles
 c.l.PersistentVector
 12: _hash (int) 0
@@ -125,28 +131,31 @@ c.l.PersistentVector
 28: root (ref) ->
 32: tail (ref) ->
 36: _meta (ref) nil
-val maybe realizes if str'ed",shape=box];
-"28996845768" ["scc-num-nodes"=1,label="144 bytes
-1 object, 144 bytes reachable
+val maybe realizes if str'ed",shape="box"];
+"19212642176" ["reachable-only-from"=19212643200,"scc-num-nodes"=1,label="24 bytes
+34 objects, 936 bytes reachable
 this object in no reference cycles
-array of 32 j.l.Object
-
-[nil nil nil nil nil nil nil nil nil nil nil nil n ...",shape=box];
-"31898530784" -> "31898530704" ["field-name"=chunk,label=chunk];
-"31898530784" -> "31898530728" ["field-name"=_more,label=_more];
-"31898491264" -> "31896926400" ["field-name"=boundsCheck,label=boundsCheck];
-"28991038320" -> "28992354792" ["field-name"=edit,label=edit];
-"28991038320" -> "28996845768" ["field-name"=array,label=array];
-"31898530728" -> "31898530760" ["field-name"=fn,label=fn];
-"31934096080" -> "31934096112" ["field-name"=chunk,label=chunk];
-"31934096080" -> "31898530728" ["field-name"=_more,label=_more];
-"31896926648" -> "31898530784" ["field-name"=s,label=s];
-"31934096712" -> "31896926648" ["field-name"="[0]",label="[0]"];
-"31934096712" -> "31934096080" ["field-name"="[1]",label="[1]"];
-"31934096112" -> "31898491384" ["field-name"=array,label=array];
-"31898530760" -> "31896926152" ["field-name"=f,label=f];
-"31898530760" -> "31898491264" ["field-name"=coll,label=coll];
-"31898530704" -> "31898491384" ["field-name"=array,label=array];
-"31934096736" -> "28991038320" ["field-name"=root,label=root];
-"31934096736" -> "31934096712" ["field-name"=tail,label=tail];
+c.l.ArrayChunk
+12: off (int) 20
+16: end (int) 32
+20: array (ref) ->
+val maybe realizes if str'ed",shape="box"];
+"18113331392" -> "18113331648" ["field-name"="fn",label="fn"];
+"18113331392" -> "18113332416" ["field-name"="lock",label="lock"];
+"19212643008" -> "18113329536" ["field-name"="[0]",label="[0]"];
+"19212643008" -> "19212641920" ["field-name"="[1]",label="[1]"];
+"17758699968" -> "17758700160" ["field-name"="edit",label="edit"];
+"17758699968" -> "17758700288" ["field-name"="array",label="array"];
+"18113329536" -> "18113329792" ["field-name"="s",label="s"];
+"19212641920" -> "19212642176" ["field-name"="chunk",label="chunk"];
+"19212641920" -> "18113331392" ["field-name"="_more",label="_more"];
+"18113332416" -> "18113332544" ["field-name"="sync",label="sync"];
+"18113331648" -> "18113331840" ["field-name"="coll",label="coll"];
+"18113331648" -> "18113332288" ["field-name"="f",label="f"];
+"18113329792" -> "18113330048" ["field-name"="chunk",label="chunk"];
+"18113329792" -> "18113331392" ["field-name"="_more",label="_more"];
+"18113330048" -> "18113330240" ["field-name"="array",label="array"];
+"19212643200" -> "17758699968" ["field-name"="root",label="root"];
+"19212643200" -> "19212643008" ["field-name"="tail",label="tail"];
+"19212642176" -> "18113330240" ["field-name"="array",label="array"];
 } 

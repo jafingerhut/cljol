@@ -1,85 +1,105 @@
 digraph {
-graph [layout=dot,rankdir=LR];
-"28991464632" ["scc-num-nodes"=1,label="24 bytes
-1 object, 24 bytes reachable
+graph [layout="dot",rankdir="LR"];
+"18777430336" ["reachable-only-from"=17920231296,"scc-num-nodes"=1,label="32 bytes
+1 object, 32 bytes reachable
 this object in no reference cycles
-j.l.Long
-16: value (long) 2
-2",shape=box];
-"28991406664" ["scc-num-nodes"=1,label="24 bytes
+j.u.c.locks.ReentrantLock$NonfairSync
+12: exclusiveOwnerThread (ref) nil
+16: state (int) 0
+20: head (ref) nil
+24: tail (ref) nil
+val maybe realizes if str'ed",shape="box"];
+"34349647488" ["reachable-only-from"=17920231296,"scc-num-nodes"=1,label="24 bytes
 1 object, 24 bytes reachable
 this object in no reference cycles
 j.l.Long
 16: value (long) 0
-0",shape=box];
-"32138488696" ["scc-num-nodes"=1,label="32 bytes
-4 objects, 104 bytes reachable
+0",shape="box"];
+"18777430208" ["reachable-only-from"=17920231296,"scc-num-nodes"=1,label="16 bytes
+2 objects, 48 bytes reachable
+this object in no reference cycles
+j.u.c.locks.ReentrantLock
+12: sync (ref) ->
+val maybe realizes if str'ed",shape="box"];
+"18777430016" ["reachable-only-from"=17920231296,"scc-num-nodes"=1,label="24 bytes
+3 objects, 72 bytes reachable
+this object in no reference cycles
+user$fib_fn$fn__10167
+12: __methodImplCache (ref) nil
+16: a (ref) ->
+20: b (ref) ->
+val maybe realizes if str'ed",shape="box"];
+"17920231296" ["reachable-only-from"=17920231296,"scc-num-nodes"=1,style="filled","my-unique-total-size"=304,"my-unique-num-reachable-nodes"=11,label="32 bytes
+11 objects, 304 bytes reachable
+this object in no reference cycles
+c.l.LazySeq
+12: _meta (ref) nil
+16: fn (ref) nil
+20: sv (ref) nil
+24: s (ref) ->
+28: lock (ref) nil
+val maybe realizes if str'ed",shape="box"];
+"17920231552" ["reachable-only-from"=17920231296,"scc-num-nodes"=1,label="32 bytes
+10 objects, 272 bytes reachable
+this object in no reference cycles
+c.l.Cons
+12: _meta (ref) nil
+16: _hash (int) 0
+20: _hasheq (int) 0
+24: _first (ref) ->
+28: _more (ref) ->
+val maybe realizes if str'ed",shape="box"];
+"17920231808" ["reachable-only-from"=17920231296,"scc-num-nodes"=1,label="32 bytes
+8 objects, 216 bytes reachable
+this object in no reference cycles
+c.l.LazySeq
+12: _meta (ref) nil
+16: fn (ref) nil
+20: sv (ref) nil
+24: s (ref) ->
+28: lock (ref) nil
+val maybe realizes if str'ed",shape="box"];
+"18777429760" ["reachable-only-from"=17920231296,"scc-num-nodes"=1,label="32 bytes
+6 objects, 152 bytes reachable
 this object in no reference cycles
 c.l.LazySeq
 12: _meta (ref) nil
 16: fn (ref) ->
 20: sv (ref) nil
 24: s (ref) nil
-val maybe realizes if str'ed",shape=box];
-"28991464656" ["scc-num-nodes"=1,label="24 bytes
+28: lock (ref) ->
+val maybe realizes if str'ed",shape="box"];
+"34349647872" ["reachable-only-from"=17920231296,"scc-num-nodes"=1,label="24 bytes
+1 object, 24 bytes reachable
+this object in no reference cycles
+j.l.Long
+16: value (long) 2
+2",shape="box"];
+"18777430592" ["reachable-only-from"=17920231296,"scc-num-nodes"=1,label="32 bytes
+7 objects, 184 bytes reachable
+this object in no reference cycles
+c.l.Cons
+12: _meta (ref) nil
+16: _hash (int) 0
+20: _hasheq (int) 0
+24: _first (ref) ->
+28: _more (ref) ->
+val maybe realizes if str'ed",shape="box"];
+"34349647680" ["reachable-only-from"=17920231296,"scc-num-nodes"=1,label="24 bytes
 1 object, 24 bytes reachable
 this object in no reference cycles
 j.l.Long
 16: value (long) 1
-1",shape=box];
-"32024788488" ["scc-num-nodes"=1,style=filled,label="32 bytes
-9 objects, 256 bytes reachable
-this object in no reference cycles
-c.l.LazySeq
-12: _meta (ref) nil
-16: fn (ref) nil
-20: sv (ref) nil
-24: s (ref) ->
-val maybe realizes if str'ed",shape=box];
-"32025552152" ["scc-num-nodes"=1,label="32 bytes
-8 objects, 224 bytes reachable
-this object in no reference cycles
-c.l.Cons
-12: _meta (ref) nil
-16: _hash (int) 0
-20: _hasheq (int) 0
-24: _first (ref) ->
-28: _more (ref) ->
-val maybe realizes if str'ed",shape=box];
-"32138488728" ["scc-num-nodes"=1,label="24 bytes
-3 objects, 72 bytes reachable
-this object in no reference cycles
-user$fib_fn$fn__7006
-12: __methodImplCache (ref) nil
-16: a (ref) ->
-20: b (ref) ->
-val maybe realizes if str'ed",shape=box];
-"32138488752" ["scc-num-nodes"=1,label="32 bytes
-5 objects, 136 bytes reachable
-this object in no reference cycles
-c.l.Cons
-12: _meta (ref) nil
-16: _hash (int) 0
-20: _hasheq (int) 0
-24: _first (ref) ->
-28: _more (ref) ->
-val maybe realizes if str'ed",shape=box];
-"32025552096" ["scc-num-nodes"=1,label="32 bytes
-6 objects, 168 bytes reachable
-this object in no reference cycles
-c.l.LazySeq
-12: _meta (ref) nil
-16: fn (ref) nil
-20: sv (ref) nil
-24: s (ref) ->
-val maybe realizes if str'ed",shape=box];
-"32138488696" -> "32138488728" ["field-name"=fn,label=fn];
-"32024788488" -> "32025552152" ["field-name"=s,label=s];
-"32025552152" -> "28991406664" ["field-name"=_first,label=_first];
-"32025552152" -> "32025552096" ["field-name"=_more,label=_more];
-"32138488728" -> "28991464656" ["field-name"=a,label=a];
-"32138488728" -> "28991464632" ["field-name"=b,label=b];
-"32138488752" -> "28991464656" ["field-name"=_first,label=_first];
-"32138488752" -> "32138488696" ["field-name"=_more,label=_more];
-"32025552096" -> "32138488752" ["field-name"=s,label=s];
+1",shape="box"];
+"18777430208" -> "18777430336" ["field-name"="sync",label="sync"];
+"18777430016" -> "34349647680" ["field-name"="a",label="a"];
+"18777430016" -> "34349647872" ["field-name"="b",label="b"];
+"17920231296" -> "17920231552" ["field-name"="s",label="s"];
+"17920231552" -> "34349647488" ["field-name"="_first",label="_first"];
+"17920231552" -> "17920231808" ["field-name"="_more",label="_more"];
+"17920231808" -> "18777430592" ["field-name"="s",label="s"];
+"18777429760" -> "18777430016" ["field-name"="fn",label="fn"];
+"18777429760" -> "18777430208" ["field-name"="lock",label="lock"];
+"18777430592" -> "34349647680" ["field-name"="_first",label="_first"];
+"18777430592" -> "18777429760" ["field-name"="_more",label="_more"];
 } 

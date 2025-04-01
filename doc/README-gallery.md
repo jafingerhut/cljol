@@ -3,6 +3,17 @@ the figures and it will show it on a page zoomed in to a larger size.
 This zoomed in image allows you to scroll up, down, left, and right
 within it.
 
+Unless stated explicitly otherwise, the code snippets were executed
+on, and figures were generated from, Clojure 1.12.0 running on the
+following version of Java on aarch64 Ubuntu 24.04 Linux:
+
+```
+$ java -version
+openjdk version "21.0.6" 2025-01-21 LTS
+OpenJDK Runtime Environment Temurin-21.0.6+7 (build 21.0.6+7-LTS)
+OpenJDK 64-Bit Server VM Temurin-21.0.6+7 (build 21.0.6+7-LTS, mixed mode, sharing)
+```
+
 
 # Lazy sequences realized one element at a time
 
@@ -294,7 +305,7 @@ and it is a reference.  The next field starts at offset 24 bytes, so
 Other examples include the `value` field in the two objects with type
 `String`.
 
-![compressed-pointers-enabled](images/compressed-oops-enabled/map2-Linux-4.15.0-54-jdk-Oracle-1.8.0_192-clj-1.10.1.png)
+![compressed-pointers-enabled](images/compressed-oops-enabled/map2-Linux-6.8.0-56-jdk-openjdk-21.0.6-clj-1.12.0.png)
 
 The next figure below shows the results with compressed pointers
 disabled via the `-XX:-UseCompressedOops` command line option when
@@ -306,17 +317,15 @@ bytes.  Similarly for the size of the `value` fields of the objects
 with type `String`.
 
 No offsets are shown for each array element in the object with type
-`array of 4 j.l.Object`, but you can see that it occupies 56 bytes
+`array of 4 j.l.Object`, but you can see that it occupies 48 bytes
 total, whereas in the previous figure it only occupied 32 bytes.
 
-Another difference to note is that the minimum offset of any field in
-this figure is 16 bytes, whereas several fields in the figure above
-start at offset 12 bytes.  I believe that the common "header" fields
-at the beginning of every object in the JVM include a reference that
-is not shown in these figures, and this is also 8 bytes instead of 4
-bytes when compressed pointers are disabled.
+I believe there might be some pointer/reference fields in the common
+"header" fields at the beginning of every object in the JVM, but that
+is not so clear from these figures, where the offset of the first
+field is sometimes 12 bytes, sometimes 16 bytes.
 
-![compressed-pointers-disabled](images/compressed-oops-disabled/map2-Linux-4.15.0-54-jdk-Oracle-1.8.0_192-clj-1.10.1.png)
+![compressed-pointers-disabled](images/compressed-oops-disabled/map2-Linux-6.8.0-56-jdk-openjdk-21.0.6-clj-1.12.0.png)
 
 
 # JVM object headers
@@ -331,13 +340,13 @@ disabled, and perhaps other factors.  I will say that sizes I have
 commonly seen are 12 or 16 bytes.
 
 The example output below was obtained running this version of the JVM
-on an Ubuntu 18.04 Linux system, on x86_64 processor architecture.
+on an Ubuntu 24.04 Linux system, on aarch64 processor architecture.
 
 ```
 $ java -version
-openjdk version "11.0.3" 2019-04-16
-OpenJDK Runtime Environment (build 11.0.3+7-Ubuntu-1ubuntu218.04.1)
-OpenJDK 64-Bit Server VM (build 11.0.3+7-Ubuntu-1ubuntu218.04.1, mixed mode)
+openjdk version "21.0.6" 2025-01-21 LTS
+OpenJDK Runtime Environment Temurin-21.0.6+7 (build 21.0.6+7-LTS)
+OpenJDK 64-Bit Server VM Temurin-21.0.6+7 (build 21.0.6+7-LTS, mixed mode, sharing)
 ```
 
 Sample output showing contents of object headers with compressed
@@ -345,31 +354,36 @@ pointers enabled:
 ```
 user=> (print (d/class-layout->str ""))
 java.lang.String object internals:
- OFFSET  SIZE     TYPE DESCRIPTION                               VALUE
-      0     4          (object header)                           31 00 00 00 (00110001 00000000 00000000 00000000) (49)
-      4     4          (object header)                           00 00 00 00 (00000000 00000000 00000000 00000000) (0)
-      8     4          (object header)                           da 02 00 20 (11011010 00000010 00000000 00100000) (536871642)
-     12     4   char[] String.value                              []
-     16     4      int String.hash                               0
-     20     4          (loss due to the next object alignment)
+ OFFSET  SIZE      TYPE DESCRIPTION                               VALUE
+      0     4           (object header)                           01 00 00 00 (00000001 00000000 00000000 00000000) (1)
+      4     4           (object header)                           00 00 00 00 (00000000 00000000 00000000 00000000) (0)
+      8     4           (object header)                           40 e7 00 00 (01000000 11100111 00000000 00000000) (59200)
+     12     4       int String.hash                               0
+     16     1      byte String.coder                              0
+     17     1   boolean String.hashIsZero                         true
+     18     2           (alignment/padding gap)                  
+     20     4    byte[] String.value                              []
 Instance size: 24 bytes
-Space losses: 0 bytes internal + 4 bytes external = 4 bytes total
+Space losses: 2 bytes internal + 0 bytes external = 2 bytes total
+nil
 ```
 
 and again with compressed pointers disabled:
 ```
 user=> (print (d/class-layout->str ""))
 java.lang.String object internals:
- OFFSET  SIZE     TYPE DESCRIPTION                               VALUE
-      0     4          (object header)                           01 00 00 00 (00000001 00000000 00000000 00000000) (1)
-      4     4          (object header)                           00 00 00 00 (00000000 00000000 00000000 00000000) (0)
-      8     4          (object header)                           c0 df 3f 28 (11000000 11011111 00111111 00101000) (675274688)
-     12     4          (object header)                           dc 7f 00 00 (11011100 01111111 00000000 00000000) (32732)
-     16     8   char[] String.value                              []
-     24     4      int String.hash                               0
-     28     4          (loss due to the next object alignment)
+ OFFSET  SIZE      TYPE DESCRIPTION                               VALUE
+      0     4           (object header)                           09 00 00 00 (00001001 00000000 00000000 00000000) (9)
+      4     4           (object header)                           00 00 00 00 (00000000 00000000 00000000 00000000) (0)
+      8     4           (object header)                           40 e7 00 00 (01000000 11100111 00000000 00000000) (59200)
+     12     4       int String.hash                               0
+     16     1      byte String.coder                              0
+     17     1   boolean String.hashIsZero                         true
+     18     6           (alignment/padding gap)                  
+     24     8    byte[] String.value                              []
 Instance size: 32 bytes
-Space losses: 0 bytes internal + 4 bytes external = 4 bytes total
+Space losses: 6 bytes internal + 0 bytes external = 6 bytes total
+nil
 ```
 
 
@@ -383,10 +397,10 @@ handled consistently throughout the Java library whether they use a
 larger subset of the full Unicode character set, or not.
 
 Java 9 introduced [Compact
-strings](https://www.codenuclear.com/compact-strings-java-9), where if
-a string contains only characters whose code points fit within a
-single 8-bit byte, then it is stored in memory using only 1 byte per
-character.
+strings](https://web.archive.org/web/20210419082005/https://codenuclear.com/compact-strings-java-9/),
+where if a string contains only characters whose code points fit
+within a single 8-bit byte, then it is stored in memory using only 1
+byte per character.
 
 `cljol` can make this easy to see, by using it to analyze a string
 like `"food has only 8-bit characters"` containing exactly 30
@@ -397,13 +411,13 @@ Unicode code point -- it is the one represented using Java and
 Clojure/Java's `\u1234` syntax, which means a single character with
 code point of 1234 hexadecimal.
 
-Examine the first figure below, generated using JDK 1.8.0_192.  Notice
+Examine the first figure below, generated using JDK 1.8.0_442.  Notice
 that both strings have a reference to an array of 30 Java chars, where
 each of those chars take 2 bytes of storage:
 
-![strings-jdk-1-8-0-192](images/strings-8-bit-and-not-Linux-4.15.0-54-jdk-Oracle-1.8.0_192-clj-1.10.1.png)
+![strings-jdk-1-8-0-442](images/strings-8-bit-and-not-Linux-6.8.0-56-jdk-openjdk-1.8.0_442-clj-1.12.0.png)
 
-Now look at the similar figure below, generated using JDK 9.0.4.  The
+Now look at the similar figure below, generated using JDK 11.0.26.  The
 string that contains only 8-bit characters has a reference to an array
 of 30 bytes, whereas the string that has a character that cannot be
 represented in 8 bits has a reference to an array of 60 bytes.  The
@@ -411,7 +425,7 @@ Java library stores the difference in the array encoding via the field
 `coder` in the object of type `java.lang.String` that references the
 byte array.
 
-![strings-jdk-9-4](images/strings-8-bit-and-not-Linux-4.15.0-54-jdk-Oracle-9.0.4-clj-1.10.1.png)
+![strings-jdk-11-0-26](images/strings-8-bit-and-not-Linux-6.8.0-56-jdk-openjdk-11.0.26-clj-1.12.0.png)
 
 
 # Different ways of holding vectors of numbers in Clojure
@@ -434,15 +448,15 @@ large.
 (require '[cljol.dig9 :as d])
 (d/view [vec10])
 ```
-![vector of 10 longs, boxed](images/vec10-Mac-OS-X-10.13.6-jdk-Oracle-1.8.0_192-clj-1.10.1.png)
+![vector of 10 longs, boxed](images/vec10-Linux-6.8.0-56-jdk-openjdk-21.0.6-clj-1.12.0.png)
 ```
 (d/view [unboxed-vec10])
 ```
-![vector of 10 longs, unboxed](images/unboxed-vec10-Mac-OS-X-10.13.6-jdk-Oracle-1.8.0_192-clj-1.10.1.png)
+![vector of 10 longs, unboxed](images/unboxed-vec10-Linux-6.8.0-56-jdk-openjdk-21.0.6-clj-1.12.0.png)
 ```
 (d/view [arr10])
 ```
-![array of 10 longs, unboxed](images/arr10-Mac-OS-X-10.13.6-jdk-Oracle-1.8.0_192-clj-1.10.1.png)
+![array of 10 longs, unboxed](images/arr10-Linux-6.8.0-56-jdk-openjdk-21.0.6-clj-1.12.0.png)
 
 Every Long integer requires 8 bytes of storage, so 1000 longs requires
 at least 8,000 bytes.  What is the average overhead for using these

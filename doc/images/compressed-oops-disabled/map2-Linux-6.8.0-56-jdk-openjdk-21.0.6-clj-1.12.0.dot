@@ -1,0 +1,67 @@
+digraph {
+graph [layout="dot",rankdir="LR"];
+"270458824976096" ["reachable-only-from"=270458824976056,"scc-num-nodes"=1,label="48 bytes
+7 objects, 208 bytes reachable
+this object in no reference cycles
+array of 4 j.l.Object
+
+[\"a\" 1 \"foobar\" 3.5]",shape="box"];
+"270460740704544" ["reachable-only-from"=270458824976056,"scc-num-nodes"=1,label="24 bytes
+1 object, 24 bytes reachable
+this object in no reference cycles
+array of 1 byte
+
+[97]",shape="box"];
+"270458824976144" ["reachable-only-from"=270458824976056,"scc-num-nodes"=1,label="24 bytes
+1 object, 24 bytes reachable
+this object in no reference cycles
+j.l.Double
+16: value (double) 3.5
+3.5",shape="box"];
+"270458677322912" ["reachable-only-from"=270458824976056,"scc-num-nodes"=1,label="24 bytes
+1 object, 24 bytes reachable
+this object in no reference cycles
+j.l.Long
+16: value (long) 1
+1",shape="box"];
+"270458824976200" ["reachable-only-from"=270458824976056,"scc-num-nodes"=1,label="24 bytes
+1 object, 24 bytes reachable
+this object in no reference cycles
+array of 6 byte
+
+[102 111 111 98 97 114]",shape="box"];
+"270460740704512" ["reachable-only-from"=270458824976056,"scc-num-nodes"=1,label="32 bytes
+2 objects, 56 bytes reachable
+this object in no reference cycles
+j.l.String
+12: hash (int) 97
+16: coder (byte) 0
+17: hashIsZero (boolean) false
+24: value (ref) ->
+a",shape="box"];
+"270458824976056" ["reachable-only-from"=270458824976056,"scc-num-nodes"=1,style="filled","my-unique-total-size"=248,"my-unique-num-reachable-nodes"=8,label="40 bytes
+8 objects, 248 bytes reachable
+this object in no reference cycles
+c.l.PersistentArrayMap
+12: _hash (int) 0
+16: _hasheq (int) 0
+24: array (ref) ->
+32: _meta (ref) nil
+{\"a\" 1, \"foobar\" 3.5}",shape="box"];
+"270458824976168" ["reachable-only-from"=270458824976056,"scc-num-nodes"=1,label="32 bytes
+2 objects, 56 bytes reachable
+this object in no reference cycles
+j.l.String
+12: hash (int) -1268878963
+16: coder (byte) 0
+17: hashIsZero (boolean) false
+24: value (ref) ->
+foobar",shape="box"];
+"270458824976096" -> "270460740704512" ["field-name"="[0]",label="[0]"];
+"270458824976096" -> "270458677322912" ["field-name"="[1]",label="[1]"];
+"270458824976096" -> "270458824976168" ["field-name"="[2]",label="[2]"];
+"270458824976096" -> "270458824976144" ["field-name"="[3]",label="[3]"];
+"270460740704512" -> "270460740704544" ["field-name"="value",label="value"];
+"270458824976056" -> "270458824976096" ["field-name"="array",label="array"];
+"270458824976168" -> "270458824976200" ["field-name"="value",label="value"];
+} 
