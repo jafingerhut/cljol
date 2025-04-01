@@ -46,7 +46,7 @@ the `clj` / `clojure` commands provided by the Clojure installer.
 No extra JVM options are necessary if you are running JDK 8 or 11:
 
 ```bash
-clj -Sdeps '{:deps {cljol/cljol {:git/url "https://github.com/jafingerhut/cljol" :sha "dc17a8e02f5abf7aacf6c1962c627fe7b19993d0"}}}'
+clj -Sdeps '{:deps {cljol/cljol {:git/url "https://github.com/jafingerhut/cljol" :sha "787343793edb6df3a6769d99ebb87e9c60839f4f"}}}'
 ```
 
 If you are running JDK 16 or later, then the additional JVM command
@@ -56,7 +56,7 @@ fields with the values omitted, showing the message `.setAccessible
 failed` in place of the field value.
 
 ```bash
-clj -Sdeps '{:deps {cljol/cljol {:git/url "https://github.com/jafingerhut/cljol" :sha "dc17a8e02f5abf7aacf6c1962c627fe7b19993d0"}}}' \
+clj -Sdeps '{:deps {cljol/cljol {:git/url "https://github.com/jafingerhut/cljol" :sha "787343793edb6df3a6769d99ebb87e9c60839f4f"}}}' \
     -J-Djdk.attach.allowAttachSelf \
     -J-Djol.tryWithSudo=true \
     -J-XX:+EnableDynamicAgentLoading \
