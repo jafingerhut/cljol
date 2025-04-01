@@ -18,10 +18,10 @@ It can create images of these graphs, either:
 + writing to any of several other image file formats using the
   `write-drawing-file` function.
 
-`cljol` has been tested most with Clojure 1.10.1 so far, but as far as
-I know should work fine with Clojure 1.7.0 or later (it cannot go
-earlier, since the Loom graph library requires that version of Clojure
-or later).
+`cljol` has been tested most with Clojure 1.10.1 and 1.12.0 so far,
+but as far as I know should work fine with Clojure 1.7.0 or later (it
+cannot go earlier, since the Loom graph library requires that version
+of Clojure or later).
 
 See the [gallery](doc/README-gallery.md) for examples of figures
 created by this library that demonstrate aspects of the Java VM or
@@ -180,17 +180,16 @@ node directed towards another node.  Those 1001 are 'leaf nodes' of
 the graph.
 
 ```
-user=> (def g (d/sum [v1]))
-
+user=> (def g (d/sum [v1] {:summary-options #{:all}}))
 1067 objects
 1097 references between them
 29480 bytes total in all objects
 no cycles
-1 weakly connected components found in: 19.503015 msec, 0 gc-count, 0 gc-time-msec
+1 weakly connected components found in: 5.6 msec, 0 gc-count, 0 gc-time-msec
 number of nodes in all weakly connected components,
 from most to fewest nodes:
 (1067)
-The scc-graph has 1067 nodes and 1097 edges, took: 24.689886 msec, 0 gc-count, 0 gc-time-msec
+The scc-graph has 1067 nodes and 1097 edges, took: 5.8 msec, 0 gc-count, 0 gc-time-msec
 The largest size strongly connected components, at most 10:
 (1 1 1 1 1 1 1 1 1 1)
 number of objects of each size in bytes:
@@ -205,7 +204,7 @@ number and size of objects of each class:
   :class "j.u.c.atomic.AtomicReference"}
  {:total-size 40, :num-objects 1, :class "c.l.PersistentVector"}
  {:total-size 768, :num-objects 32, :class "c.l.PersistentVector$Node"}
- {:total-size 4656, :num-objects 33, :class "[Ljava.lang.Object;"}
+ {:total-size 4656, :num-objects 33, :class "j.l.Object/1"}
  {:total-size 24000, :num-objects 1000, :class "j.l.Long"})
 
 1001 leaf objects (no references to other objects)
@@ -220,8 +219,7 @@ number of objects of each out-degree (# of references from it):
  {:out-degree 8, :num-objects 1}
  {:out-degree 31, :num-objects 1}
  {:out-degree 32, :num-objects 31})
-map where keys are distance of an object from a start node,
-values are number of objects with that distance:
+Number and total size of objects at each distance from a starting object:
 ({:distance 0, :num-objects 1, :total-size 40}
  {:distance 1, :num-objects 2, :total-size 72}
  {:distance 2, :num-objects 10, :total-size 352}
