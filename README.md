@@ -60,10 +60,7 @@ clj -Sdeps '{:deps {cljol/cljol {:git/url "https://github.com/jafingerhut/cljol"
     -J-Djdk.attach.allowAttachSelf \
     -J-Djol.tryWithSudo=true \
     -J-XX:+EnableDynamicAgentLoading \
-    -J--add-opens -Jjava.base/java.lang=ALL-UNNAMED \
-    -J--add-opens -Jjava.base/java.util=ALL-UNNAMED \
-    -J--add-opens -Jjava.base/java.util.concurrent=ALL-UNNAMED \
-    -J--add-opens -Jjava.base/java.util.concurrent.locks=ALL-UNNAMED
+    -J--add-opens -Jjava.base/java.lang=ALL-UNNAMED
 ```
 
 In the REPL:
@@ -300,10 +297,22 @@ collection created by making a small change to the first collection.
 ```
 
 
-# Warning messages
+# Error and Warning messages
 
 When running with JDK 16 or later and the extra command line options
-recommended above, I typically see a warning like the one below the
+recommended above, you may see error messages like these:
+
+```
+ERROR: Add these JVM command line options to avoid errors determining field values of objects: --add-opens java.base/java.util.concurrent.locks=ALL-UNNAMED
+ERROR: Add these JVM command line options to avoid errors determining field values of objects: --add-opens java.base/java.lang=ALL-UNNAMED
+```
+
+These occur if `cljol` is attempting to read the values of fields of
+JVM objects, but an `InaccessibleObjectException` was thrown.  This
+causes `cljol` to produce incorrect graphs of objects, and to show the
+message `.setAccessible failed` instead of the true values of fields.
+
+I typically see a warning like the one below the
 first time I call the function `view`, `write-dot-file`, or
 `write-drawing-file`:
 
