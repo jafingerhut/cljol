@@ -43,12 +43,30 @@ There are not yet any packaged releases of `cljol` on Clojars.  You
 can clone the repository yourself and create a JAR if you like, or use
 the `clj` / `clojure` commands provided by the Clojure installer.
 
+No extra JVM options are necessary if you are running JDK 8 or 11:
+
 ```bash
-$ clj -Sdeps '{:deps {cljol/cljol {:git/url "https://github.com/jafingerhut/cljol" :sha "dc17a8e02f5abf7aacf6c1962c627fe7b19993d0"}}}'
+clj -Sdeps '{:deps {cljol/cljol {:git/url "https://github.com/jafingerhut/cljol" :sha "dc17a8e02f5abf7aacf6c1962c627fe7b19993d0"}}}'
+```
+
+If you are running JDK 16 or later, then the additional JVM command
+line options below are strongly recommended.  Not using these options
+often leads to missing edges between objects in drawn graphs, and/or
+fields with the values omitted, showing the message `.setAccessible
+failed` in place of the field value.
+
+```bash
+clj -Sdeps '{:deps {cljol/cljol {:git/url "https://github.com/jafingerhut/cljol" :sha "dc17a8e02f5abf7aacf6c1962c627fe7b19993d0"}}}' \
+    -J-Djdk.attach.allowAttachSelf \
+	-J-Djol.tryWithSudo=true \
+	-J-XX:+EnableDynamicAgentLoading \
+	-J--add-opens -Jjava.base/java.lang=ALL-UNNAMED \
+	-J--add-opens -Jjava.base/java.util=ALL-UNNAMED \
+	-J--add-opens -Jjava.base/java.util.concurrent=ALL-UNNAMED \
+	-J--add-opens -Jjava.base/java.util.concurrent.locks=ALL-UNNAMED
 ```
 
 In the REPL:
-
 ```
 (require '[cljol.dig9 :as d])
 (def my-map {"a" 1 "foobar" 3.5})
@@ -221,7 +239,8 @@ leaves removed, and then draw `g2`:
 
 ```
 (require '[ubergraph.core :as uber]
-         '[cljol.graph :as gr])
+         '[cljol.graph :as gr]
+         '[cljol.ubergraph-extras :as gre])
 
 (def g2 (uber/remove-nodes* g (gr/leaf-nodes g)))
 
@@ -234,8 +253,8 @@ That is, the Java object is reachable from one of the starting objects
 in 3 or fewer 'hops'.
 
 ```
-(def g3 (gr/induced-subgraph g (filter #(<= (uber/attr g % :distance) 3)
-                                        (uber/nodes g))))
+(def g3 (gre/induced-subgraph g (filter #(<= (uber/attr g % :distance) 3)
+                                         (uber/nodes g))))
 
 (d/view-graph g3)
 ```
@@ -283,6 +302,18 @@ collection created by making a small change to the first collection.
 
 # Warning messages
 
+When running with JDK 16 or later and the extra command line options
+recommended above, I typically see a warning like the one below the
+first time I call the function `view`, `write-dot-file`, or
+`write-drawing-file`:
+
+```bash
+# WARNING: Unable to attach Serviceability Agent. sun.jvm.hotspot.memory.Universe.getNarrowOopBase()
+```
+
+The presence of this warning does not seem to harm the functionality
+of `cljol` in any way.
+
 Note: I see output like that shown below in my REPL, the first time I
 run `view` or `write-dot-file`, at least on Ubuntu 18.04 Linux with
 OpenJDK 11 and Clojure 1.10.1.  According to its documentation, the
@@ -326,6 +357,7 @@ details.
 
 Tested with:
 
+* Ubuntu 24.04, Adoptium OpenJDK 8, 11, 16-24, Clojure 1.12.0
 * Ubuntu 18.04.2, OpenJDK 11, Clojure 1.10.1
 * Ubuntu 18.04.2, Oracle JDK 8, Clojure 1.10.1
 * Mac OS X 10.13 High Sierra, Oracle JDK 8, Clojure 1.10.1
