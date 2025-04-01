@@ -58,12 +58,12 @@ failed` in place of the field value.
 ```bash
 clj -Sdeps '{:deps {cljol/cljol {:git/url "https://github.com/jafingerhut/cljol" :sha "dc17a8e02f5abf7aacf6c1962c627fe7b19993d0"}}}' \
     -J-Djdk.attach.allowAttachSelf \
-	-J-Djol.tryWithSudo=true \
-	-J-XX:+EnableDynamicAgentLoading \
-	-J--add-opens -Jjava.base/java.lang=ALL-UNNAMED \
-	-J--add-opens -Jjava.base/java.util=ALL-UNNAMED \
-	-J--add-opens -Jjava.base/java.util.concurrent=ALL-UNNAMED \
-	-J--add-opens -Jjava.base/java.util.concurrent.locks=ALL-UNNAMED
+    -J-Djol.tryWithSudo=true \
+    -J-XX:+EnableDynamicAgentLoading \
+    -J--add-opens -Jjava.base/java.lang=ALL-UNNAMED \
+    -J--add-opens -Jjava.base/java.util=ALL-UNNAMED \
+    -J--add-opens -Jjava.base/java.util.concurrent=ALL-UNNAMED \
+    -J--add-opens -Jjava.base/java.util.concurrent.locks=ALL-UNNAMED
 ```
 
 In the REPL:
