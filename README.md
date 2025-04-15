@@ -281,11 +281,11 @@ collection created by making a small change to the first collection.
 (defn colored-graph [obj-color-pairs multi-color]
   (let [objs (map first obj-color-pairs)
         attrs (mapv (fn [[obj color]]
-		              {:only-from obj :attrs {:color color}})
-					obj-color-pairs)
+                      {:only-from obj :attrs {:color color}})
+                    obj-color-pairs)
         attrs (conj attrs
-		          {:from-multiple true :attrs {:color multi-color}}
-				  {:from-none true :attrs {:color "gray"}})
+                    {:from-multiple true :attrs {:color multi-color}}
+                    {:from-none true :attrs {:color "gray"}})
         g (d/sum objs)]
     (d/add-attributes-by-reachability g attrs)))
 
