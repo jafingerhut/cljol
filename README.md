@@ -266,32 +266,42 @@ objects shared between a persistent collection, and the persistent
 collection created by making a small change to the first collection.
 
 ```
+;; Create a graph of objects reachable from one or more
+;; root objects.  Use a function add-attributes-by-reachability
+;; to add color attributes to the graph nodes so that if
+;; a node is reachable from one root object, but not any of
+;; the others, it will be given a specified color.
+;; If a node is reachable from more than one root node,
+;; assign it the color 'multi-color'.  In this function,
+;; all nodes of the graph should be reachable from one of
+;; the given root objects, but in case there is some kind
+;; of situation where a node cannot be reached from any
+;; root object, assign it the color "gray".
+
+(defn colored-graph [obj-color-pairs multi-color]
+  (let [objs (map first obj-color-pairs)
+        attrs (mapv (fn [[obj color]]
+		              {:only-from obj :attrs {:color color}})
+					obj-color-pairs)
+        attrs (conj attrs
+		          {:from-multiple true :attrs {:color multi-color}}
+				  {:from-none true :attrs {:color "gray"}})
+        g (d/sum objs)]
+    (d/add-attributes-by-reachability g attrs)))
+
+;; Two similar Clojure vectors, with lots of sharing of objects.
 (def v1 (vec (range 5)))
 (def v2 (conj v1 5))
-(def g (d/sum [v1 v2]))
+(def g (colored-graph [[v1 "red"] [v2 "green"]] "blue"))
+(d/view-graph g)
+(d/view-graph g {:save {:filename "g.pdf" :format :pdf}})
 
-;; Create a graph from g, different because of some additional
-;; attributes added to the nodes by the function
-;; add-attributes-by-reachability
-
-;; Any node reachable ":only-from" object v1 will have its attributes
-;; augmented by adding the `:color "red"`.  Any node reachable only
-;; from object v2 will have color green.  Any node reachable from more
-;; than one root node will be blue, and any reachable from no root
-;; will be colored gray.
-
-(def g2 (d/add-attributes-by-reachability g
-         [{:only-from v1
-           :attrs {:color "red"}}
-          {:only-from v2
-           :attrs {:color "green"}}
-          {:from-multiple true
-           :attrs {:color "blue"}}
-          {:from-none true
-           :attrs {:color "gray"}}]))
-
-(d/view-graph g2)
-(d/view-graph g2 {:save {:filename "g2.pdf" :format :pdf}})
+;; Two similar Clojure hash maps, with lots of sharing of objects.
+(def m1 (hash-map 1 -1 2 -2 3 -3 5 -5 9 -9))
+(def m2 (assoc m1 4 -4))
+(def g (colored-graph [[m1 "red"] [m2 "green"]] "blue"))
+(d/view-graph g)
+(d/view-graph g {:save {:filename "g.pdf" :format :pdf}})
 ```
 
 
